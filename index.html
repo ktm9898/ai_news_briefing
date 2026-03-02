@@ -220,10 +220,10 @@
             <!-- 테이블 헤더 (데스크톱) -->
             <div
                 class="hidden sm:flex items-center px-3 py-2 text-sm font-bold text-muted uppercase tracking-wider border-b-2 border-border">
-                <div class="w-[12%]">상태</div>
+                <div class="w-[10%]">상태</div>
                 <div class="w-[35%]">기사</div>
-                <div class="w-[43%]">요약</div>
-                <div class="w-[10%] text-right font-bold">원문</div>
+                <div class="w-[48%]">요약</div>
+                <div class="w-[7%] text-right font-bold">원문</div>
             </div>
 
             <!-- 뉴스 행 컨테이너 -->
@@ -555,7 +555,7 @@ function doPost(e) {
             <div class="news-row flex flex-col sm:flex-row sm:items-start px-3 py-4 border-b border-border cursor-pointer transition-colors"
                  onclick="openModal(${i})" data-idx="${i}">
                 <!-- 상태/분류 -->
-                <div class="sm:w-[12%] flex sm:flex-col gap-1.5 mb-1.5 sm:mb-0 sm:pr-4">
+                <div class="sm:w-[10%] flex sm:flex-col gap-1.5 mb-1.5 sm:mb-0 sm:pr-4">
                     <span class="inline-block text-[11px] font-bold px-2.5 py-1 rounded-md text-center ${badgeColor}">${n.중요도}</span>
                     <span class="inline-block text-[11px] font-medium px-2.5 py-1 rounded-md bg-gray-100 text-gray-600 border border-gray-200 text-center">${n.카테고리}</span>
                 </div>
@@ -565,11 +565,11 @@ function doPost(e) {
                     <p class="text-xs text-muted mt-1.5 font-medium">${n.언론사} <span class="mx-1">·</span> ${n.날짜}</p>
                 </div>
                 <!-- 요약 -->
-                <div class="sm:w-[43%] sm:pr-4">
+                <div class="sm:w-[48%] sm:pr-4">
                     <p class="text-sm text-gray-600 leading-relaxed line-clamp-3">${desc}</p>
                 </div>
                 <!-- 원문 링크 -->
-                <div class="sm:w-[10%] flex items-center justify-end mt-2 sm:mt-0">
+                <div class="sm:w-[7%] flex items-center justify-end mt-2 sm:mt-0">
                     ${n.링크 ? `<a href="${n.링크}" target="_blank" rel="noopener" onclick="event.stopPropagation()"
                         class="inline-flex items-center gap-1 text-sm font-bold text-accent hover:text-blue-700 hover:underline whitespace-nowrap bg-blue-50 px-2 py-1 rounded-lg">
                         ↗ 원문
@@ -595,23 +595,23 @@ function doPost(e) {
                 <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">${n.카테고리}</span>
                 <span class="text-xs text-muted">${n.언론사} · ${n.날짜}</span>
             </div>
-            <h3 class="text-base font-bold leading-snug">${n.제목}</h3>
+            <h3 class="text-lg font-bold leading-tight text-gray-900">${n.제목}</h3>
             ${n.링크 ? `<a href="${n.링크}" target="_blank" rel="noopener"
-                class="inline-flex items-center gap-1 text-xs text-accent font-medium hover:underline">
+                class="inline-flex items-center gap-1 text-sm text-accent font-bold hover:underline">
                 ↗ 원문 보기
             </a>` : ''}
             ${n.AI요약 ? `
-            <div>
-                <p class="text-xs font-bold text-muted uppercase mb-1">AI 브리핑</p>
-                <div class="text-sm text-gray-700 leading-relaxed bg-blue-50 rounded-lg p-3 border border-blue-100">${n.AI요약}</div>
+            <div class="pt-2">
+                <p class="text-xs font-bold text-muted uppercase mb-2 tracking-wider">AI 브리핑</p>
+                <div class="text-base text-gray-800 leading-relaxed bg-blue-50 rounded-xl p-4 border border-blue-100 shadow-sm">${n.AI요약}</div>
             </div>` : `
-            <div class="bg-amber-50 border border-amber-100 rounded-lg p-3">
-                <p class="text-xs text-amber-700">⌛ AI 요약이 생성되지 않았습니다. 다음 뉴스 수집 시 생성됩니다.</p>
+            <div class="bg-amber-50 border border-amber-100 rounded-lg p-4">
+                <p class="text-sm text-amber-700 font-medium">⌛ AI 요약이 생성되지 않았습니다. 다음 뉴스 수집 시 생성됩니다.</p>
             </div>`}
             ${n.본문 ? `
-            <div>
-                <p class="text-xs font-bold text-muted uppercase mb-1">기사 전문</p>
-                <div class="text-xs text-gray-500 leading-relaxed max-h-60 overflow-y-auto bg-gray-50 rounded-lg p-3">${n.본문.substring(0, 3000)}${n.본문.length > 3000 ? '...' : ''}</div>
+            <div class="pt-2">
+                <p class="text-xs font-bold text-muted uppercase mb-2 tracking-wider">기사 전문</p>
+                <div class="text-sm text-gray-600 leading-relaxed max-h-[40vh] overflow-y-auto bg-gray-50 rounded-xl p-4 border border-border shadow-inner">${n.본문.substring(0, 3000)}${n.본문.length > 3000 ? '...' : ''}</div>
             </div>` : ''}
         `;
 
