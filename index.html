@@ -423,10 +423,10 @@ function doPost(e) {
                     카테고리: row['카테고리'] || '기타',
                     언론사: row['언론사'] || '',
                     제목: row['제목'] || '제목 없음',
-                    네이버요약: row['네이버 요약'] || '',
-                    본문: row['본문 전문'] || '',
+                    네이버요약: row['네이버 요약'] || row['네이버요약'] || '',
+                    본문: row['본문 전문'] || row['본문전문'] || '',
                     링크: row['링크'] || '',
-                    AI요약: row['AI 요약'] || '',
+                    AI요약: row['AI 요약'] || row['AI요약'] || '',
                     중요도: row['중요도'] || '중',
                 }));
 
@@ -549,7 +549,7 @@ function doPost(e) {
                 const badgeColor = n.중요도 === '상' ? 'bg-rose-100 text-rose-700' :
                     n.중요도 === '하' ? 'bg-sky-100 text-sky-700' :
                         'bg-amber-100 text-amber-700';
-                const desc = n.네이버요약 || n.AI요약 || '요약 정보 없음';
+                const desc = n.AI요약 || n.네이버요약 || '요약 정보 없음';
 
                 return `
             <div class="news-row flex flex-col sm:flex-row sm:items-start px-3 py-3 border-b border-border cursor-pointer transition-colors"
