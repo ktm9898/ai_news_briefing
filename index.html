@@ -549,7 +549,7 @@ function doPost(e) {
                 const badgeColor = n.중요도 === '상' ? 'bg-rose-100 text-rose-700' :
                     n.중요도 === '하' ? 'bg-sky-100 text-sky-700' :
                         'bg-amber-100 text-amber-700';
-                const desc = n.AI요약 || n.네이버요약 || '요약 정보 없음';
+                const desc = n.AI요약 || 'AI 요약 대기 중...';
 
                 return `
             <div class="news-row flex flex-col sm:flex-row sm:items-start px-3 py-3 border-b border-border cursor-pointer transition-colors"
@@ -598,16 +598,14 @@ function doPost(e) {
                 class="inline-flex items-center gap-1 text-xs text-accent font-medium hover:underline">
                 ↗ 원문 보기
             </a>` : ''}
-            ${n.네이버요약 ? `
-            <div>
-                <p class="text-xs font-bold text-muted uppercase mb-1">네이버 요약</p>
-                <p class="text-sm text-gray-600 leading-relaxed bg-gray-50 rounded-lg p-3">${n.네이버요약}</p>
-            </div>` : ''}
             ${n.AI요약 ? `
             <div>
                 <p class="text-xs font-bold text-muted uppercase mb-1">AI 브리핑</p>
                 <div class="text-sm text-gray-700 leading-relaxed bg-blue-50 rounded-lg p-3 border border-blue-100">${n.AI요약}</div>
-            </div>` : ''}
+            </div>` : `
+            <div class="bg-amber-50 border border-amber-100 rounded-lg p-3">
+                <p class="text-xs text-amber-700">⌛ AI 요약이 생성되지 않았습니다. 다음 뉴스 수집 시 생성됩니다.</p>
+            </div>`}
             ${n.본문 ? `
             <div>
                 <p class="text-xs font-bold text-muted uppercase mb-1">기사 전문</p>
