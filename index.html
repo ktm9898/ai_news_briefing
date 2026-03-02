@@ -388,9 +388,8 @@ function doPost(e) {
 
         // ── 초기화 ──
         document.addEventListener('DOMContentLoaded', () => {
-            // 오늘 날짜를 필터 기본값으로
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('filterDate').value = today;
+            // 날짜 필터는 비워두기 (전체 날짜 보기)
+            document.getElementById('filterDate').value = '';
 
             // 필터 이벤트
             document.getElementById('filterDate').addEventListener('change', applyFilters);
@@ -460,11 +459,17 @@ function doPost(e) {
         // ── 날짜 포맷 ──
         function formatDate(raw) {
             if (!raw) return '';
-            if (typeof raw === 'string' && raw.includes('-')) return raw;
-            // 구글 시트의 Date 직렬화 처리
+            // 이미 정확한 YYYY-MM-DD 형식이면 그대로
+            if (typeof raw === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+            // ISO 8601, 구글 시트 Date 직렬화 등 모든 형식 처리
             try {
                 const d = new Date(raw);
-                if (!isNaN(d)) return d.toISOString().split('T')[0];
+                if (!isNaN(d.getTime())) {
+                    const y = d.getFullYear();
+                    const m = String(d.getMonth() + 1).padStart(2, '0');
+                    const dd = String(d.getDate()).padStart(2, '0');
+                    return `${y}-${m}-${dd}`;
+                }
             } catch (e) { }
             return String(raw);
         }
