@@ -220,10 +220,10 @@
             <!-- 테이블 헤더 (데스크톱) -->
             <div
                 class="hidden sm:flex items-center px-3 py-2 text-xs font-bold text-muted uppercase tracking-wider border-b-2 border-border">
-                <div class="w-[8%]">상태</div>
-                <div class="w-[32%]">기사</div>
-                <div class="w-[42%]">요약</div>
-                <div class="w-[18%] text-right">액션</div>
+                <div class="w-[10%]">상태</div>
+                <div class="w-[28%]">기사</div>
+                <div class="w-[52%]">요약</div>
+                <div class="w-[10%] text-right">원문</div>
             </div>
 
             <!-- 뉴스 행 컨테이너 -->
@@ -554,25 +554,24 @@ function doPost(e) {
                 return `
             <div class="news-row flex flex-col sm:flex-row sm:items-start px-3 py-3 border-b border-border cursor-pointer transition-colors"
                  onclick="openModal(${i})" data-idx="${i}">
-                <!-- 상태/분류 (모바일: 인라인) -->
-                <div class="sm:w-[8%] flex sm:flex-col gap-1.5 mb-1.5 sm:mb-0">
+                <!-- 상태/분류 -->
+                <div class="sm:w-[10%] flex sm:flex-col gap-1.5 mb-1.5 sm:mb-0 sm:pr-3">
                     <span class="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeColor}">${n.중요도}</span>
                     <span class="inline-block text-[10px] font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 border border-gray-200">${n.카테고리}</span>
                 </div>
                 <!-- 제목/출처 -->
-                <div class="sm:w-[32%] sm:pr-3 mb-1 sm:mb-0">
+                <div class="sm:w-[28%] sm:pr-3 mb-1 sm:mb-0">
                     <p class="text-sm font-semibold leading-snug line-clamp-2">${n.제목}</p>
                     <p class="text-[11px] text-muted mt-0.5">${n.언론사} · ${n.날짜}</p>
                 </div>
                 <!-- 요약 -->
-                <div class="sm:w-[42%] sm:pr-3">
+                <div class="sm:w-[52%] sm:pr-3">
                     <p class="text-xs text-muted leading-relaxed line-clamp-2">${desc}</p>
                 </div>
-                <!-- 액션 -->
-                <div class="sm:w-[18%] flex items-center gap-2 justify-end mt-2 sm:mt-0">
+                <!-- 원문 링크 -->
+                <div class="sm:w-[10%] flex items-center justify-end mt-2 sm:mt-0">
                     ${n.링크 ? `<a href="${n.링크}" target="_blank" rel="noopener" onclick="event.stopPropagation()"
                         class="text-xs font-medium text-accent hover:underline whitespace-nowrap">↗ 원문</a>` : ''}
-                    <span class="text-xs text-muted">상세 →</span>
                 </div>
             </div>`;
             }).join('');
