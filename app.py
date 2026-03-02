@@ -22,197 +22,241 @@ logging.basicConfig(
 
 # ── 페이지 설정 ────────────────────────────────────────
 st.set_page_config(
-    page_title="AI 뉴스 비서",
+    page_title="AI 기사 브리핑",
     page_icon="📰",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed", # 모바일에선 기본으로 닫기
 )
 
-# ── 커스텀 CSS ─────────────────────────────────────────
+# ── 커스텀 CSS (Ultra Premium & Dark Minimal) ────────────────
 st.markdown("""
 <style>
-    /* 전체 폰트 및 배경 */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&display=swap');
     
     :root {
-        --primary: #6366f1;
-        --primary-light: #818cf8;
-        --secondary: #f43f5e;
-        --bg-glass: rgba(255, 255, 255, 0.7);
-        --text-main: #1e293b;
-        --text-muted: #64748b;
+        --bg-color: #0c0c0c;
+        --card-bg: #161618;
+        --text-main: #fcfcfc;
+        --text-muted: #8b8f97;
+        --accent: #e2e2e2;
+        --primary: #ffffff;
+        --border-color: #2a2c30;
     }
 
-    html, body, [class*="css"] {
-        font-family: 'Inter', 'Noto Sans KR', sans-serif;
-        color: var(--text-main);
+    /* 전체 폰트 및 다크 테마 배경 */
+    html, body, [class*="css"], .stApp {
+        font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important;
+        background-color: var(--bg-color) !important;
+        color: var(--text-main) !important;
     }
 
-    .stApp {
-        background: radial-gradient(circle at top right, #f8fafc, #f1f5f9);
+    /* Streamlit 기본 요소 숨기기 (헤더바, 푸터 등) */
+    #MainMenu {visibility: hidden;}
+    header {visibility: hidden !important; display: none !important;}
+    footer {visibility: hidden;}
+    .stDeployButton {display:none;}
+    
+    /* 전체 패딩 최소화 */
+    .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 2rem !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+        max-width: 1200px !important;
     }
 
-    /* 헤더 영역 - 글래스모피즘 */
+    /* 사이드바 다크화 */
+    [data-testid="stSidebar"] > div:first-child {
+        background-color: var(--card-bg) !important;
+        border-right: 1px solid var(--border-color);
+        padding-top: 2rem;
+    }
+    
+    /* 메인 타이틀 영역 (애플 감성 미니멀) */
     .main-header {
-        background: linear-gradient(135deg, rgba(99, 102, 241, 0.9) 0%, rgba(129, 140, 248, 0.8) 100%);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        padding: 2.5rem 1.5rem;
-        border-radius: 24px;
-        color: white;
-        margin-bottom: 2rem;
-        box-shadow: 0 10px 40px rgba(99, 102, 241, 0.2);
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        padding: 3rem 0 2rem 0;
+        text-align: left;
+        border-bottom: 1px solid var(--border-color);
+        margin-bottom: 2.5rem;
     }
     .main-header h1 {
         margin: 0;
-        font-size: 2.4rem;
+        font-size: 3rem;
         font-weight: 800;
-        letter-spacing: -0.02em;
+        letter-spacing: -0.04em;
+        line-height: 1.1;
+        color: var(--text-main);
     }
     .main-header p {
-        margin: 0.75rem 0 0 0;
-        opacity: 0.9;
+        margin: 1rem 0 0 0;
         font-size: 1.1rem;
         font-weight: 400;
+        color: var(--text-muted);
+        letter-spacing: -0.01em;
     }
 
-    /* 뉴스 카드 - 미니멀 & 프리미엄 */
-    .news-card {
-        background: white;
-        border-radius: 20px;
-        padding: 1.8rem;
-        margin-bottom: 1.2rem;
-        border: 1px solid #e2e8f0;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        position: relative;
-        overflow: hidden;
+    /* 통계 카드 (Minimal Grid) */
+    .stat-container {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        margin-bottom: 3rem;
     }
-    .news-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-        border-color: var(--primary-light);
-    }
-
-    /* 중요도 배지 */
-    .badge-high {
-        background: #fee2e2;
-        color: #ef4444;
-        padding: 0.3rem 0.8rem;
-        border-radius: 12px;
-        font-size: 0.75rem;
-        font-weight: 700;
-        border: 1px solid #fecaca;
-    }
-    .badge-mid {
-        background: #fef3c7;
-        color: #d97706;
-        padding: 0.3rem 0.8rem;
-        border-radius: 12px;
-        font-size: 0.75rem;
-        font-weight: 700;
-        border: 1px solid #fde68a;
-    }
-    .badge-low {
-        background: #e0f2fe;
-        color: #0284c7;
-        padding: 0.3rem 0.8rem;
-        border-radius: 12px;
-        font-size: 0.75rem;
-        font-weight: 700;
-        border: 1px solid #bae6fd;
-    }
-
-    /* 카테고리 태그 */
-    .category-tag {
-        background: #f1f5f9;
-        color: #475569;
-        padding: 0.25rem 0.75rem;
-        border-radius: 10px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.025em;
-    }
-
-    /* 통계 카드 */
     .stat-card {
-        background: white;
-        border-radius: 20px;
-        padding: 1.5rem;
-        text-align: center;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-        border: 1px solid #e2e8f0;
+        background: transparent;
+        border-radius: 0;
+        padding: 1rem 0;
+        text-align: left;
+        border-top: 1px solid var(--border-color);
     }
     .stat-number {
-        font-size: 2.2rem;
-        font-weight: 800;
+        font-size: 2.5rem;
+        font-weight: 600;
         color: var(--primary);
-        line-height: 1;
+        letter-spacing: -0.04em;
     }
     .stat-label {
         color: var(--text-muted);
-        font-size: 0.9rem;
-        margin-top: 0.5rem;
+        font-size: 0.85rem;
         font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-top: 0.2rem;
     }
 
-    /* 오디오 플레이어 영역 */
+    /* 오디오 플레이어 (Soft Rectangle) */
     .audio-section {
-        background: #1e293b;
-        border-radius: 24px;
-        padding: 2.5rem;
-        color: white;
-        margin-bottom: 2rem;
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: var(--card-bg);
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 3rem;
+        border: 1px solid var(--border-color);
     }
     .audio-section h3 {
-        color: white !important;
-        margin-top: 0 !important;
+        color: var(--primary) !important;
+        margin: 0 0 0.5rem 0 !important;
+        font-size: 1.5rem;
         font-weight: 700;
+        letter-spacing: -0.02em;
     }
 
-    /* 사이드바 최적화 */
-    [data-testid="stSidebar"] {
-        background-color: #ffffff;
-        border-right: 1px solid #e2e8f0;
+    /* 뉴스 피드 카드 (Neo-Brutalism + Dark) */
+    .news-card {
+        background: var(--card-bg);
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid var(--border-color);
+        transition: border-color 0.2s;
     }
-    .sidebar-info {
-        background: #f8fafc;
-        border-radius: 16px;
-        padding: 1.2rem;
-        font-size: 0.9rem;
-        color: var(--text-muted);
-        border: 1px solid #f1f5f9;
-    }
-
-    /* 버튼 스타일 커스터마이징 */
-    .stButton > button {
-        border-radius: 12px !important;
-        font-weight: 600 !important;
-        padding: 0.5rem 1.5rem !important;
-        transition: all 0.2s !important;
+    .news-card:hover {
+        border-color: #555555;
     }
     
-    /* 모바일 최적화 미디어 쿼리 */
+    /* 뉴스 제목 & 메타 */
+    .news-card h3 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1.4rem;
+        font-weight: 600;
+        line-height: 1.4;
+        color: var(--primary);
+        letter-spacing: -0.02em;
+    }
+    .news-meta {
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        margin-bottom: 1.5rem;
+        font-weight: 400;
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+    }
+
+    /* 본문 요약 박스 */
+    .summary-box {
+        background: rgba(255, 255, 255, 0.03);
+        padding: 1.5rem;
+        border-radius: 8px;
+        border-left: 2px solid #444;
+    }
+    .summary-box p {
+        margin: 0;
+        color: #d1d5db;
+        line-height: 1.7;
+        font-size: 1rem;
+        font-weight: 300;
+    }
+
+    /* 태그 및 배지 (Muted Colors) */
+    .category-tag {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-main);
+        padding: 0.3rem 0.6rem;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    .badge-high { color: #f87171; font-weight: 600; font-size: 0.8rem; }
+    .badge-mid { color: #fbbf24; font-weight: 600; font-size: 0.8rem; }
+    .badge-low { color: #60a5fa; font-weight: 600; font-size: 0.8rem; }
+
+    /* Streamlit 기본 탭/버튼 커스텀 (Dark 모드) */
+    .stButton > button {
+        background-color: var(--primary) !important;
+        color: var(--bg-color) !important;
+        border: none !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        padding: 0.6rem 1.5rem !important;
+    }
+    .stButton > button:hover {
+        background-color: #e5e5e5 !important;
+        opacity: 0.9;
+    }
+
+    /* 모바일 초밀착 최적화 */
     @media (max-width: 768px) {
-        .main-header h1 {
-            font-size: 1.8rem;
+        .block-container {
+            padding-top: 0 !important; /* 상단 여백 완벽 제거 */
+            padding-left: 0.8rem !important;
+            padding-right: 0.8rem !important;
         }
         .main-header {
-            padding: 1.5rem 1rem;
+            padding: 2rem 0 1.5rem 0;
+            margin-bottom: 1.5rem;
+        }
+        .main-header h1 {
+            font-size: 2.2rem;
+        }
+        
+        /* 모바일에선 스택형으로 */
+        .stat-container {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
         }
         .stat-card {
-            padding: 1rem;
-            margin-bottom: 0.5rem;
+            border-top: none;
+            border-left: 2px solid var(--border-color);
+            padding: 0 0 0 1rem;
         }
-        .stat-number {
-            font-size: 1.6rem;
-        }
+        .stat-number { font-size: 2rem; }
+        
         .news-card {
             padding: 1.2rem;
+            margin-bottom: 1rem;
+        }
+        .news-card h3 {
+            font-size: 1.2rem;
+        }
+        .summary-box {
+            padding: 1rem;
+        }
+        .audio-section {
+            padding: 1.5rem;
+            border-radius: 12px;
         }
     }
 </style>
@@ -307,8 +351,8 @@ with st.sidebar:
 
 st.markdown(
     '<div class="main-header">'
-    "<h1>📰 AI 뉴스 비서</h1>"
-    "<p>매일 아침, 당신을 위한 맞춤형 뉴스 브리핑</p>"
+    "<h1>AI 뉴스 비서<span style='color:var(--primary);'>.</span></h1>"
+    "<p>간결하고 강력한 모닝 인텔리전스</p>"
     "</div>",
     unsafe_allow_html=True,
 )
@@ -434,25 +478,34 @@ try:
             and (selected_date == "전체" or n.get("날짜") == selected_date)
         ]
 
-        # 통계 카드
+        # 통계 카드 (Minimal Grid)
         st.write("") # 간격
+        st.markdown('<div class="stat-container">', unsafe_allow_html=True)
         stat1, stat2, stat3, stat4 = st.columns(4)
         with stat1:
-            st.markdown(f'<div class="stat-card"><div class="stat-number">{len(filtered)}</div><div class="stat-label">📊 전체 뉴스</div></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="stat-card"><div class="stat-number">{len(filtered)}</div><div class="stat-label">Total News</div></div>', unsafe_allow_html=True)
         with stat2:
             high_count = sum(1 for n in filtered if n.get("중요도") == "상")
-            st.markdown(f'<div class="stat-card"><div class="stat-number">{high_count}</div><div class="stat-label">🔴 중요 뉴스</div></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="stat-card"><div class="stat-number" style="color:#f87171;">{high_count}</div><div class="stat-label">High Priority</div></div>', unsafe_allow_html=True)
         with stat3:
-            st.markdown(f'<div class="stat-card"><div class="stat-number">{len(categories)}</div><div class="stat-label">📁 카테고리</div></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="stat-card"><div class="stat-number">{len(categories)}</div><div class="stat-label">Categories</div></div>', unsafe_allow_html=True)
         with stat4:
-            st.markdown(f'<div class="stat-card"><div class="stat-number">{len(dates)}</div><div class="stat-label">📅 수집 일수</div></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="stat-card"><div class="stat-number">{len(dates)}</div><div class="stat-label">Days Collected</div></div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
-        st.markdown("---")
+        st.markdown("<br>", unsafe_allow_html=True)
 
-        # 뉴스 카드 렌더링
+        # 뉴스 카드 렌더링 (Dark Minimal)
         for news in filtered:
             importance = news.get("중요도", "중")
-            badge = get_importance_badge(importance)
+            # 중요도 텍스트 스타일
+            if importance == "상":
+                badge_html = '<span class="badge-high">🔴 HIGH</span>'
+            elif importance == "중":
+                badge_html = '<span class="badge-mid">🟡 MID</span>'
+            else:
+                badge_html = '<span class="badge-low">🔵 LOW</span>'
+                
             category = news.get("카테고리", "기타")
             title = news.get("제목", "제목 없음")
             source = news.get("언론사", "알 수 없음")
@@ -462,79 +515,64 @@ try:
 
             st.markdown(
                 f'<div class="news-card">'
-                f'<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">'
+                f'<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem;">'
                 f'<span class="category-tag">{category}</span>'
-                f"{badge}"
-                f"</div>"
-                f'<h3 style="margin:0.5rem 0; font-size:1.25rem; font-weight:700; color:#1e293b;">{title}</h3>'
-                f'<p style="color:var(--text-muted); font-size:0.875rem; margin-bottom:1rem; font-weight:500;">{source} • {date}</p>'
-                f'<div style="background:#f8fafc; padding:1.2rem; border-radius:12px; border:1px solid #f1f5f9;">'
-                f'<p style="margin:0; color:#334155; line-height:1.6;">{summary}</p>'
-                f"</div>"
-                f"</div>",
+                f'{badge_html}'
+                f'</div>'
+                f'<h3>{title}</h3>'
+                f'<div class="news-meta">'
+                f'<span>{source}</span>'
+                f'<span style="opacity:0.5;">|</span>'
+                f'<span>{date}</span>'
+                f'</div>'
+                f'<div class="summary-box">'
+                f'<p>{summary}</p>'
+                f'</div>'
+                f'</div>',
                 unsafe_allow_html=True,
             )
 
-            # 원문 보기
+            # 원문 보기 (Streamlit Link Button 활용하되 여백 최소화)
             col_link, col_body = st.columns([1, 4])
             with col_link:
                 if link:
-                    st.link_button("🔗 원문 보기", link, use_container_width=True)
+                    st.link_button("↗ 원문 보기", link, use_container_width=True)
             with col_body:
                 body = news.get("본문 전문", "")
                 if body and body != "(본문 추출 실패)":
-                    with st.expander("📄 본문 전체 보기"):
+                    with st.expander("본문 전체 보기 (Expand)"):
                         st.write(body[:5000])
                         if len(body) > 5000:
                             st.caption("(본문이 길어 일부만 표시)")
 
-            st.markdown("")  # 간격
+            st.markdown("<div style='height:1rem;'></div>", unsafe_allow_html=True)  # 뉴스 간 간격
 
     else:
         st.info(
             "아직 수집된 뉴스가 없습니다.\n\n"
-            "1. ⚙️ **설정** 페이지에서 키워드를 등록하세요\n"
-            "2. 🔄 **지금 새로고침** 버튼을 클릭하세요"
+            "1. 사이드바 설정 영역에서 키워드를 확인하세요.\n"
+            "2. 상단의 '지금 새로고침' 버튼을 클릭하세요."
         )
 
 except Exception as e:
     st.warning("Google Sheets 연결을 확인해 주세요.")
     st.error(f"오류: {e}")
 
-    # 진단 정보 표시
-    with st.expander("🔍 연결 진단 정보"):
+    # 진단 정보 표시 (개발자 도구 숨김 처리 등으로 깔끔하게 보일 수 있으나 일단 유지)
+    with st.expander("System Diagnostic Info"):
         from config import GOOGLE_SHEET_ID, GOOGLE_CREDENTIALS_PATH
         import os
 
         st.write("**GOOGLE_SHEET_ID:**", GOOGLE_SHEET_ID[:10] + "..." if len(GOOGLE_SHEET_ID) > 10 else GOOGLE_SHEET_ID or "❌ 미설정")
-        st.write("**GOOGLE_SHEET_ID 길이:**", len(GOOGLE_SHEET_ID))
-
-        # Streamlit secrets 확인
+        
         try:
             has_gcp = "gcp_service_account" in st.secrets
             st.write("**st.secrets[gcp_service_account]:**", "✅ 있음" if has_gcp else "❌ 없음")
-            if has_gcp:
-                gcp = dict(st.secrets["gcp_service_account"])
-                st.write("**client_email:**", gcp.get("client_email", "❌ 없음"))
-                st.write("**project_id:**", gcp.get("project_id", "❌ 없음"))
-                st.write("**private_key 존재:**", "✅" if gcp.get("private_key") else "❌")
-                st.write("**type:**", gcp.get("type", "❌ 없음"))
         except Exception as se:
             st.write(f"**st.secrets 접근 오류:** {se}")
 
         st.write("**credentials 파일 존재:**", os.path.exists(GOOGLE_CREDENTIALS_PATH))
 
-        st.info(
-            "💡 확인사항:\n"
-            "1. Google Cloud Console에서 **Google Sheets API**와 **Google Drive API**가 활성화되었는지\n"
-            "2. Google Sheet가 서비스 계정 이메일(client_email)에 **편집자**로 공유되었는지\n"
-            "3. GOOGLE_SHEET_ID가 URL의 `/d/` 뒤 부분만 입력되었는지"
-        )
 
-
-# ── 푸터 ──────────────────────────────────────────────
-st.markdown("---")
-st.caption(
-    "AI 뉴스 비서 v1.0 | "
-    "Powered by 네이버 뉴스 API · Gemini · edge-tts · Streamlit"
-)
+# ── 푸터 (Streamlit 푸터가 아닌 커스텀 최소화 푸터) ────────────────
+st.markdown("<br><hr style='border-color:var(--border-color); opacity:0.3;'><div style='text-align:center; color:var(--text-muted); font-size:0.8rem; padding:1rem 0;'>AI News Intelligence Dashboard V2 <br>Powered by Gemini & Streamlit</div>", unsafe_allow_html=True)
