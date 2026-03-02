@@ -14,6 +14,14 @@ import logging
 from datetime import datetime
 
 import requests
+import nltk
+
+# newspaper4k가 필요로 하는 NLTK 데이터 자동 설치 (클라우드 환경 대응)
+try:
+    nltk.data.find('tokenizers/punkt_tab')
+except LookupError:
+    nltk.download('punkt_tab', quiet=True)
+
 from newspaper import Article
 
 from config import (
