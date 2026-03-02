@@ -9,6 +9,7 @@ ai_analyzer.py - Gemini API 기반 뉴스 분석 모듈
 
 import json
 import logging
+import time
 
 import google.generativeai as genai
 
@@ -66,7 +67,7 @@ class AIAnalyzer:
         """뉴스 배치에 대해 Gemini로 중요도·요약 생성"""
         news_texts = []
         for idx, news in enumerate(batch):
-            body_preview = news.get("본문 전문", "")[:2000]  # 토큰 절약
+            body_preview = news.get("본문 전문", "")[:500]  # 토큰 절약 (요약엔 500자 충분)
             news_texts.append(
                 f"[뉴스 {idx + 1}]\n"
                 f"제목: {news.get('제목', '')}\n"
