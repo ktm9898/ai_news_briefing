@@ -133,6 +133,24 @@
                     </svg>
                     설정
                 </button>
+                <button onclick="triggerCollection()" id="collectBtn"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded-lg hover:bg-emerald-700 transition-colors"
+                    title="GitHub Actions를 통해 최신 뉴스를 수집합니다">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    수집
+                </button>
+                <button onclick="toggleTTS()" id="ttsBtn"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 text-white text-xs font-semibold rounded-lg hover:bg-violet-700 transition-colors"
+                    title="AI 요약을 음성으로 읽어줍니다">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                    </svg>
+                    음성
+                </button>
                 <button onclick="loadData()" id="refreshBtn"
                     class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -791,6 +809,141 @@ function doPost(e) {
         }
         function hideError() {
             document.getElementById('errorArea').classList.add('hidden');
+        }
+
+        // ══════════════════════════════════════════
+        // ── 🔊 음성 브리핑 (Web Speech API) ──
+        // ══════════════════════════════════════════
+        let isSpeaking = false;
+        let speechQueue = [];
+        let currentUtterance = null;
+
+        function toggleTTS() {
+            if (isSpeaking) {
+                stopTTS();
+                return;
+            }
+            startTTS();
+        }
+
+        function startTTS() {
+            const filtered = getCurrentFiltered();
+            const newsWithSummary = filtered.filter(n => n.AI요약);
+
+            if (newsWithSummary.length === 0) {
+                alert('읽어줄 AI 요약이 있는 뉴스가 없습니다.');
+                return;
+            }
+
+            if (!window.speechSynthesis) {
+                alert('이 브라우저는 음성 읽기를 지원하지 않습니다.');
+                return;
+            }
+
+            // 버튼 상태 변경
+            isSpeaking = true;
+            const btn = document.getElementById('ttsBtn');
+            btn.classList.remove('bg-violet-600', 'hover:bg-violet-700');
+            btn.classList.add('bg-rose-600', 'hover:bg-rose-700');
+            btn.innerHTML = `<svg class="w-3.5 h-3.5 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/></svg> 정지`;
+
+            // 인트로 멘트
+            const today = new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
+            const intro = `${today} AI 뉴스 브리핑을 시작합니다. 총 ${newsWithSummary.length}건의 기사입니다.`;
+
+            speechQueue = [intro];
+            newsWithSummary.forEach((n, i) => {
+                speechQueue.push(`${i + 1}번째. ${n.카테고리}. ${n.제목}.`);
+                speechQueue.push(n.AI요약);
+            });
+            speechQueue.push('이상 AI 뉴스 브리핑을 마칩니다.');
+
+            speakNext();
+        }
+
+        function speakNext() {
+            if (speechQueue.length === 0 || !isSpeaking) {
+                stopTTS();
+                return;
+            }
+
+            const text = speechQueue.shift();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'ko-KR';
+            utterance.rate = 1.05;
+            utterance.pitch = 1.0;
+
+            // 한국어 음성 선택 시도
+            const voices = speechSynthesis.getVoices();
+            const koVoice = voices.find(v => v.lang.startsWith('ko'));
+            if (koVoice) utterance.voice = koVoice;
+
+            utterance.onend = () => speakNext();
+            utterance.onerror = () => speakNext();
+
+            currentUtterance = utterance;
+            speechSynthesis.speak(utterance);
+        }
+
+        function stopTTS() {
+            isSpeaking = false;
+            speechQueue = [];
+            speechSynthesis.cancel();
+
+            const btn = document.getElementById('ttsBtn');
+            btn.classList.remove('bg-rose-600', 'hover:bg-rose-700');
+            btn.classList.add('bg-violet-600', 'hover:bg-violet-700');
+            btn.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg> 음성`;
+        }
+
+        // 음성 목록 로드 (일부 브라우저에서 비동기)
+        speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
+
+        // ══════════════════════════════════════════
+        // ── 🔄 수동 뉴스 수집 (Apps Script 경유) ──
+        // ══════════════════════════════════════════
+        async function triggerCollection() {
+            const url = localStorage.getItem(STORAGE_KEY);
+            if (!url) {
+                alert('Apps Script URL을 먼저 설정해주세요. (⚙️ 설정)');
+                return;
+            }
+
+            const btn = document.getElementById('collectBtn');
+            const originalHTML = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = `<svg class="w-3.5 h-3.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> 수집 중...`;
+            btn.classList.add('opacity-70');
+
+            try {
+                const resp = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({ action: 'triggerWorkflow' }),
+                });
+                const result = await resp.json();
+
+                if (result.ok) {
+                    btn.innerHTML = `✅ 수집 시작됨!`;
+                    btn.classList.remove('bg-emerald-600');
+                    btn.classList.add('bg-emerald-500');
+                    // 2분 후 자동 새로고침
+                    setTimeout(() => {
+                        loadData();
+                        btn.innerHTML = originalHTML;
+                        btn.disabled = false;
+                        btn.classList.remove('opacity-70', 'bg-emerald-500');
+                        btn.classList.add('bg-emerald-600');
+                    }, 120000);
+                } else {
+                    throw new Error(result.error || '수집 트리거 실패');
+                }
+            } catch (err) {
+                alert('뉴스 수집 요청 실패: ' + err.message + '\n\n설정 > Apps Script URL이 올바른지 확인하고,\nApps Script에 triggerWorkflow 기능이 포함되어 있는지 확인하세요.');
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+                btn.classList.remove('opacity-70');
+            }
         }
     </script>
 </body>
