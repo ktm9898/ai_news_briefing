@@ -34,6 +34,14 @@ class AIAnalyzer:
         if not news_list:
             return news_list
 
+        # API 키 확인
+        if not GEMINI_API_KEY:
+            logger.error("GEMINI_API_KEY가 설정되지 않았습니다.")
+            for news in news_list:
+                news["AI 요약"] = "(GEMINI_API_KEY 미설정)"
+                news["중요도"] = "중"
+            return news_list
+
         # 뉴스를 배치로 처리 (API 호출 절약)
         batch_size = 5
         analyzed = []
@@ -44,10 +52,11 @@ class AIAnalyzer:
                 result = self._analyze_batch(batch)
                 analyzed.extend(result)
             except Exception as e:
-                logger.error(f"AI 분석 배치 실패 (인덱스 {i}~{i+len(batch)}): {e}")
-                # 실패 시 원본 유지
+                error_msg = str(e)
+                logger.error(f"AI 분석 배치 실패 (인덱스 {i}~{i+len(batch)}): {error_msg}")
+                # 실패 시 에러 내용을 기록
                 for news in batch:
-                    news["AI 요약"] = "(분석 실패)"
+                    news["AI 요약"] = f"(분석 실패: {error_msg[:100]})"
                     news["중요도"] = "중"
                 analyzed.extend(batch)
 
