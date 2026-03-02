@@ -46,15 +46,21 @@ class AIAnalyzer:
         # 뉴스를 배치로 처리 (한 번에 최대 30건)
         batch_size = 30
         analyzed = []
+        total_batches = (len(news_list) + batch_size - 1) // batch_size
+        
+        logger.info(f"AI 분석 시작: 총 {len(news_list)}건, {total_batches}개 배치로 처리 (배치 크기: {batch_size})")
 
         for i in range(0, len(news_list), batch_size):
+            batch_num = (i // batch_size) + 1
             batch = news_list[i:i + batch_size]
             try:
+                logger.info(f"배치 실행 중 ({batch_num}/{total_batches}): {len(batch)}건 분석 요청...")
                 result = self._analyze_batch(batch)
                 analyzed.extend(result)
+                logger.info(f"배치 완료 ({batch_num}/{total_batches})")
             except Exception as e:
                 error_msg = str(e)
-                logger.error(f"AI 분석 배치 실패 (인덱스 {i}~{i+len(batch)}): {error_msg}")
+                logger.error(f"AI 분석 배치 실패 (배치 {batch_num}, 인덱스 {i}~{i+len(batch)}): {error_msg}")
                 # 실패 시 에러 내용을 기록
                 for news in batch:
                     news["AI 요약"] = f"(분석 실패: {error_msg[:100]})"

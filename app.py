@@ -31,124 +31,189 @@ st.set_page_config(
 # ── 커스텀 CSS ─────────────────────────────────────────
 st.markdown("""
 <style>
-    /* 전체 폰트 */
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
-    html, body, [class*="css"] {
-        font-family: 'Noto Sans KR', sans-serif;
+    /* 전체 폰트 및 배경 */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+    
+    :root {
+        --primary: #6366f1;
+        --primary-light: #818cf8;
+        --secondary: #f43f5e;
+        --bg-glass: rgba(255, 255, 255, 0.7);
+        --text-main: #1e293b;
+        --text-muted: #64748b;
     }
 
-    /* 헤더 영역 */
+    html, body, [class*="css"] {
+        font-family: 'Inter', 'Noto Sans KR', sans-serif;
+        color: var(--text-main);
+    }
+
+    .stApp {
+        background: radial-gradient(circle at top right, #f8fafc, #f1f5f9);
+    }
+
+    /* 헤더 영역 - 글래스모피즘 */
     .main-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 2rem;
-        border-radius: 16px;
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.9) 0%, rgba(129, 140, 248, 0.8) 100%);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        padding: 2.5rem 1.5rem;
+        border-radius: 24px;
         color: white;
         margin-bottom: 2rem;
-        box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+        box-shadow: 0 10px 40px rgba(99, 102, 241, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.2);
     }
     .main-header h1 {
         margin: 0;
-        font-size: 2rem;
-        font-weight: 700;
+        font-size: 2.4rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
     }
     .main-header p {
-        margin: 0.5rem 0 0 0;
-        opacity: 0.85;
-        font-size: 1rem;
+        margin: 0.75rem 0 0 0;
+        opacity: 0.9;
+        font-size: 1.1rem;
+        font-weight: 400;
     }
 
-    /* 뉴스 카드 */
+    /* 뉴스 카드 - 미니멀 & 프리미엄 */
     .news-card {
         background: white;
-        border-radius: 12px;
-        padding: 1.5rem;
-        margin-bottom: 1rem;
-        border-left: 4px solid #667eea;
-        box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        border-radius: 20px;
+        padding: 1.8rem;
+        margin-bottom: 1.2rem;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
     }
     .news-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        transform: translateY(-4px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        border-color: var(--primary-light);
     }
 
     /* 중요도 배지 */
     .badge-high {
-        background: linear-gradient(135deg, #ff6b6b, #ee5a24);
-        color: white;
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
+        background: #fee2e2;
+        color: #ef4444;
+        padding: 0.3rem 0.8rem;
+        border-radius: 12px;
         font-size: 0.75rem;
-        font-weight: 600;
+        font-weight: 700;
+        border: 1px solid #fecaca;
     }
     .badge-mid {
-        background: linear-gradient(135deg, #feca57, #ff9f43);
-        color: #333;
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
+        background: #fef3c7;
+        color: #d97706;
+        padding: 0.3rem 0.8rem;
+        border-radius: 12px;
         font-size: 0.75rem;
-        font-weight: 600;
+        font-weight: 700;
+        border: 1px solid #fde68a;
     }
     .badge-low {
-        background: linear-gradient(135deg, #48dbfb, #0abde3);
-        color: white;
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
+        background: #e0f2fe;
+        color: #0284c7;
+        padding: 0.3rem 0.8rem;
+        border-radius: 12px;
         font-size: 0.75rem;
-        font-weight: 600;
+        font-weight: 700;
+        border: 1px solid #bae6fd;
     }
 
     /* 카테고리 태그 */
     .category-tag {
-        background: #f1f3f8;
-        color: #667eea;
-        padding: 0.2rem 0.6rem;
-        border-radius: 8px;
+        background: #f1f5f9;
+        color: #475569;
+        padding: 0.25rem 0.75rem;
+        border-radius: 10px;
         font-size: 0.8rem;
-        font-weight: 500;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
     }
 
     /* 통계 카드 */
     .stat-card {
         background: white;
-        border-radius: 12px;
+        border-radius: 20px;
         padding: 1.5rem;
         text-align: center;
-        box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        border: 1px solid #e2e8f0;
     }
     .stat-number {
-        font-size: 2rem;
-        font-weight: 700;
-        color: #667eea;
+        font-size: 2.2rem;
+        font-weight: 800;
+        color: var(--primary);
+        line-height: 1;
     }
     .stat-label {
-        color: #888;
-        font-size: 0.85rem;
-        margin-top: 0.25rem;
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+        font-weight: 500;
     }
 
     /* 오디오 플레이어 영역 */
     .audio-section {
-        background: linear-gradient(135deg, #2d3436 0%, #636e72 100%);
-        border-radius: 16px;
-        padding: 2rem;
+        background: #1e293b;
+        border-radius: 24px;
+        padding: 2.5rem;
         color: white;
         margin-bottom: 2rem;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .audio-section h3 {
+        color: white !important;
+        margin-top: 0 !important;
+        font-weight: 700;
     }
 
-    /* 사이드바 */
+    /* 사이드바 최적화 */
+    [data-testid="stSidebar"] {
+        background-color: #ffffff;
+        border-right: 1px solid #e2e8f0;
+    }
     .sidebar-info {
-        background: #f8f9fa;
-        border-radius: 8px;
-        padding: 1rem;
-        font-size: 0.85rem;
-        color: #666;
+        background: #f8fafc;
+        border-radius: 16px;
+        padding: 1.2rem;
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        border: 1px solid #f1f5f9;
     }
 
-    /* Streamlit 기본 버튼 오버라이드 */
+    /* 버튼 스타일 커스터마이징 */
     .stButton > button {
-        border-radius: 8px;
-        font-weight: 500;
+        border-radius: 12px !important;
+        font-weight: 600 !important;
+        padding: 0.5rem 1.5rem !important;
+        transition: all 0.2s !important;
+    }
+    
+    /* 모바일 최적화 미디어 쿼리 */
+    @media (max-width: 768px) {
+        .main-header h1 {
+            font-size: 1.8rem;
+        }
+        .main-header {
+            padding: 1.5rem 1rem;
+        }
+        .stat-card {
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .stat-number {
+            font-size: 1.6rem;
+        }
+        .news-card {
+            padding: 1.2rem;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -370,16 +435,17 @@ try:
         ]
 
         # 통계 카드
+        st.write("") # 간격
         stat1, stat2, stat3, stat4 = st.columns(4)
         with stat1:
-            st.metric("📊 전체 뉴스", f"{len(filtered)}건")
+            st.markdown(f'<div class="stat-card"><div class="stat-number">{len(filtered)}</div><div class="stat-label">📊 전체 뉴스</div></div>', unsafe_allow_html=True)
         with stat2:
             high_count = sum(1 for n in filtered if n.get("중요도") == "상")
-            st.metric("🔴 중요 뉴스", f"{high_count}건")
+            st.markdown(f'<div class="stat-card"><div class="stat-number">{high_count}</div><div class="stat-label">🔴 중요 뉴스</div></div>', unsafe_allow_html=True)
         with stat3:
-            st.metric("📁 카테고리", f"{len(categories)}개")
+            st.markdown(f'<div class="stat-card"><div class="stat-number">{len(categories)}</div><div class="stat-label">📁 카테고리</div></div>', unsafe_allow_html=True)
         with stat4:
-            st.metric("📅 수집 일수", f"{len(dates)}일")
+            st.markdown(f'<div class="stat-card"><div class="stat-number">{len(dates)}</div><div class="stat-label">📅 수집 일수</div></div>', unsafe_allow_html=True)
 
         st.markdown("---")
 
@@ -396,13 +462,15 @@ try:
 
             st.markdown(
                 f'<div class="news-card">'
-                f'<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">'
+                f'<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">'
                 f'<span class="category-tag">{category}</span>'
                 f"{badge}"
                 f"</div>"
-                f'<h4 style="margin:0.5rem 0;">{title}</h4>'
-                f'<p style="color:#888; font-size:0.85rem; margin:0;">{source} · {date}</p>'
-                f'<p style="margin:0.5rem 0; color:#555;">{summary}</p>'
+                f'<h3 style="margin:0.5rem 0; font-size:1.25rem; font-weight:700; color:#1e293b;">{title}</h3>'
+                f'<p style="color:var(--text-muted); font-size:0.875rem; margin-bottom:1rem; font-weight:500;">{source} • {date}</p>'
+                f'<div style="background:#f8fafc; padding:1.2rem; border-radius:12px; border:1px solid #f1f5f9;">'
+                f'<p style="margin:0; color:#334155; line-height:1.6;">{summary}</p>'
+                f"</div>"
                 f"</div>",
                 unsafe_allow_html=True,
             )
