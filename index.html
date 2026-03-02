@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -33,21 +34,41 @@
 
     <style>
         /* 스크롤바 커스텀 */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
 
         /* 뱃지 애니메이션 */
-        .badge-pulse { animation: pulse 2s infinite; }
+        .badge-pulse {
+            animation: pulse 2s infinite;
+        }
+
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.7;
+            }
         }
 
         /* 모달 오버레이 */
         .modal-overlay {
             transition: opacity 0.2s ease;
         }
+
         .modal-content {
             transition: transform 0.2s ease, opacity 0.2s ease;
         }
@@ -57,17 +78,32 @@
             border: 3px solid #e2e8f0;
             border-top: 3px solid #2563eb;
             border-radius: 50%;
-            width: 32px; height: 32px;
+            width: 32px;
+            height: 32px;
             animation: spin 0.8s linear infinite;
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
 
         /* 행 호버 효과 */
-        .news-row:hover { background-color: #f1f5f9; }
+        .news-row:hover {
+            background-color: #f1f5f9;
+        }
 
         /* 필터 칩 */
-        .chip { transition: all 0.15s ease; }
-        .chip.active { background-color: #2563eb; color: white; border-color: #2563eb; }
+        .chip {
+            transition: all 0.15s ease;
+        }
+
+        .chip.active {
+            background-color: #2563eb;
+            color: white;
+            border-color: #2563eb;
+        }
     </style>
 </head>
 
@@ -87,10 +123,21 @@
             </div>
             <div class="flex items-center gap-2">
                 <span id="lastUpdate" class="text-xs text-muted hidden sm:inline"></span>
+                <button onclick="openSettingsModal()"
+                    class="inline-flex items-center gap-1 px-2.5 py-1.5 border border-border text-xs font-medium rounded-lg hover:bg-gray-50 transition-colors">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    설정
+                </button>
                 <button onclick="loadData()" id="refreshBtn"
                     class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
                     새로고침
                 </button>
@@ -133,9 +180,12 @@
                 <!-- 중요도 -->
                 <div class="flex items-center gap-1.5">
                     <label class="text-xs font-semibold text-muted">중요도</label>
-                    <button onclick="toggleImportance('상')" data-imp="상" class="chip text-xs px-2.5 py-1 border border-border rounded-full font-medium active">상</button>
-                    <button onclick="toggleImportance('중')" data-imp="중" class="chip text-xs px-2.5 py-1 border border-border rounded-full font-medium active">중</button>
-                    <button onclick="toggleImportance('하')" data-imp="하" class="chip text-xs px-2.5 py-1 border border-border rounded-full font-medium active">하</button>
+                    <button onclick="toggleImportance('상')" data-imp="상"
+                        class="chip text-xs px-2.5 py-1 border border-border rounded-full font-medium active">상</button>
+                    <button onclick="toggleImportance('중')" data-imp="중"
+                        class="chip text-xs px-2.5 py-1 border border-border rounded-full font-medium active">중</button>
+                    <button onclick="toggleImportance('하')" data-imp="하"
+                        class="chip text-xs px-2.5 py-1 border border-border rounded-full font-medium active">하</button>
                 </div>
                 <!-- 카테고리 -->
                 <div class="flex items-center gap-2">
@@ -168,7 +218,8 @@
         <!-- 뉴스 테이블 -->
         <div id="newsArea" class="hidden">
             <!-- 테이블 헤더 (데스크톱) -->
-            <div class="hidden sm:flex items-center px-3 py-2 text-xs font-bold text-muted uppercase tracking-wider border-b-2 border-border">
+            <div
+                class="hidden sm:flex items-center px-3 py-2 text-xs font-bold text-muted uppercase tracking-wider border-b-2 border-border">
                 <div class="w-[8%]">상태</div>
                 <div class="w-[32%]">기사</div>
                 <div class="w-[42%]">요약</div>
@@ -187,15 +238,19 @@
     </main>
 
     <!-- ═══════════ 상세 모달 ═══════════ -->
-    <div id="detailModal" class="modal-overlay fixed inset-0 bg-black/50 z-[100] hidden flex items-end sm:items-center justify-center"
-         onclick="if(event.target===this) closeModal()">
-        <div class="modal-content bg-white w-full sm:max-w-xl sm:rounded-2xl rounded-t-2xl max-h-[85vh] overflow-y-auto">
+    <div id="detailModal"
+        class="modal-overlay fixed inset-0 bg-black/50 z-[100] hidden flex items-end sm:items-center justify-center"
+        onclick="if(event.target===this) closeModal()">
+        <div
+            class="modal-content bg-white w-full sm:max-w-xl sm:rounded-2xl rounded-t-2xl max-h-[85vh] overflow-y-auto">
             <!-- 모달 헤더 -->
             <div class="sticky top-0 bg-white border-b border-border px-5 py-3 flex items-center justify-between">
                 <h2 class="text-sm font-bold">기사 상세</h2>
-                <button onclick="closeModal()" class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-100">
+                <button onclick="closeModal()"
+                    class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-100">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
                     </svg>
                 </button>
             </div>
@@ -204,9 +259,65 @@
         </div>
     </div>
 
-    <!-- ═══════════ 설정 안내 모달 ═══════════ -->
-    <div id="setupModal" class="modal-overlay fixed inset-0 bg-black/50 z-[100] hidden flex items-center justify-center p-4"
-         onclick="if(event.target===this) document.getElementById('setupModal').classList.add('hidden')">
+    <!-- ═══════════ 키워드 설정 모달 ═══════════ -->
+    <div id="settingsModal"
+        class="modal-overlay fixed inset-0 bg-black/50 z-[100] hidden flex items-end sm:items-center justify-center"
+        onclick="if(event.target===this) closeSettingsModal()">
+        <div
+            class="modal-content bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl max-h-[85vh] overflow-y-auto">
+            <div class="sticky top-0 bg-white border-b border-border px-5 py-3 flex items-center justify-between">
+                <h2 class="text-sm font-bold">⚙️ 수집 키워드 관리</h2>
+                <button onclick="closeSettingsModal()"
+                    class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-100">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="px-5 py-4 space-y-4">
+                <!-- 새 키워드 추가 -->
+                <div class="bg-gray-50 rounded-xl p-3 space-y-2">
+                    <p class="text-xs font-bold text-muted uppercase">키워드 추가</p>
+                    <div class="flex gap-2">
+                        <input type="text" id="newCategory" placeholder="카테고리 (예: 상권)"
+                            class="flex-1 text-sm border border-border rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-accent outline-none">
+                        <input type="text" id="newKeyword" placeholder="키워드 (예: 소상공인 지원금)"
+                            class="flex-1 text-sm border border-border rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-accent outline-none">
+                        <button onclick="addKeyword()"
+                            class="px-3 py-1.5 bg-accent text-white text-xs font-semibold rounded-lg hover:bg-blue-700 whitespace-nowrap">
+                            + 추가
+                        </button>
+                    </div>
+                </div>
+                <!-- 키워드 목록 -->
+                <div>
+                    <p class="text-xs font-bold text-muted uppercase mb-2">등록된 키워드</p>
+                    <div id="settingsList" class="space-y-1">
+                        <p class="text-xs text-muted text-center py-4">불러오는 중...</p>
+                    </div>
+                </div>
+                <!-- Apps Script URL 설정 -->
+                <div class="border-t border-border pt-3">
+                    <p class="text-xs font-bold text-muted uppercase mb-2">🔗 Apps Script URL</p>
+                    <div class="flex gap-2">
+                        <input type="text" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/..."
+                            class="flex-1 border border-border rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-accent outline-none">
+                        <button onclick="saveScriptUrl()"
+                            class="px-3 py-1.5 bg-gray-800 text-white text-xs font-semibold rounded-lg hover:bg-gray-700">
+                            저장
+                        </button>
+                    </div>
+                    <p class="text-[10px] text-muted mt-1">구글 시트 > 확장 프로그램 > Apps Script에서 배포한 URL</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════ 초기 설정 모달 ═══════════ -->
+    <div id="setupModal"
+        class="modal-overlay fixed inset-0 bg-black/50 z-[100] hidden flex items-center justify-center p-4"
+        onclick="if(event.target===this) document.getElementById('setupModal').classList.add('hidden')">
         <div class="modal-content bg-white rounded-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto p-6">
             <h2 class="text-lg font-bold mb-3">⚙️ 초기 설정 안내</h2>
             <div class="space-y-3 text-sm text-gray-600">
@@ -217,9 +328,10 @@
                     <li><strong>배포 &gt; 새 배포</strong> → 유형: <strong>웹 앱</strong> → 액세스: <strong>모든 사용자</strong></li>
                     <li>생성된 URL을 복사하여 아래 입력란에 붙여넣기</li>
                 </ol>
-                <pre class="bg-gray-900 text-green-400 text-xs p-3 rounded-lg overflow-x-auto">function doGet(e) {
+                <pre class="bg-gray-900 text-green-400 text-[11px] p-3 rounded-lg overflow-x-auto leading-relaxed">function doGet(e) {
+  var tab = (e &amp;&amp; e.parameter.tab) || "News_Data";
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var ws = ss.getSheetByName("News_Data");
+  var ws = ss.getSheetByName(tab);
   var data = ws.getDataRange().getValues();
   var headers = data[0];
   var result = [];
@@ -233,11 +345,31 @@
   return ContentService
     .createTextOutput(JSON.stringify(result))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  var body = JSON.parse(e.postData.contents);
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ws = ss.getSheetByName("Settings");
+  if (body.action === "add") {
+    ws.appendRow([body.category, body.keyword, "TRUE"]);
+  } else if (body.action === "delete") {
+    ws.deleteRow(body.row + 1); // +1 for header
+  } else if (body.action === "toggle") {
+    var current = ws.getRange(body.row+1, 3).getValue();
+    ws.getRange(body.row+1, 3).setValue(
+      current === "TRUE" ? "FALSE" : "TRUE"
+    );
+  }
+  return ContentService
+    .createTextOutput(JSON.stringify({ok:true}))
+    .setMimeType(ContentService.MimeType.JSON);
 }</pre>
                 <div class="flex gap-2 mt-3">
-                    <input type="text" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/..." 
+                    <input type="text" id="setupUrlInput" placeholder="https://script.google.com/macros/s/..."
                         class="flex-1 border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-accent outline-none">
-                    <button onclick="saveScriptUrl()" class="px-4 py-2 bg-accent text-white text-sm font-semibold rounded-lg hover:bg-blue-700">
+                    <button onclick="saveSetupUrl()"
+                        class="px-4 py-2 bg-accent text-white text-sm font-semibold rounded-lg hover:bg-blue-700">
                         저장
                     </button>
                 </div>
@@ -247,174 +379,174 @@
 
     <!-- ═══════════ JavaScript ═══════════ -->
     <script>
-    // ── 전역 상태 ──
-    let allNews = [];
-    let activeImportance = new Set(['상', '중', '하']);
+        // ── 전역 상태 ──
+        let allNews = [];
+        let activeImportance = new Set(['상', '중', '하']);
 
-    const STORAGE_KEY = 'ai_news_script_url';
-    const CACHE_KEY = 'ai_news_cache';
+        const STORAGE_KEY = 'ai_news_script_url';
+        const CACHE_KEY = 'ai_news_cache';
 
-    // ── 초기화 ──
-    document.addEventListener('DOMContentLoaded', () => {
-        // 오늘 날짜를 필터 기본값으로
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('filterDate').value = today;
+        // ── 초기화 ──
+        document.addEventListener('DOMContentLoaded', () => {
+            // 오늘 날짜를 필터 기본값으로
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('filterDate').value = today;
 
-        // 필터 이벤트
-        document.getElementById('filterDate').addEventListener('change', applyFilters);
-        document.getElementById('filterCategory').addEventListener('change', applyFilters);
-        document.getElementById('filterSearch').addEventListener('input', applyFilters);
+            // 필터 이벤트
+            document.getElementById('filterDate').addEventListener('change', applyFilters);
+            document.getElementById('filterCategory').addEventListener('change', applyFilters);
+            document.getElementById('filterSearch').addEventListener('input', applyFilters);
 
-        // Script URL 확인
-        const url = localStorage.getItem(STORAGE_KEY);
-        if (!url) {
-            showSetupModal();
-        } else {
-            loadData();
-        }
-    });
+            // Script URL 확인
+            const url = localStorage.getItem(STORAGE_KEY);
+            if (!url) {
+                showSetupModal();
+            } else {
+                loadData();
+            }
+        });
 
-    // ── 데이터 로드 ──
-    async function loadData() {
-        const url = localStorage.getItem(STORAGE_KEY);
-        if (!url) { showSetupModal(); return; }
+        // ── 데이터 로드 ──
+        async function loadData() {
+            const url = localStorage.getItem(STORAGE_KEY);
+            if (!url) { showSetupModal(); return; }
 
-        showLoading(true);
-        hideError();
+            showLoading(true);
+            hideError();
 
-        try {
-            const resp = await fetch(url);
-            if (!resp.ok) throw new Error('HTTP ' + resp.status);
-            const data = await resp.json();
+            try {
+                const resp = await fetch(url);
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                const data = await resp.json();
 
-            allNews = data.map(row => ({
-                날짜: formatDate(row['날짜']),
-                카테고리: row['카테고리'] || '기타',
-                언론사: row['언론사'] || '',
-                제목: row['제목'] || '제목 없음',
-                네이버요약: row['네이버 요약'] || '',
-                본문: row['본문 전문'] || '',
-                링크: row['링크'] || '',
-                AI요약: row['AI 요약'] || '',
-                중요도: row['중요도'] || '중',
-            }));
+                allNews = data.map(row => ({
+                    날짜: formatDate(row['날짜']),
+                    카테고리: row['카테고리'] || '기타',
+                    언론사: row['언론사'] || '',
+                    제목: row['제목'] || '제목 없음',
+                    네이버요약: row['네이버 요약'] || '',
+                    본문: row['본문 전문'] || '',
+                    링크: row['링크'] || '',
+                    AI요약: row['AI 요약'] || '',
+                    중요도: row['중요도'] || '중',
+                }));
 
-            // 캐시
-            localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: allNews }));
-            document.getElementById('lastUpdate').textContent = '방금 갱신됨';
-            document.getElementById('lastUpdate').classList.remove('hidden');
-
-            populateFilters();
-            applyFilters();
-        } catch (err) {
-            console.error(err);
-            // 캐시 시도
-            const cache = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
-            if (cache && cache.data) {
-                allNews = cache.data;
-                const ago = Math.round((Date.now() - cache.ts) / 60000);
-                document.getElementById('lastUpdate').textContent = `${ago}분 전 캐시`;
+                // 캐시
+                localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: allNews }));
+                document.getElementById('lastUpdate').textContent = '방금 갱신됨';
                 document.getElementById('lastUpdate').classList.remove('hidden');
+
                 populateFilters();
                 applyFilters();
-            } else {
-                showError();
+            } catch (err) {
+                console.error(err);
+                // 캐시 시도
+                const cache = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+                if (cache && cache.data) {
+                    allNews = cache.data;
+                    const ago = Math.round((Date.now() - cache.ts) / 60000);
+                    document.getElementById('lastUpdate').textContent = `${ago}분 전 캐시`;
+                    document.getElementById('lastUpdate').classList.remove('hidden');
+                    populateFilters();
+                    applyFilters();
+                } else {
+                    showError();
+                }
+            } finally {
+                showLoading(false);
             }
-        } finally {
-            showLoading(false);
         }
-    }
 
-    // ── 날짜 포맷 ──
-    function formatDate(raw) {
-        if (!raw) return '';
-        if (typeof raw === 'string' && raw.includes('-')) return raw;
-        // 구글 시트의 Date 직렬화 처리
-        try {
-            const d = new Date(raw);
-            if (!isNaN(d)) return d.toISOString().split('T')[0];
-        } catch(e) {}
-        return String(raw);
-    }
-
-    // ── 필터 채우기 ──
-    function populateFilters() {
-        const cats = [...new Set(allNews.map(n => n.카테고리))].sort();
-        const sel = document.getElementById('filterCategory');
-        sel.innerHTML = '<option value="전체">전체</option>';
-        cats.forEach(c => {
-            const opt = document.createElement('option');
-            opt.value = c; opt.textContent = c;
-            sel.appendChild(opt);
-        });
-    }
-
-    // ── 중요도 토글 ──
-    function toggleImportance(level) {
-        if (activeImportance.has(level)) {
-            if (activeImportance.size <= 1) return; // 최소 1개
-            activeImportance.delete(level);
-        } else {
-            activeImportance.add(level);
+        // ── 날짜 포맷 ──
+        function formatDate(raw) {
+            if (!raw) return '';
+            if (typeof raw === 'string' && raw.includes('-')) return raw;
+            // 구글 시트의 Date 직렬화 처리
+            try {
+                const d = new Date(raw);
+                if (!isNaN(d)) return d.toISOString().split('T')[0];
+            } catch (e) { }
+            return String(raw);
         }
-        // UI 업데이트
-        document.querySelectorAll('[data-imp]').forEach(btn => {
-            btn.classList.toggle('active', activeImportance.has(btn.dataset.imp));
-        });
-        applyFilters();
-    }
 
-    // ── 필터 적용 ──
-    function applyFilters() {
-        const dateVal = document.getElementById('filterDate').value;
-        const catVal = document.getElementById('filterCategory').value;
-        const searchVal = document.getElementById('filterSearch').value.toLowerCase().trim();
-
-        const filtered = allNews.filter(n => {
-            if (dateVal && n.날짜 !== dateVal) return false;
-            if (!activeImportance.has(n.중요도)) return false;
-            if (catVal !== '전체' && n.카테고리 !== catVal) return false;
-            if (searchVal && !n.제목.toLowerCase().includes(searchVal)) return false;
-            return true;
-        });
-
-        // 최신순 정렬
-        filtered.sort((a, b) => b.날짜.localeCompare(a.날짜));
-
-        updateStats(filtered);
-        renderNews(filtered);
-    }
-
-    // ── 통계 업데이트 ──
-    function updateStats(data) {
-        document.getElementById('statTotal').textContent = data.length;
-        document.getElementById('statHigh').textContent = data.filter(n => n.중요도 === '상').length;
-        document.getElementById('statCat').textContent = new Set(data.map(n => n.카테고리)).size;
-        document.getElementById('statDays').textContent = new Set(data.map(n => n.날짜)).size;
-    }
-
-    // ── 뉴스 렌더링 ──
-    function renderNews(data) {
-        const container = document.getElementById('newsList');
-        const emptyEl = document.getElementById('emptyState');
-        const newsArea = document.getElementById('newsArea');
-
-        newsArea.classList.remove('hidden');
-
-        if (data.length === 0) {
-            container.innerHTML = '';
-            emptyEl.classList.remove('hidden');
-            return;
+        // ── 필터 채우기 ──
+        function populateFilters() {
+            const cats = [...new Set(allNews.map(n => n.카테고리))].sort();
+            const sel = document.getElementById('filterCategory');
+            sel.innerHTML = '<option value="전체">전체</option>';
+            cats.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c; opt.textContent = c;
+                sel.appendChild(opt);
+            });
         }
-        emptyEl.classList.add('hidden');
 
-        container.innerHTML = data.map((n, i) => {
-            const badgeColor = n.중요도 === '상' ? 'bg-rose-100 text-rose-700' :
-                               n.중요도 === '하' ? 'bg-sky-100 text-sky-700' :
-                                                   'bg-amber-100 text-amber-700';
-            const desc = n.네이버요약 || n.AI요약 || '요약 정보 없음';
+        // ── 중요도 토글 ──
+        function toggleImportance(level) {
+            if (activeImportance.has(level)) {
+                if (activeImportance.size <= 1) return; // 최소 1개
+                activeImportance.delete(level);
+            } else {
+                activeImportance.add(level);
+            }
+            // UI 업데이트
+            document.querySelectorAll('[data-imp]').forEach(btn => {
+                btn.classList.toggle('active', activeImportance.has(btn.dataset.imp));
+            });
+            applyFilters();
+        }
 
-            return `
+        // ── 필터 적용 ──
+        function applyFilters() {
+            const dateVal = document.getElementById('filterDate').value;
+            const catVal = document.getElementById('filterCategory').value;
+            const searchVal = document.getElementById('filterSearch').value.toLowerCase().trim();
+
+            const filtered = allNews.filter(n => {
+                if (dateVal && n.날짜 !== dateVal) return false;
+                if (!activeImportance.has(n.중요도)) return false;
+                if (catVal !== '전체' && n.카테고리 !== catVal) return false;
+                if (searchVal && !n.제목.toLowerCase().includes(searchVal)) return false;
+                return true;
+            });
+
+            // 최신순 정렬
+            filtered.sort((a, b) => b.날짜.localeCompare(a.날짜));
+
+            updateStats(filtered);
+            renderNews(filtered);
+        }
+
+        // ── 통계 업데이트 ──
+        function updateStats(data) {
+            document.getElementById('statTotal').textContent = data.length;
+            document.getElementById('statHigh').textContent = data.filter(n => n.중요도 === '상').length;
+            document.getElementById('statCat').textContent = new Set(data.map(n => n.카테고리)).size;
+            document.getElementById('statDays').textContent = new Set(data.map(n => n.날짜)).size;
+        }
+
+        // ── 뉴스 렌더링 ──
+        function renderNews(data) {
+            const container = document.getElementById('newsList');
+            const emptyEl = document.getElementById('emptyState');
+            const newsArea = document.getElementById('newsArea');
+
+            newsArea.classList.remove('hidden');
+
+            if (data.length === 0) {
+                container.innerHTML = '';
+                emptyEl.classList.remove('hidden');
+                return;
+            }
+            emptyEl.classList.add('hidden');
+
+            container.innerHTML = data.map((n, i) => {
+                const badgeColor = n.중요도 === '상' ? 'bg-rose-100 text-rose-700' :
+                    n.중요도 === '하' ? 'bg-sky-100 text-sky-700' :
+                        'bg-amber-100 text-amber-700';
+                const desc = n.네이버요약 || n.AI요약 || '요약 정보 없음';
+
+                return `
             <div class="news-row flex flex-col sm:flex-row sm:items-start px-3 py-3 border-b border-border cursor-pointer transition-colors"
                  onclick="openModal(${i})" data-idx="${i}">
                 <!-- 상태/분류 (모바일: 인라인) -->
@@ -438,20 +570,20 @@
                     <span class="text-xs text-muted">상세 →</span>
                 </div>
             </div>`;
-        }).join('');
-    }
+            }).join('');
+        }
 
-    // ── 모달 ──
-    function openModal(idx) {
-        const filtered = getCurrentFiltered();
-        const n = filtered[idx];
-        if (!n) return;
+        // ── 모달 ──
+        function openModal(idx) {
+            const filtered = getCurrentFiltered();
+            const n = filtered[idx];
+            if (!n) return;
 
-        const badgeColor = n.중요도 === '상' ? 'bg-rose-100 text-rose-700' :
-                           n.중요도 === '하' ? 'bg-sky-100 text-sky-700' :
-                                               'bg-amber-100 text-amber-700';
+            const badgeColor = n.중요도 === '상' ? 'bg-rose-100 text-rose-700' :
+                n.중요도 === '하' ? 'bg-sky-100 text-sky-700' :
+                    'bg-amber-100 text-amber-700';
 
-        document.getElementById('modalBody').innerHTML = `
+            document.getElementById('modalBody').innerHTML = `
             <div class="flex items-center gap-2 flex-wrap">
                 <span class="text-xs font-bold px-2.5 py-1 rounded-full ${badgeColor}">${n.중요도}</span>
                 <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">${n.카테고리}</span>
@@ -479,63 +611,184 @@
             </div>` : ''}
         `;
 
-        document.getElementById('detailModal').classList.remove('hidden');
-        document.body.style.overflow = 'hidden';
-    }
-
-    function closeModal() {
-        document.getElementById('detailModal').classList.add('hidden');
-        document.body.style.overflow = '';
-    }
-
-    // ESC로 모달 닫기
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
-
-    // 현재 필터된 데이터 가져오기 (모달 인덱스용)
-    function getCurrentFiltered() {
-        const dateVal = document.getElementById('filterDate').value;
-        const catVal = document.getElementById('filterCategory').value;
-        const searchVal = document.getElementById('filterSearch').value.toLowerCase().trim();
-
-        return allNews.filter(n => {
-            if (dateVal && n.날짜 !== dateVal) return false;
-            if (!activeImportance.has(n.중요도)) return false;
-            if (catVal !== '전체' && n.카테고리 !== catVal) return false;
-            if (searchVal && !n.제목.toLowerCase().includes(searchVal)) return false;
-            return true;
-        }).sort((a, b) => b.날짜.localeCompare(a.날짜));
-    }
-
-    // ── 설정 모달 ──
-    function showSetupModal() {
-        showLoading(false);
-        document.getElementById('setupModal').classList.remove('hidden');
-    }
-
-    function saveScriptUrl() {
-        const url = document.getElementById('scriptUrlInput').value.trim();
-        if (!url.startsWith('https://script.google.com/')) {
-            alert('올바른 Google Apps Script URL을 입력해주세요.');
-            return;
+            document.getElementById('detailModal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
         }
-        localStorage.setItem(STORAGE_KEY, url);
-        document.getElementById('setupModal').classList.add('hidden');
-        loadData();
-    }
 
-    // ── UI 헬퍼 ──
-    function showLoading(show) {
-        document.getElementById('loadingArea').classList.toggle('hidden', !show);
-        if (show) {
-            document.getElementById('newsArea').classList.add('hidden');
+        function closeModal() {
+            document.getElementById('detailModal').classList.add('hidden');
+            document.body.style.overflow = '';
         }
-    }
-    function showError() {
-        document.getElementById('errorArea').classList.remove('hidden');
-    }
-    function hideError() {
-        document.getElementById('errorArea').classList.add('hidden');
-    }
+
+        // ESC로 모달 닫기
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+        // 현재 필터된 데이터 가져오기 (모달 인덱스용)
+        function getCurrentFiltered() {
+            const dateVal = document.getElementById('filterDate').value;
+            const catVal = document.getElementById('filterCategory').value;
+            const searchVal = document.getElementById('filterSearch').value.toLowerCase().trim();
+
+            return allNews.filter(n => {
+                if (dateVal && n.날짜 !== dateVal) return false;
+                if (!activeImportance.has(n.중요도)) return false;
+                if (catVal !== '전체' && n.카테고리 !== catVal) return false;
+                if (searchVal && !n.제목.toLowerCase().includes(searchVal)) return false;
+                return true;
+            }).sort((a, b) => b.날짜.localeCompare(a.날짜));
+        }
+
+        // ── 초기 설정 모달 ──
+        function showSetupModal() {
+            showLoading(false);
+            document.getElementById('setupModal').classList.remove('hidden');
+        }
+
+        function saveSetupUrl() {
+            const url = document.getElementById('setupUrlInput').value.trim();
+            if (!url.startsWith('https://script.google.com/')) {
+                alert('올바른 Google Apps Script URL을 입력해주세요.');
+                return;
+            }
+            localStorage.setItem(STORAGE_KEY, url);
+            document.getElementById('setupModal').classList.add('hidden');
+            loadData();
+        }
+
+        function saveScriptUrl() {
+            const url = document.getElementById('scriptUrlInput').value.trim();
+            if (!url.startsWith('https://script.google.com/')) {
+                alert('올바른 Google Apps Script URL을 입력해주세요.');
+                return;
+            }
+            localStorage.setItem(STORAGE_KEY, url);
+            alert('URL이 저장되었습니다!');
+            loadData();
+        }
+
+        // ── 키워드 설정 관리 ──
+        function openSettingsModal() {
+            document.getElementById('settingsModal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            // 현재 URL 표시
+            const currentUrl = localStorage.getItem(STORAGE_KEY) || '';
+            document.getElementById('scriptUrlInput').value = currentUrl;
+            loadSettings();
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settingsModal').classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        async function loadSettings() {
+            const url = localStorage.getItem(STORAGE_KEY);
+            if (!url) {
+                document.getElementById('settingsList').innerHTML = '<p class="text-xs text-muted text-center py-4">Apps Script URL을 먼저 설정해주세요.</p>';
+                return;
+            }
+
+            document.getElementById('settingsList').innerHTML = '<p class="text-xs text-muted text-center py-4">불러오는 중...</p>';
+
+            try {
+                const resp = await fetch(url + '?tab=Settings');
+                const data = await resp.json();
+                renderSettings(data);
+            } catch (err) {
+                document.getElementById('settingsList').innerHTML = '<p class="text-xs text-rose-500 text-center py-4">설정을 불러올 수 없습니다.</p>';
+            }
+        }
+
+        function renderSettings(settings) {
+            const container = document.getElementById('settingsList');
+            if (settings.length === 0) {
+                container.innerHTML = '<p class="text-xs text-muted text-center py-4">등록된 키워드가 없습니다</p>';
+                return;
+            }
+            container.innerHTML = settings.map((s, i) => {
+                const isActive = String(s['활성화'] || '').toUpperCase() === 'TRUE';
+                return `
+            <div class="flex items-center gap-2 px-3 py-2 rounded-lg border border-border ${isActive ? 'bg-white' : 'bg-gray-50 opacity-60'}">
+                <button onclick="toggleSetting(${i + 1})" class="w-5 h-5 rounded border-2 flex items-center justify-center text-xs
+                    ${isActive ? 'border-accent bg-accent text-white' : 'border-gray-300 bg-white'}">
+                    ${isActive ? '✓' : ''}
+                </button>
+                <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">${s['카테고리'] || '기타'}</span>
+                <span class="text-sm font-medium flex-1">${s['키워드'] || ''}</span>
+                <button onclick="deleteSetting(${i + 1})" class="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-rose-500 hover:bg-rose-50 rounded transition-colors">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                </button>
+            </div>`;
+            }).join('');
+        }
+
+        async function addKeyword() {
+            const url = localStorage.getItem(STORAGE_KEY);
+            if (!url) { alert('Apps Script URL을 먼저 설정해주세요.'); return; }
+
+            const category = document.getElementById('newCategory').value.trim();
+            const keyword = document.getElementById('newKeyword').value.trim();
+            if (!category || !keyword) { alert('카테고리와 키워드를 모두 입력해주세요.'); return; }
+
+            try {
+                await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({ action: 'add', category, keyword }),
+                });
+                document.getElementById('newCategory').value = '';
+                document.getElementById('newKeyword').value = '';
+                loadSettings();
+            } catch (err) {
+                alert('키워드 추가 실패: ' + err.message);
+            }
+        }
+
+        async function deleteSetting(row) {
+            if (!confirm('이 키워드를 삭제하시겠습니까?')) return;
+            const url = localStorage.getItem(STORAGE_KEY);
+            try {
+                await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({ action: 'delete', row }),
+                });
+                loadSettings();
+            } catch (err) {
+                alert('삭제 실패: ' + err.message);
+            }
+        }
+
+        async function toggleSetting(row) {
+            const url = localStorage.getItem(STORAGE_KEY);
+            try {
+                await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({ action: 'toggle', row }),
+                });
+                loadSettings();
+            } catch (err) {
+                alert('변경 실패: ' + err.message);
+            }
+        }
+
+        // ── UI 헬퍼 ──
+        function showLoading(show) {
+            document.getElementById('loadingArea').classList.toggle('hidden', !show);
+            if (show) {
+                document.getElementById('newsArea').classList.add('hidden');
+            }
+        }
+        function showError() {
+            document.getElementById('errorArea').classList.remove('hidden');
+        }
+        function hideError() {
+            document.getElementById('errorArea').classList.add('hidden');
+        }
     </script>
 </body>
+
 </html>
