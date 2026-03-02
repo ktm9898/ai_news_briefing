@@ -1,13 +1,36 @@
 """
 config.py - 환경변수 로드 및 전역 설정
+
+인증 방식:
+  - 로컬: .env 파일에서 환경변수 로드
+  - Streamlit Cloud: st.secrets에서 환경변수 로드
 """
 
 import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-# .env 파일 로드
+# .env 파일 로드 (로컬 환경)
 load_dotenv()
+
+
+def _get_config(key: str, default: str = "") -> str:
+    """환경변수 우선순위: os.environ > st.secrets > default"""
+    # 1순위: os.environ (.env 또는 시스템 환경변수)
+    value = os.getenv(key, "")
+    if value:
+        return value
+
+    # 2순위: Streamlit Cloud Secrets
+    try:
+        import streamlit as st
+        if key in st.secrets:
+            return str(st.secrets[key])
+    except Exception:
+        pass
+
+    return default
+
 
 # ── 프로젝트 경로 ─────────────────────────────────────
 BASE_DIR = Path(__file__).resolve().parent
@@ -19,18 +42,18 @@ AUDIO_DIR.mkdir(exist_ok=True)
 CREDENTIALS_DIR.mkdir(exist_ok=True)
 
 # ── 네이버 검색 API ───────────────────────────────────
-NAVER_CLIENT_ID = os.getenv("NAVER_CLIENT_ID", "")
-NAVER_CLIENT_SECRET = os.getenv("NAVER_CLIENT_SECRET", "")
+NAVER_CLIENT_ID = _get_config("NAVER_CLIENT_ID")
+NAVER_CLIENT_SECRET = _get_config("NAVER_CLIENT_SECRET")
 NAVER_SEARCH_URL = "https://openapi.naver.com/v1/search/news.json"
 NAVER_NEWS_DISPLAY = 10  # 키워드당 최대 수집 건수
 
 # ── Google Gemini API ─────────────────────────────────
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-GEMINI_MODEL = "gemini-3-flash-preview"
+GEMINI_API_KEY = _get_config("GEMINI_API_KEY")
+GEMINI_MODEL = "gemini-2.0-flash"
 
 # ── Google Sheets ─────────────────────────────────────
-GOOGLE_SHEET_ID = os.getenv("GOOGLE_SHEET_ID", "")
-GOOGLE_CREDENTIALS_PATH = os.getenv(
+GOOGLE_SHEET_ID = _get_config("GOOGLE_SHEET_ID")
+GOOGLE_CREDENTIALS_PATH = _get_config(
     "GOOGLE_CREDENTIALS_PATH",
     str(CREDENTIALS_DIR / "service_account.json"),
 )
@@ -49,7 +72,7 @@ NEWS_DATA_HEADERS = [
 ]
 
 # ── TTS ────────────────────────────────────────────────
-TTS_VOICE = os.getenv("TTS_VOICE", "ko-KR-SunHiNeural")
+TTS_VOICE = _get_config("TTS_VOICE", "ko-KR-SunHiNeural")
 
 # ── 스케줄러 ───────────────────────────────────────────
 SCHEDULE_HOUR = 7   # 매일 실행 시각 (시)

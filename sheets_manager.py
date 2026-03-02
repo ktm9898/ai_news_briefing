@@ -3,8 +3,14 @@ sheets_manager.py - Google Sheets CRUD 관리 모듈
 
 Settings 탭: 카테고리-키워드 설정 관리
 News_Data 탭: 수집된 뉴스 통합 저장소
+
+인증 방식:
+  - 로컬: credentials/service_account.json 파일
+  - Streamlit Cloud: st.secrets["gcp_service_account"]
 """
 
+import os
+import json
 import gspread
 from google.oauth2.service_account import Credentials
 
@@ -24,13 +30,41 @@ SCOPES = [
 ]
 
 
+def _get_credentials():
+    """
+    환경에 따라 적절한 인증 방법 선택.
+    1순위: Streamlit Cloud Secrets (st.secrets)
+    2순위: 로컬 JSON 파일
+    """
+    # 1순위: Streamlit Cloud Secrets
+    try:
+        import streamlit as st
+        if "gcp_service_account" in st.secrets:
+            creds_dict = dict(st.secrets["gcp_service_account"])
+            creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
+            return creds
+    except Exception:
+        pass
+
+    # 2순위: 로컬 JSON 파일
+    if os.path.exists(GOOGLE_CREDENTIALS_PATH):
+        creds = Credentials.from_service_account_file(
+            GOOGLE_CREDENTIALS_PATH, scopes=SCOPES
+        )
+        return creds
+
+    raise FileNotFoundError(
+        "Google 인증 정보를 찾을 수 없습니다.\n"
+        "로컬: credentials/service_account.json 파일을 배치하세요.\n"
+        "Streamlit Cloud: Secrets에 [gcp_service_account] 섹션을 추가하세요."
+    )
+
+
 class SheetsManager:
     """Google Sheets 읽기/쓰기 관리자"""
 
     def __init__(self):
-        creds = Credentials.from_service_account_file(
-            GOOGLE_CREDENTIALS_PATH, scopes=SCOPES
-        )
+        creds = _get_credentials()
         self.client = gspread.authorize(creds)
         self.spreadsheet = self.client.open_by_key(GOOGLE_SHEET_ID)
         self._ensure_tabs()
