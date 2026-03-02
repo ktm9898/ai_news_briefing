@@ -49,7 +49,7 @@ NAVER_NEWS_DISPLAY = 10  # 키워드당 최대 수집 건수
 
 # ── Google Gemini API ─────────────────────────────────
 GEMINI_API_KEY = _get_config("GEMINI_API_KEY")
-GEMINI_MODEL = "gemini-2.0-flash"
+GEMINI_MODEL = "gemini-3-flash-preview"
 
 # ── Google Sheets ─────────────────────────────────────
 GOOGLE_SHEET_ID = _get_config("GOOGLE_SHEET_ID")
