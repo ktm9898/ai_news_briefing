@@ -430,11 +430,38 @@ try:
         )
 
 except Exception as e:
-    st.warning(
-        "Google Sheets 연결을 확인해 주세요.\n\n"
-        f"오류: {e}\n\n"
-        "`.env` 파일의 API 키와 `credentials/` 폴더의 서비스 계정 JSON을 확인하세요."
-    )
+    st.warning("Google Sheets 연결을 확인해 주세요.")
+    st.error(f"오류: {e}")
+
+    # 진단 정보 표시
+    with st.expander("🔍 연결 진단 정보"):
+        from config import GOOGLE_SHEET_ID, GOOGLE_CREDENTIALS_PATH
+        import os
+
+        st.write("**GOOGLE_SHEET_ID:**", GOOGLE_SHEET_ID[:10] + "..." if len(GOOGLE_SHEET_ID) > 10 else GOOGLE_SHEET_ID or "❌ 미설정")
+        st.write("**GOOGLE_SHEET_ID 길이:**", len(GOOGLE_SHEET_ID))
+
+        # Streamlit secrets 확인
+        try:
+            has_gcp = "gcp_service_account" in st.secrets
+            st.write("**st.secrets[gcp_service_account]:**", "✅ 있음" if has_gcp else "❌ 없음")
+            if has_gcp:
+                gcp = dict(st.secrets["gcp_service_account"])
+                st.write("**client_email:**", gcp.get("client_email", "❌ 없음"))
+                st.write("**project_id:**", gcp.get("project_id", "❌ 없음"))
+                st.write("**private_key 존재:**", "✅" if gcp.get("private_key") else "❌")
+                st.write("**type:**", gcp.get("type", "❌ 없음"))
+        except Exception as se:
+            st.write(f"**st.secrets 접근 오류:** {se}")
+
+        st.write("**credentials 파일 존재:**", os.path.exists(GOOGLE_CREDENTIALS_PATH))
+
+        st.info(
+            "💡 확인사항:\n"
+            "1. Google Cloud Console에서 **Google Sheets API**와 **Google Drive API**가 활성화되었는지\n"
+            "2. Google Sheet가 서비스 계정 이메일(client_email)에 **편집자**로 공유되었는지\n"
+            "3. GOOGLE_SHEET_ID가 URL의 `/d/` 뒤 부분만 입력되었는지"
+        )
 
 
 # ── 푸터 ──────────────────────────────────────────────
