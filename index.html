@@ -955,30 +955,26 @@ function doPost(e) {
             btn.classList.add('opacity-70');
 
             try {
-                const resp = await fetch(url, {
+                await fetch(url, {
                     method: 'POST',
+                    mode: 'no-cors',
                     headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify({ action: 'triggerWorkflow' }),
                 });
-                const result = await resp.json();
-
-                if (result.ok) {
-                    btn.innerHTML = `✅ 수집 시작됨!`;
-                    btn.classList.remove('bg-emerald-600');
-                    btn.classList.add('bg-emerald-500');
-                    // 2분 후 자동 새로고침
-                    setTimeout(() => {
-                        loadData();
-                        btn.innerHTML = originalHTML;
-                        btn.disabled = false;
-                        btn.classList.remove('opacity-70', 'bg-emerald-500');
-                        btn.classList.add('bg-emerald-600');
-                    }, 120000);
-                } else {
-                    throw new Error(result.error || '수집 트리거 실패');
-                }
+                // no-cors 모드에서는 응답을 읽을 수 없지만 요청은 전달됨
+                btn.innerHTML = `✅ 수집 시작됨!`;
+                btn.classList.remove('bg-emerald-600');
+                btn.classList.add('bg-emerald-500');
+                // 2분 후 자동 새로고침
+                setTimeout(() => {
+                    loadData();
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-70', 'bg-emerald-500');
+                    btn.classList.add('bg-emerald-600');
+                }, 120000);
             } catch (err) {
-                alert('뉴스 수집 요청 실패: ' + err.message + '\n\n설정 > Apps Script URL이 올바른지 확인하고,\nApps Script에 triggerWorkflow 기능이 포함되어 있는지 확인하세요.');
+                alert('뉴스 수집 요청 실패: ' + err.message);
                 btn.innerHTML = originalHTML;
                 btn.disabled = false;
                 btn.classList.remove('opacity-70');
