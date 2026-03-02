@@ -1,0 +1,28 @@
+# Environment
+.env
+__pycache__/
+*.pyc
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Credentials (서비스 계정 JSON 등 민감 정보)
+credentials/*.json
+credentials/*.p12
+
+# Audio files (생성된 브리핑 오디오)
+audio/*.mp3
+audio/*.wav
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+.DS_Store
+desktop.ini
