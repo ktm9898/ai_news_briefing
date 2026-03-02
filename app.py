@@ -28,7 +28,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed", # 모바일에선 기본으로 닫기
 )
 
-# ── 커스텀 CSS (Ultra Premium & Dark Minimal) ────────────────
+# ── 커스텀 CSS (Ultra Compact Admin Dashboard) ────────────────
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&display=swap');
@@ -48,6 +48,7 @@ st.markdown("""
         font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important;
         background-color: var(--bg-color) !important;
         color: var(--text-main) !important;
+        font-size: 14px !important; /* 전체 폰트 사이즈 대폭 축소 */
     }
 
     /* Streamlit 기본 요소 숨기기 (헤더바, 푸터 등) */
@@ -56,160 +57,170 @@ st.markdown("""
     footer {visibility: hidden;}
     .stDeployButton {display:none;}
     
-    /* 전체 패딩 최소화 */
+    /* 전체 패딩 극소화 */
     .block-container {
-        padding-top: 1rem !important;
-        padding-bottom: 2rem !important;
-        padding-left: 1rem !important;
-        padding-right: 1rem !important;
-        max-width: 1200px !important;
+        padding-top: 0.5rem !important;
+        padding-bottom: 1rem !important;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+        max-width: 1400px !important; /* 폭을 넓혀 더 많은 정보를 밀집 */
     }
 
-    /* 사이드바 다크화 */
+    /* 사이드바 다크화 및 패딩 축소 */
     [data-testid="stSidebar"] > div:first-child {
         background-color: var(--card-bg) !important;
         border-right: 1px solid var(--border-color);
-        padding-top: 2rem;
+        padding-top: 1rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
     }
     
-    /* 메인 타이틀 영역 (애플 감성 미니멀) */
+    /* 메인 타이틀 영역 (매우 작게) */
     .main-header {
-        padding: 3rem 0 2rem 0;
+        padding: 1rem 0 1rem 0;
         text-align: left;
         border-bottom: 1px solid var(--border-color);
-        margin-bottom: 2.5rem;
+        margin-bottom: 1rem;
     }
     .main-header h1 {
         margin: 0;
-        font-size: 3rem;
+        font-size: 1.6rem;
         font-weight: 800;
-        letter-spacing: -0.04em;
-        line-height: 1.1;
+        letter-spacing: -0.02em;
+        line-height: 1.2;
         color: var(--text-main);
     }
     .main-header p {
-        margin: 1rem 0 0 0;
-        font-size: 1.1rem;
+        margin: 0.3rem 0 0 0;
+        font-size: 0.9rem;
         font-weight: 400;
         color: var(--text-muted);
-        letter-spacing: -0.01em;
     }
 
-    /* 통계 카드 (Minimal Grid) */
+    /* 통계 카드 (Minimal Grid & Compact) */
     .stat-container {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
-        gap: 1rem;
-        margin-bottom: 3rem;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
     }
     .stat-card {
         background: transparent;
         border-radius: 0;
-        padding: 1rem 0;
+        padding: 0.5rem 0;
         text-align: left;
         border-top: 1px solid var(--border-color);
     }
     .stat-number {
-        font-size: 2.5rem;
+        font-size: 1.5rem;
         font-weight: 600;
         color: var(--primary);
-        letter-spacing: -0.04em;
     }
     .stat-label {
         color: var(--text-muted);
-        font-size: 0.85rem;
+        font-size: 0.75rem;
         font-weight: 500;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-top: 0.2rem;
+        margin-top: 0.1rem;
     }
 
-    /* 오디오 플레이어 (Soft Rectangle) */
+    /* 오디오 플레이어 (Soft Rectangle & Compact) */
     .audio-section {
         background: var(--card-bg);
-        border-radius: 16px;
-        padding: 2rem;
-        margin-bottom: 3rem;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
         border: 1px solid var(--border-color);
     }
     .audio-section h3 {
         color: var(--primary) !important;
-        margin: 0 0 0.5rem 0 !important;
-        font-size: 1.5rem;
+        margin: 0 0 0.3rem 0 !important;
+        font-size: 1rem;
         font-weight: 700;
-        letter-spacing: -0.02em;
     }
 
-    /* 뉴스 피드 카드 (Neo-Brutalism + Dark) */
+    /* 뉴스 피드 카드 (Compact List View) */
     .news-card {
         background: var(--card-bg);
-        border-radius: 12px;
-        padding: 2rem;
-        margin-bottom: 1.5rem;
+        border-radius: 6px;
+        padding: 0.8rem 1rem;
+        margin-bottom: 0.6rem;
         border: 1px solid var(--border-color);
-        transition: border-color 0.2s;
+        transition: border-color 0.1s;
     }
     .news-card:hover {
         border-color: #555555;
     }
     
-    /* 뉴스 제목 & 메타 */
+    /* 뉴스 제목 & 메타 (Compact) */
     .news-card h3 {
-        margin: 0 0 0.5rem 0;
-        font-size: 1.4rem;
+        margin: 0 0 0.2rem 0;
+        font-size: 1.05rem;
         font-weight: 600;
-        line-height: 1.4;
+        line-height: 1.3;
         color: var(--primary);
-        letter-spacing: -0.02em;
     }
+    
+    .news-desc {
+        font-size: 0.85rem;
+        color: #aaaaaa;
+        margin: 0 0 0.4rem 0;
+        line-height: 1.4;
+        display: -webkit-box;
+        -webkit-line-clamp: 2; /* 2줄까지만 표시 */
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
     .news-meta {
         color: var(--text-muted);
-        font-size: 0.85rem;
-        margin-bottom: 1.5rem;
+        font-size: 0.75rem;
+        margin-bottom: 0.6rem;
         font-weight: 400;
         display: flex;
         align-items: center;
-        gap: 0.8rem;
+        gap: 0.5rem;
     }
 
-    /* 본문 요약 박스 */
+    /* 본문 요약 박스 (Compact) */
     .summary-box {
         background: rgba(255, 255, 255, 0.03);
-        padding: 1.5rem;
-        border-radius: 8px;
+        padding: 0.6rem 0.8rem;
+        border-radius: 4px;
         border-left: 2px solid #444;
     }
     .summary-box p {
         margin: 0;
         color: #d1d5db;
-        line-height: 1.7;
-        font-size: 1rem;
+        line-height: 1.5;
+        font-size: 0.85rem;
         font-weight: 300;
     }
 
-    /* 태그 및 배지 (Muted Colors) */
+    /* 태그 및 배지 (Muted Colors & Small) */
     .category-tag {
         background: rgba(255, 255, 255, 0.1);
         color: var(--text-main);
-        padding: 0.3rem 0.6rem;
-        border-radius: 6px;
-        font-size: 0.75rem;
+        padding: 0.1rem 0.4rem;
+        border-radius: 4px;
+        font-size: 0.65rem;
         font-weight: 600;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
     }
-    .badge-high { color: #f87171; font-weight: 600; font-size: 0.8rem; }
-    .badge-mid { color: #fbbf24; font-weight: 600; font-size: 0.8rem; }
-    .badge-low { color: #60a5fa; font-weight: 600; font-size: 0.8rem; }
+    .badge-high { color: #f87171; font-weight: 600; font-size: 0.65rem; }
+    .badge-mid { color: #fbbf24; font-weight: 600; font-size: 0.65rem; }
+    .badge-low { color: #60a5fa; font-weight: 600; font-size: 0.65rem; }
 
-    /* Streamlit 기본 탭/버튼 커스텀 (Dark 모드) */
+    /* Streamlit 기본 버튼 커스텀 (Tiny) */
     .stButton > button {
         background-color: var(--primary) !important;
         color: var(--bg-color) !important;
         border: none !important;
-        border-radius: 8px !important;
+        border-radius: 4px !important;
         font-weight: 600 !important;
-        padding: 0.6rem 1.5rem !important;
+        padding: 0.3rem 0.8rem !important;
+        font-size: 0.85rem !important;
     }
     .stButton > button:hover {
         background-color: #e5e5e5 !important;
@@ -219,44 +230,27 @@ st.markdown("""
     /* 모바일 초밀착 최적화 */
     @media (max-width: 768px) {
         .block-container {
-            padding-top: 0 !important; /* 상단 여백 완벽 제거 */
-            padding-left: 0.8rem !important;
-            padding-right: 0.8rem !important;
-        }
-        .main-header {
-            padding: 2rem 0 1.5rem 0;
-            margin-bottom: 1.5rem;
-        }
-        .main-header h1 {
-            font-size: 2.2rem;
+            padding-left: 0.4rem !important;
+            padding-right: 0.4rem !important;
         }
         
-        /* 모바일에선 스택형으로 */
+        /* 모바일에선 스택형 2x2 유지하되 간격 극소화 */
         .stat-container {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-        .stat-card {
-            border-top: none;
-            border-left: 2px solid var(--border-color);
-            padding: 0 0 0 1rem;
-        }
-        .stat-number { font-size: 2rem; }
-        
-        .news-card {
-            padding: 1.2rem;
+            gap: 0.3rem;
             margin-bottom: 1rem;
         }
+        .stat-card {
+            border-left: 1px solid var(--border-color);
+            padding: 0 0 0 0.5rem;
+        }
+        .stat-number { font-size: 1.2rem; }
+        
+        .news-card {
+            padding: 0.6rem 0.8rem;
+            margin-bottom: 0.4rem;
+        }
         .news-card h3 {
-            font-size: 1.2rem;
-        }
-        .summary-box {
-            padding: 1rem;
-        }
-        .audio-section {
-            padding: 1.5rem;
-            border-radius: 12px;
+            font-size: 0.95rem;
         }
     }
 </style>
@@ -509,9 +503,13 @@ try:
             category = news.get("카테고리", "기타")
             title = news.get("제목", "제목 없음")
             source = news.get("언론사", "알 수 없음")
+            naver_desc = news.get("네이버 요약", "")
             summary = news.get("AI 요약", "")
             link = news.get("링크", "")
             date = news.get("날짜", "")
+
+            # 네이버 요약이 있으면 표시, 없으면 무시
+            naver_desc_html = f'<div class="news-desc">{naver_desc}</div>' if naver_desc else ''
 
             st.markdown(
                 f'<div class="news-card">'
@@ -520,6 +518,7 @@ try:
                 f'{badge_html}'
                 f'</div>'
                 f'<h3>{title}</h3>'
+                f'{naver_desc_html}'
                 f'<div class="news-meta">'
                 f'<span>{source}</span>'
                 f'<span style="opacity:0.5;">|</span>'

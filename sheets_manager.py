@@ -165,6 +165,7 @@ class SheetsManager:
                 news.get("링크", ""),
                 news.get("AI 요약", ""),
                 news.get("중요도", ""),
+                news.get("네이버 요약", ""),
             ])
 
         # 배치 추가 (API 호출 절약)

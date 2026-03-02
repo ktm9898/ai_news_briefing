@@ -135,6 +135,7 @@ class NewsCollector:
                     link = item["link"]  # 네이버 링크 사용
 
             title = self._clean_html(item.get("title", ""))
+            description = self._clean_html(item.get("description", ""))
             source = self._extract_source(
                 item.get("originallink", ""),
                 item.get("link", ""),
@@ -149,6 +150,7 @@ class NewsCollector:
                 "링크": link,
                 "AI 요약": "",   # 이후 AI 분석 단계에서 채움
                 "중요도": "",    # 이후 AI 분석 단계에서 채움
+                "네이버 요약": description, # 기사 목록 표시용
             })
 
             existing_links.add(link)  # 같은 배치 내 중복 방지
