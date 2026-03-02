@@ -3,33 +3,23 @@ config.py - 환경변수 로드 및 전역 설정
 
 인증 방식:
   - 로컬: .env 파일에서 환경변수 로드
-  - Streamlit Cloud: st.secrets에서 환경변수 로드
+  - GitHub Actions: Repository Secrets → 환경변수
 """
 
 import os
 from pathlib import Path
-from dotenv import load_dotenv
 
-# .env 파일 로드 (로컬 환경)
-load_dotenv()
+# .env 파일 로드 (로컬 환경, 없으면 무시)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 
 def _get_config(key: str, default: str = "") -> str:
-    """환경변수 우선순위: os.environ > st.secrets > default"""
-    # 1순위: os.environ (.env 또는 시스템 환경변수)
-    value = os.getenv(key, "")
-    if value:
-        return value
-
-    # 2순위: Streamlit Cloud Secrets
-    try:
-        import streamlit as st
-        if key in st.secrets:
-            return str(st.secrets[key])
-    except Exception:
-        pass
-
-    return default
+    """환경변수에서 설정값 로드"""
+    return os.getenv(key, default)
 
 
 # ── 프로젝트 경로 ─────────────────────────────────────

@@ -6,11 +6,13 @@ News_Data 탭: 수집된 뉴스 통합 저장소
 
 인증 방식:
   - 로컬: credentials/service_account.json 파일
-  - Streamlit Cloud: st.secrets["gcp_service_account"]
+  - GitHub Actions: GOOGLE_CREDENTIALS_JSON 환경변수 (base64)
 """
 
 import os
 import json
+import base64
+import tempfile
 import gspread
 from google.oauth2.service_account import Credentials
 
@@ -33,18 +35,19 @@ SCOPES = [
 def _get_credentials():
     """
     환경에 따라 적절한 인증 방법 선택.
-    1순위: Streamlit Cloud Secrets (st.secrets)
+    1순위: GOOGLE_CREDENTIALS_JSON 환경변수 (base64 인코딩된 서비스 계정 JSON)
     2순위: 로컬 JSON 파일
     """
-    # 1순위: Streamlit Cloud Secrets
-    try:
-        import streamlit as st
-        if "gcp_service_account" in st.secrets:
-            creds_dict = dict(st.secrets["gcp_service_account"])
+    # 1순위: 환경변수에서 base64 디코딩 (GitHub Actions용)
+    creds_b64 = os.getenv("GOOGLE_CREDENTIALS_JSON", "")
+    if creds_b64:
+        try:
+            creds_json = base64.b64decode(creds_b64).decode("utf-8")
+            creds_dict = json.loads(creds_json)
             creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
             return creds
-    except Exception:
-        pass
+        except Exception:
+            pass
 
     # 2순위: 로컬 JSON 파일
     if os.path.exists(GOOGLE_CREDENTIALS_PATH):
@@ -56,7 +59,7 @@ def _get_credentials():
     raise FileNotFoundError(
         "Google 인증 정보를 찾을 수 없습니다.\n"
         "로컬: credentials/service_account.json 파일을 배치하세요.\n"
-        "Streamlit Cloud: Secrets에 [gcp_service_account] 섹션을 추가하세요."
+        "GitHub Actions: GOOGLE_CREDENTIALS_JSON 시크릿을 설정하세요."
     )
 
 

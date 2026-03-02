@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 뉴스 비서 | 소상공인 뉴스 대시보드</title>
+    <meta name="description" content="AI가 매일 수집·분석하는 소상공인 종합지원 뉴스 브리핑 대시보드">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Pretendard -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Pretendard', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#0f172a',
+                        accent: '#2563eb',
+                        muted: '#64748b',
+                        surface: '#f8fafc',
+                        border: '#e2e8f0',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* 스크롤바 커스텀 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+        /* 뱃지 애니메이션 */
+        .badge-pulse { animation: pulse 2s infinite; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* 모달 오버레이 */
+        .modal-overlay {
+            transition: opacity 0.2s ease;
+        }
+        .modal-content {
+            transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+
+        /* 로딩 스피너 */
+        .spinner {
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #2563eb;
+            border-radius: 50%;
+            width: 32px; height: 32px;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* 행 호버 효과 */
+        .news-row:hover { background-color: #f1f5f9; }
+
+        /* 필터 칩 */
+        .chip { transition: all 0.15s ease; }
+        .chip.active { background-color: #2563eb; color: white; border-color: #2563eb; }
+    </style>
+</head>
+
+<body class="bg-gray-50 font-sans text-primary min-h-screen">
+
+    <!-- ═══════════ 헤더 ═══════════ -->
+    <header class="bg-white border-b border-border sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-accent rounded-lg flex items-center justify-center">
+                    <span class="text-white text-sm font-bold">AI</span>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-tight leading-tight">뉴스 비서</h1>
+                    <p class="text-xs text-muted">소상공인 종합지원 AI 뉴스</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <span id="lastUpdate" class="text-xs text-muted hidden sm:inline"></span>
+                <button onclick="loadData()" id="refreshBtn"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    새로고침
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- ═══════════ 메인 ═══════════ -->
+    <main class="max-w-7xl mx-auto px-4 py-4">
+
+        <!-- 통계 카드 -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            <div class="bg-white rounded-xl border border-border p-3">
+                <p class="text-xs font-semibold text-muted uppercase tracking-wide">총 기사</p>
+                <p id="statTotal" class="text-2xl font-bold mt-0.5">-</p>
+            </div>
+            <div class="bg-white rounded-xl border border-border p-3">
+                <p class="text-xs font-semibold text-muted uppercase tracking-wide">중요 (상)</p>
+                <p id="statHigh" class="text-2xl font-bold mt-0.5 text-rose-600">-</p>
+            </div>
+            <div class="bg-white rounded-xl border border-border p-3">
+                <p class="text-xs font-semibold text-muted uppercase tracking-wide">카테고리</p>
+                <p id="statCat" class="text-2xl font-bold mt-0.5 text-accent">-</p>
+            </div>
+            <div class="bg-white rounded-xl border border-border p-3">
+                <p class="text-xs font-semibold text-muted uppercase tracking-wide">수집 일수</p>
+                <p id="statDays" class="text-2xl font-bold mt-0.5 text-emerald-600">-</p>
+            </div>
+        </div>
+
+        <!-- 필터 바 -->
+        <div class="bg-white rounded-xl border border-border p-3 mb-4">
+            <div class="flex flex-wrap items-center gap-3">
+                <!-- 날짜 -->
+                <div class="flex items-center gap-2">
+                    <label class="text-xs font-semibold text-muted">날짜</label>
+                    <input type="date" id="filterDate"
+                        class="text-sm border border-border rounded-lg px-2 py-1 focus:ring-2 focus:ring-accent focus:border-accent outline-none">
+                </div>
+                <!-- 중요도 -->
+                <div class="flex items-center gap-1.5">
+                    <label class="text-xs font-semibold text-muted">중요도</label>
+                    <button onclick="toggleImportance('상')" data-imp="상" class="chip text-xs px-2.5 py-1 border border-border rounded-full font-medium active">상</button>
+                    <button onclick="toggleImportance('중')" data-imp="중" class="chip text-xs px-2.5 py-1 border border-border rounded-full font-medium active">중</button>
+                    <button onclick="toggleImportance('하')" data-imp="하" class="chip text-xs px-2.5 py-1 border border-border rounded-full font-medium active">하</button>
+                </div>
+                <!-- 카테고리 -->
+                <div class="flex items-center gap-2">
+                    <label class="text-xs font-semibold text-muted">분류</label>
+                    <select id="filterCategory"
+                        class="text-sm border border-border rounded-lg px-2 py-1 focus:ring-2 focus:ring-accent outline-none">
+                        <option value="전체">전체</option>
+                    </select>
+                </div>
+                <!-- 검색 -->
+                <div class="flex-1 min-w-[150px]">
+                    <input type="text" id="filterSearch" placeholder="제목 검색..."
+                        class="w-full text-sm border border-border rounded-lg px-3 py-1 focus:ring-2 focus:ring-accent outline-none">
+                </div>
+            </div>
+        </div>
+
+        <!-- 로딩 -->
+        <div id="loadingArea" class="flex flex-col items-center justify-center py-16">
+            <div class="spinner mb-3"></div>
+            <p class="text-sm text-muted">뉴스 데이터를 불러오는 중...</p>
+        </div>
+
+        <!-- 에러 -->
+        <div id="errorArea" class="hidden bg-rose-50 border border-rose-200 rounded-xl p-4 text-center mb-4">
+            <p class="text-sm text-rose-600 font-medium">⚠️ 데이터를 불러올 수 없습니다</p>
+            <p class="text-xs text-rose-400 mt-1">Google Apps Script URL을 확인해주세요</p>
+        </div>
+
+        <!-- 뉴스 테이블 -->
+        <div id="newsArea" class="hidden">
+            <!-- 테이블 헤더 (데스크톱) -->
+            <div class="hidden sm:flex items-center px-3 py-2 text-xs font-bold text-muted uppercase tracking-wider border-b-2 border-border">
+                <div class="w-[8%]">상태</div>
+                <div class="w-[32%]">기사</div>
+                <div class="w-[42%]">요약</div>
+                <div class="w-[18%] text-right">액션</div>
+            </div>
+
+            <!-- 뉴스 행 컨테이너 -->
+            <div id="newsList"></div>
+
+            <!-- 빈 데이터 -->
+            <div id="emptyState" class="hidden text-center py-12">
+                <p class="text-4xl mb-2">📭</p>
+                <p class="text-sm text-muted font-medium">해당 조건에 맞는 뉴스가 없습니다</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- ═══════════ 상세 모달 ═══════════ -->
+    <div id="detailModal" class="modal-overlay fixed inset-0 bg-black/50 z-[100] hidden flex items-end sm:items-center justify-center"
+         onclick="if(event.target===this) closeModal()">
+        <div class="modal-content bg-white w-full sm:max-w-xl sm:rounded-2xl rounded-t-2xl max-h-[85vh] overflow-y-auto">
+            <!-- 모달 헤더 -->
+            <div class="sticky top-0 bg-white border-b border-border px-5 py-3 flex items-center justify-between">
+                <h2 class="text-sm font-bold">기사 상세</h2>
+                <button onclick="closeModal()" class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-100">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <!-- 모달 내용 -->
+            <div id="modalBody" class="px-5 py-4 space-y-4"></div>
+        </div>
+    </div>
+
+    <!-- ═══════════ 설정 안내 모달 ═══════════ -->
+    <div id="setupModal" class="modal-overlay fixed inset-0 bg-black/50 z-[100] hidden flex items-center justify-center p-4"
+         onclick="if(event.target===this) document.getElementById('setupModal').classList.add('hidden')">
+        <div class="modal-content bg-white rounded-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto p-6">
+            <h2 class="text-lg font-bold mb-3">⚙️ 초기 설정 안내</h2>
+            <div class="space-y-3 text-sm text-gray-600">
+                <p>이 대시보드가 구글 시트의 뉴스 데이터를 읽으려면 <strong>Google Apps Script</strong>를 한 번만 설정하면 됩니다.</p>
+                <ol class="list-decimal pl-5 space-y-2">
+                    <li>구글 시트를 열고 <strong>확장 프로그램 &gt; Apps Script</strong> 클릭</li>
+                    <li>아래 코드를 붙여넣고 저장</li>
+                    <li><strong>배포 &gt; 새 배포</strong> → 유형: <strong>웹 앱</strong> → 액세스: <strong>모든 사용자</strong></li>
+                    <li>생성된 URL을 복사하여 아래 입력란에 붙여넣기</li>
+                </ol>
+                <pre class="bg-gray-900 text-green-400 text-xs p-3 rounded-lg overflow-x-auto">function doGet(e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ws = ss.getSheetByName("News_Data");
+  var data = ws.getDataRange().getValues();
+  var headers = data[0];
+  var result = [];
+  for (var i = 1; i &lt; data.length; i++) {
+    var row = {};
+    for (var j = 0; j &lt; headers.length; j++) {
+      row[headers[j]] = data[i][j];
+    }
+    result.push(row);
+  }
+  return ContentService
+    .createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
+}</pre>
+                <div class="flex gap-2 mt-3">
+                    <input type="text" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/..." 
+                        class="flex-1 border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-accent outline-none">
+                    <button onclick="saveScriptUrl()" class="px-4 py-2 bg-accent text-white text-sm font-semibold rounded-lg hover:bg-blue-700">
+                        저장
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════ JavaScript ═══════════ -->
+    <script>
+    // ── 전역 상태 ──
+    let allNews = [];
+    let activeImportance = new Set(['상', '중', '하']);
+
+    const STORAGE_KEY = 'ai_news_script_url';
+    const CACHE_KEY = 'ai_news_cache';
+
+    // ── 초기화 ──
+    document.addEventListener('DOMContentLoaded', () => {
+        // 오늘 날짜를 필터 기본값으로
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('filterDate').value = today;
+
+        // 필터 이벤트
+        document.getElementById('filterDate').addEventListener('change', applyFilters);
+        document.getElementById('filterCategory').addEventListener('change', applyFilters);
+        document.getElementById('filterSearch').addEventListener('input', applyFilters);
+
+        // Script URL 확인
+        const url = localStorage.getItem(STORAGE_KEY);
+        if (!url) {
+            showSetupModal();
+        } else {
+            loadData();
+        }
+    });
+
+    // ── 데이터 로드 ──
+    async function loadData() {
+        const url = localStorage.getItem(STORAGE_KEY);
+        if (!url) { showSetupModal(); return; }
+
+        showLoading(true);
+        hideError();
+
+        try {
+            const resp = await fetch(url);
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            const data = await resp.json();
+
+            allNews = data.map(row => ({
+                날짜: formatDate(row['날짜']),
+                카테고리: row['카테고리'] || '기타',
+                언론사: row['언론사'] || '',
+                제목: row['제목'] || '제목 없음',
+                네이버요약: row['네이버 요약'] || '',
+                본문: row['본문 전문'] || '',
+                링크: row['링크'] || '',
+                AI요약: row['AI 요약'] || '',
+                중요도: row['중요도'] || '중',
+            }));
+
+            // 캐시
+            localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: allNews }));
+            document.getElementById('lastUpdate').textContent = '방금 갱신됨';
+            document.getElementById('lastUpdate').classList.remove('hidden');
+
+            populateFilters();
+            applyFilters();
+        } catch (err) {
+            console.error(err);
+            // 캐시 시도
+            const cache = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+            if (cache && cache.data) {
+                allNews = cache.data;
+                const ago = Math.round((Date.now() - cache.ts) / 60000);
+                document.getElementById('lastUpdate').textContent = `${ago}분 전 캐시`;
+                document.getElementById('lastUpdate').classList.remove('hidden');
+                populateFilters();
+                applyFilters();
+            } else {
+                showError();
+            }
+        } finally {
+            showLoading(false);
+        }
+    }
+
+    // ── 날짜 포맷 ──
+    function formatDate(raw) {
+        if (!raw) return '';
+        if (typeof raw === 'string' && raw.includes('-')) return raw;
+        // 구글 시트의 Date 직렬화 처리
+        try {
+            const d = new Date(raw);
+            if (!isNaN(d)) return d.toISOString().split('T')[0];
+        } catch(e) {}
+        return String(raw);
+    }
+
+    // ── 필터 채우기 ──
+    function populateFilters() {
+        const cats = [...new Set(allNews.map(n => n.카테고리))].sort();
+        const sel = document.getElementById('filterCategory');
+        sel.innerHTML = '<option value="전체">전체</option>';
+        cats.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c; opt.textContent = c;
+            sel.appendChild(opt);
+        });
+    }
+
+    // ── 중요도 토글 ──
+    function toggleImportance(level) {
+        if (activeImportance.has(level)) {
+            if (activeImportance.size <= 1) return; // 최소 1개
+            activeImportance.delete(level);
+        } else {
+            activeImportance.add(level);
+        }
+        // UI 업데이트
+        document.querySelectorAll('[data-imp]').forEach(btn => {
+            btn.classList.toggle('active', activeImportance.has(btn.dataset.imp));
+        });
+        applyFilters();
+    }
+
+    // ── 필터 적용 ──
+    function applyFilters() {
+        const dateVal = document.getElementById('filterDate').value;
+        const catVal = document.getElementById('filterCategory').value;
+        const searchVal = document.getElementById('filterSearch').value.toLowerCase().trim();
+
+        const filtered = allNews.filter(n => {
+            if (dateVal && n.날짜 !== dateVal) return false;
+            if (!activeImportance.has(n.중요도)) return false;
+            if (catVal !== '전체' && n.카테고리 !== catVal) return false;
+            if (searchVal && !n.제목.toLowerCase().includes(searchVal)) return false;
+            return true;
+        });
+
+        // 최신순 정렬
+        filtered.sort((a, b) => b.날짜.localeCompare(a.날짜));
+
+        updateStats(filtered);
+        renderNews(filtered);
+    }
+
+    // ── 통계 업데이트 ──
+    function updateStats(data) {
+        document.getElementById('statTotal').textContent = data.length;
+        document.getElementById('statHigh').textContent = data.filter(n => n.중요도 === '상').length;
+        document.getElementById('statCat').textContent = new Set(data.map(n => n.카테고리)).size;
+        document.getElementById('statDays').textContent = new Set(data.map(n => n.날짜)).size;
+    }
+
+    // ── 뉴스 렌더링 ──
+    function renderNews(data) {
+        const container = document.getElementById('newsList');
+        const emptyEl = document.getElementById('emptyState');
+        const newsArea = document.getElementById('newsArea');
+
+        newsArea.classList.remove('hidden');
+
+        if (data.length === 0) {
+            container.innerHTML = '';
+            emptyEl.classList.remove('hidden');
+            return;
+        }
+        emptyEl.classList.add('hidden');
+
+        container.innerHTML = data.map((n, i) => {
+            const badgeColor = n.중요도 === '상' ? 'bg-rose-100 text-rose-700' :
+                               n.중요도 === '하' ? 'bg-sky-100 text-sky-700' :
+                                                   'bg-amber-100 text-amber-700';
+            const desc = n.네이버요약 || n.AI요약 || '요약 정보 없음';
+
+            return `
+            <div class="news-row flex flex-col sm:flex-row sm:items-start px-3 py-3 border-b border-border cursor-pointer transition-colors"
+                 onclick="openModal(${i})" data-idx="${i}">
+                <!-- 상태/분류 (모바일: 인라인) -->
+                <div class="sm:w-[8%] flex sm:flex-col gap-1.5 mb-1.5 sm:mb-0">
+                    <span class="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeColor}">${n.중요도}</span>
+                    <span class="inline-block text-[10px] font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 border border-gray-200">${n.카테고리}</span>
+                </div>
+                <!-- 제목/출처 -->
+                <div class="sm:w-[32%] sm:pr-3 mb-1 sm:mb-0">
+                    <p class="text-sm font-semibold leading-snug line-clamp-2">${n.제목}</p>
+                    <p class="text-[11px] text-muted mt-0.5">${n.언론사} · ${n.날짜}</p>
+                </div>
+                <!-- 요약 -->
+                <div class="sm:w-[42%] sm:pr-3">
+                    <p class="text-xs text-muted leading-relaxed line-clamp-2">${desc}</p>
+                </div>
+                <!-- 액션 -->
+                <div class="sm:w-[18%] flex items-center gap-2 justify-end mt-2 sm:mt-0">
+                    ${n.링크 ? `<a href="${n.링크}" target="_blank" rel="noopener" onclick="event.stopPropagation()"
+                        class="text-xs font-medium text-accent hover:underline whitespace-nowrap">↗ 원문</a>` : ''}
+                    <span class="text-xs text-muted">상세 →</span>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    // ── 모달 ──
+    function openModal(idx) {
+        const filtered = getCurrentFiltered();
+        const n = filtered[idx];
+        if (!n) return;
+
+        const badgeColor = n.중요도 === '상' ? 'bg-rose-100 text-rose-700' :
+                           n.중요도 === '하' ? 'bg-sky-100 text-sky-700' :
+                                               'bg-amber-100 text-amber-700';
+
+        document.getElementById('modalBody').innerHTML = `
+            <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-xs font-bold px-2.5 py-1 rounded-full ${badgeColor}">${n.중요도}</span>
+                <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">${n.카테고리}</span>
+                <span class="text-xs text-muted">${n.언론사} · ${n.날짜}</span>
+            </div>
+            <h3 class="text-base font-bold leading-snug">${n.제목}</h3>
+            ${n.링크 ? `<a href="${n.링크}" target="_blank" rel="noopener"
+                class="inline-flex items-center gap-1 text-xs text-accent font-medium hover:underline">
+                ↗ 원문 보기
+            </a>` : ''}
+            ${n.네이버요약 ? `
+            <div>
+                <p class="text-xs font-bold text-muted uppercase mb-1">네이버 요약</p>
+                <p class="text-sm text-gray-600 leading-relaxed bg-gray-50 rounded-lg p-3">${n.네이버요약}</p>
+            </div>` : ''}
+            ${n.AI요약 ? `
+            <div>
+                <p class="text-xs font-bold text-muted uppercase mb-1">AI 브리핑</p>
+                <div class="text-sm text-gray-700 leading-relaxed bg-blue-50 rounded-lg p-3 border border-blue-100">${n.AI요약}</div>
+            </div>` : ''}
+            ${n.본문 ? `
+            <div>
+                <p class="text-xs font-bold text-muted uppercase mb-1">기사 전문</p>
+                <div class="text-xs text-gray-500 leading-relaxed max-h-60 overflow-y-auto bg-gray-50 rounded-lg p-3">${n.본문.substring(0, 3000)}${n.본문.length > 3000 ? '...' : ''}</div>
+            </div>` : ''}
+        `;
+
+        document.getElementById('detailModal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+        document.getElementById('detailModal').classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+
+    // ESC로 모달 닫기
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    // 현재 필터된 데이터 가져오기 (모달 인덱스용)
+    function getCurrentFiltered() {
+        const dateVal = document.getElementById('filterDate').value;
+        const catVal = document.getElementById('filterCategory').value;
+        const searchVal = document.getElementById('filterSearch').value.toLowerCase().trim();
+
+        return allNews.filter(n => {
+            if (dateVal && n.날짜 !== dateVal) return false;
+            if (!activeImportance.has(n.중요도)) return false;
+            if (catVal !== '전체' && n.카테고리 !== catVal) return false;
+            if (searchVal && !n.제목.toLowerCase().includes(searchVal)) return false;
+            return true;
+        }).sort((a, b) => b.날짜.localeCompare(a.날짜));
+    }
+
+    // ── 설정 모달 ──
+    function showSetupModal() {
+        showLoading(false);
+        document.getElementById('setupModal').classList.remove('hidden');
+    }
+
+    function saveScriptUrl() {
+        const url = document.getElementById('scriptUrlInput').value.trim();
+        if (!url.startsWith('https://script.google.com/')) {
+            alert('올바른 Google Apps Script URL을 입력해주세요.');
+            return;
+        }
+        localStorage.setItem(STORAGE_KEY, url);
+        document.getElementById('setupModal').classList.add('hidden');
+        loadData();
+    }
+
+    // ── UI 헬퍼 ──
+    function showLoading(show) {
+        document.getElementById('loadingArea').classList.toggle('hidden', !show);
+        if (show) {
+            document.getElementById('newsArea').classList.add('hidden');
+        }
+    }
+    function showError() {
+        document.getElementById('errorArea').classList.remove('hidden');
+    }
+    function hideError() {
+        document.getElementById('errorArea').classList.add('hidden');
+    }
+    </script>
+</body>
+</html>
