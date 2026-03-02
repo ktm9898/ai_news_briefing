@@ -28,230 +28,184 @@ st.set_page_config(
     initial_sidebar_state="collapsed", # 모바일에선 기본으로 닫기
 )
 
-# ── 커스텀 CSS (Ultra Compact Admin Dashboard) ────────────────
+# ── 커스텀 CSS (Light Admin Table Dashboard) ────────────────
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&display=swap');
     
     :root {
-        --bg-color: #0c0c0c;
-        --card-bg: #161618;
-        --text-main: #fcfcfc;
-        --text-muted: #8b8f97;
-        --accent: #e2e2e2;
-        --primary: #ffffff;
-        --border-color: #2a2c30;
+        --bg-color: #f4f6f8;
+        --card-bg: #ffffff;
+        --text-main: #1e293b;
+        --text-muted: #64748b;
+        --primary: #0f172a;
+        --border-color: #e2e8f0;
+        --accent-blue: #2563eb;
     }
 
-    /* 전체 폰트 및 다크 테마 배경 */
+    /* 전체 폰트 및 라이트 테마 배경 */
     html, body, [class*="css"], .stApp {
         font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important;
         background-color: var(--bg-color) !important;
         color: var(--text-main) !important;
-        font-size: 14px !important; /* 전체 폰트 사이즈 대폭 축소 */
+        font-size: 13px !important; /* 어드민용 콤팩트 폰트 */
     }
 
-    /* Streamlit 기본 요소 숨기기 (헤더바, 푸터 등) */
-    #MainMenu {visibility: hidden;}
-    header {visibility: hidden !important; display: none !important;}
-    footer {visibility: hidden;}
-    .stDeployButton {display:none;}
+    #MainMenu, header, footer, .stDeployButton {visibility: hidden !important; display: none !important;}
     
-    /* 전체 패딩 극소화 */
     .block-container {
-        padding-top: 0.5rem !important;
+        padding-top: 1rem !important;
         padding-bottom: 1rem !important;
-        padding-left: 0.5rem !important;
-        padding-right: 0.5rem !important;
-        max-width: 1400px !important; /* 폭을 넓혀 더 많은 정보를 밀집 */
+        padding-left: 1.5rem !important;
+        padding-right: 1.5rem !important;
+        max-width: 1600px !important; /* 넓은 테이블을 위해 가로폭 확장 */
     }
 
-    /* 사이드바 다크화 및 패딩 축소 */
+    /* 사이드바 라이트화 */
     [data-testid="stSidebar"] > div:first-child {
         background-color: var(--card-bg) !important;
         border-right: 1px solid var(--border-color);
         padding-top: 1rem;
-        padding-left: 0.5rem;
-        padding-right: 0.5rem;
     }
     
-    /* 메인 타이틀 영역 (매우 작게) */
-    .main-header {
-        padding: 1rem 0 1rem 0;
-        text-align: left;
-        border-bottom: 1px solid var(--border-color);
+    /* 카드 컴포넌트 공통 (화이트, 옅은 보더, 그림자 억제) */
+    .admin-card {
+        background: var(--card-bg);
+        border-radius: 6px;
+        border: 1px solid var(--border-color);
+        padding: 1rem;
         margin-bottom: 1rem;
     }
-    .main-header h1 {
-        margin: 0;
-        font-size: 1.6rem;
-        font-weight: 800;
-        letter-spacing: -0.02em;
-        line-height: 1.2;
-        color: var(--text-main);
-    }
-    .main-header p {
-        margin: 0.3rem 0 0 0;
-        font-size: 0.9rem;
-        font-weight: 400;
-        color: var(--text-muted);
-    }
 
-    /* 통계 카드 (Minimal Grid & Compact) */
+    /* 통계 카드 (가로 배열) */
     .stat-container {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 0.5rem;
-        margin-bottom: 1.5rem;
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1rem;
     }
     .stat-card {
-        background: transparent;
-        border-radius: 0;
-        padding: 0.5rem 0;
-        text-align: left;
-        border-top: 1px solid var(--border-color);
+        flex: 1;
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        padding: 0.8rem 1rem;
+        display: flex;
+        flex-direction: column;
     }
     .stat-number {
-        font-size: 1.5rem;
-        font-weight: 600;
+        font-size: 1.4rem;
+        font-weight: 700;
         color: var(--primary);
     }
     .stat-label {
         color: var(--text-muted);
         font-size: 0.75rem;
-        font-weight: 500;
-        text-transform: uppercase;
-        margin-top: 0.1rem;
-    }
-
-    /* 오디오 플레이어 (Soft Rectangle & Compact) */
-    .audio-section {
-        background: var(--card-bg);
-        border-radius: 8px;
-        padding: 1rem;
-        margin-bottom: 1.5rem;
-        border: 1px solid var(--border-color);
-    }
-    .audio-section h3 {
-        color: var(--primary) !important;
-        margin: 0 0 0.3rem 0 !important;
-        font-size: 1rem;
-        font-weight: 700;
-    }
-
-    /* 뉴스 피드 카드 (Compact List View) */
-    .news-card {
-        background: var(--card-bg);
-        border-radius: 6px;
-        padding: 0.8rem 1rem;
-        margin-bottom: 0.6rem;
-        border: 1px solid var(--border-color);
-        transition: border-color 0.1s;
-    }
-    .news-card:hover {
-        border-color: #555555;
-    }
-    
-    /* 뉴스 제목 & 메타 (Compact) */
-    .news-card h3 {
-        margin: 0 0 0.2rem 0;
-        font-size: 1.05rem;
         font-weight: 600;
-        line-height: 1.3;
-        color: var(--primary);
+    }
+
+    /* 테이블 헤더 스타일 */
+    .table-header {
+        display: flex;
+        padding: 0.6rem 0.5rem;
+        border-bottom: 2px solid var(--border-color);
+        color: var(--text-muted);
+        font-weight: 700;
+        font-size: 0.8rem;
+        margin-bottom: 0.2rem;
     }
     
-    .news-desc {
+    /* 뉴스 테이블 Row (가로형 리스트) */
+    .news-row {
+        display: flex;
+        align-items: flex-start;
+        padding: 0.8rem 0.5rem;
+        border-bottom: 1px solid var(--border-color);
+        background: var(--card-bg);
+    }
+    .news-row:hover {
+        background-color: #f8fafc;
+    }
+    
+    /* 뉴스 테이블 각 영역 폭 */
+    .col-meta { width: 10%; flex-shrink: 0; padding-right: 0.5rem; }
+    .col-title { width: 35%; flex-shrink: 0; padding-right: 1rem; }
+    .col-desc { width: 40%; flex-shrink: 0; padding-right: 1rem; }
+    .col-action { width: 15%; flex-shrink: 0; display:flex; gap:0.3rem; justify-content:flex-end;}
+
+    /* 텍스트 요소 */
+    .row-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--primary);
+        margin: 0 0 0.2rem 0;
+        line-height: 1.3;
+    }
+    .row-desc {
         font-size: 0.85rem;
-        color: #aaaaaa;
-        margin: 0 0 0.4rem 0;
+        color: var(--text-muted);
+        margin: 0;
         line-height: 1.4;
         display: -webkit-box;
-        -webkit-line-clamp: 2; /* 2줄까지만 표시 */
+        -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
-        text-overflow: ellipsis;
     }
-
-    .news-meta {
-        color: var(--text-muted);
+    .row-info {
         font-size: 0.75rem;
-        margin-bottom: 0.6rem;
-        font-weight: 400;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
+        color: var(--text-muted);
     }
 
-    /* 본문 요약 박스 (Compact) */
-    .summary-box {
-        background: rgba(255, 255, 255, 0.03);
-        padding: 0.6rem 0.8rem;
-        border-radius: 4px;
-        border-left: 2px solid #444;
-    }
-    .summary-box p {
-        margin: 0;
-        color: #d1d5db;
-        line-height: 1.5;
-        font-size: 0.85rem;
-        font-weight: 300;
-    }
-
-    /* 태그 및 배지 (Muted Colors & Small) */
-    .category-tag {
-        background: rgba(255, 255, 255, 0.1);
-        color: var(--text-main);
-        padding: 0.1rem 0.4rem;
+    /* 뱃지 포인트 (원색 억제, 파스텔/연한 톤) */
+    .badge {
+        display: inline-block;
+        padding: 0.15rem 0.4rem;
         border-radius: 4px;
         font-size: 0.65rem;
         font-weight: 600;
-        text-transform: uppercase;
+        margin-bottom: 0.2rem;
     }
-    .badge-high { color: #f87171; font-weight: 600; font-size: 0.65rem; }
-    .badge-mid { color: #fbbf24; font-weight: 600; font-size: 0.65rem; }
-    .badge-low { color: #60a5fa; font-weight: 600; font-size: 0.65rem; }
+    .badge-high { background: #fee2e2; color: #b91c1c; }
+    .badge-mid { background: #fef3c7; color: #b45309; }
+    .badge-low { background: #e0f2fe; color: #0369a1; }
+    .badge-cat { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
 
-    /* Streamlit 기본 버튼 커스텀 (Tiny) */
+    /* Streamlit 기본 버튼 초소형(테이블용) */
     .stButton > button {
-        background-color: var(--primary) !important;
-        color: var(--bg-color) !important;
-        border: none !important;
+        background-color: #ffffff !important;
+        color: var(--text-main) !important;
+        border: 1px solid var(--border-color) !important;
         border-radius: 4px !important;
-        font-weight: 600 !important;
-        padding: 0.3rem 0.8rem !important;
-        font-size: 0.85rem !important;
+        font-weight: 500 !important;
+        padding: 0.2rem 0.6rem !important;
+        font-size: 0.75rem !important;
+        min-height: 0 !important;
     }
     .stButton > button:hover {
-        background-color: #e5e5e5 !important;
-        opacity: 0.9;
+        background-color: #f1f5f9 !important;
+        color: #000 !important;
     }
 
-    /* 모바일 초밀착 최적화 */
+    /* 새로고침 등 주요 버튼 (파란색 포인트) */
+    .btn-primary > button {
+        background-color: var(--accent-blue) !important;
+        color: #ffffff !important;
+        border: none !important;
+    }
+    .btn-primary > button:hover {
+        background-color: #1d4ed8 !important;
+    }
+
+    /* expander 스타일 (AI 요약 / 본문 보기 영역) */
+    .streamlit-expanderHeader {
+        font-size: 0.8rem !important;
+        padding: 0.2rem 0.5rem !important;
+        color: var(--accent-blue) !important;
+    }
+    
     @media (max-width: 768px) {
-        .block-container {
-            padding-left: 0.4rem !important;
-            padding-right: 0.4rem !important;
-        }
-        
-        /* 모바일에선 스택형 2x2 유지하되 간격 극소화 */
-        .stat-container {
-            gap: 0.3rem;
-            margin-bottom: 1rem;
-        }
-        .stat-card {
-            border-left: 1px solid var(--border-color);
-            padding: 0 0 0 0.5rem;
-        }
-        .stat-number { font-size: 1.2rem; }
-        
-        .news-card {
-            padding: 0.6rem 0.8rem;
-            margin-bottom: 0.4rem;
-        }
-        .news-card h3 {
-            font-size: 0.95rem;
-        }
+        .news-row { flex-direction: column; }
+        .col-meta, .col-title, .col-desc, .col-action { width: 100%; padding-right:0; margin-bottom:0.5rem; }
+        .col-action { justify-content: flex-start; }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -341,128 +295,71 @@ with st.sidebar:
     )
 
 
-# ── 메인 헤더 ──────────────────────────────────────────
-
-st.markdown(
-    '<div class="main-header">'
-    "<h1>AI 뉴스 비서<span style='color:var(--primary);'>.</span></h1>"
-    "<p>간결하고 강력한 모닝 인텔리전스</p>"
-    "</div>",
-    unsafe_allow_html=True,
-)
-
-
-# ── 수동 새로고침 ─────────────────────────────────────
-
-col_refresh, col_time = st.columns([1, 3])
-with col_refresh:
-    if st.button("🔄 지금 새로고침", type="primary", use_container_width=True):
-        with st.spinner("뉴스를 수집하고 분석 중입니다... (1~3분 소요)"):
+# ── 메인 타이틀 및 새로고침 (한 줄 배치) ───────────────────
+col_title, col_btn = st.columns([5, 1])
+with col_title:
+    st.markdown(
+        '<div class="main-header" style="border:none; margin-bottom:0; padding-bottom:0.5rem;">'
+        "<h1>📰 상담 관리자<span style='color:var(--accent-blue);'>.</span></h1>"
+        "<p>소상공인 종합지원 AI 뉴스 데이터 관리</p>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+with col_btn:
+    st.markdown("<div style='height: 1.2rem;'></div>", unsafe_allow_html=True)
+    if st.button("🔄 새로고침", type="primary", use_container_width=True):
+        with st.spinner("수집 중..."):
             try:
                 from scheduler import run_pipeline
                 result = run_pipeline()
                 st.session_state.pipeline_result = result
                 st.session_state.last_refresh = datetime.now()
-
                 if result.get("status") == "완료":
-                    st.success(
-                        f"✅ 완료! {result.get('collected', 0)}건 수집, "
-                        f"{result.get('analyzed', 0)}건 분석"
-                    )
-                elif result.get("error"):
-                    st.error(f"오류: {result['error']}")
+                    st.success("수집 완료")
                 else:
-                    st.info(result.get("status", "완료"))
+                    st.error("수집 오류")
             except Exception as e:
-                st.error(f"파이프라인 실행 실패: {e}")
+                st.error(f"실패: {e}")
 
-with col_time:
-    if st.session_state.last_refresh:
-        st.caption(
-            f"마지막 새로고침: {st.session_state.last_refresh.strftime('%Y-%m-%d %H:%M:%S')}"
-        )
+st.markdown("<hr style='margin-top:0; border-color:var(--border-color);'>", unsafe_allow_html=True)
 
-
-# ── 오디오 브리핑 플레이어 ──────────────────────────────
-
-st.markdown("---")
-st.subheader("🎙️ 오늘의 브리핑")
-
+# ── 오디오 브리핑 플레이어 (초경량 Expand) ────────────────────────
 try:
     from tts_engine import TTSEngine
     tts = TTSEngine()
     latest_audio = tts.get_latest_audio()
 
     if latest_audio and latest_audio.exists():
-        audio_date = latest_audio.stem.replace("briefing_", "")
-        formatted_date = f"{audio_date[:4]}-{audio_date[4:6]}-{audio_date[6:]}"
-
-        st.markdown(
-            f'<div class="audio-section">'
-            f"<h3>🎧 {formatted_date} 브리핑</h3>"
-            f"<p>AI가 큐레이션한 오늘의 핵심 뉴스를 들어보세요</p>"
-            f"</div>",
-            unsafe_allow_html=True,
-        )
-        with open(latest_audio, "rb") as f:
-            st.audio(f.read(), format="audio/mp3")
-
-        # 이전 브리핑 목록
-        all_audio = tts.get_audio_list()
-        if len(all_audio) > 1:
-            with st.expander("📂 이전 브리핑 목록"):
-                for audio_file in all_audio[1:5]:  # 최근 5개까지
-                    audio_name = audio_file.stem.replace("briefing_", "")
-                    with open(audio_file, "rb") as f:
-                        st.audio(f.read(), format="audio/mp3")
-                    st.caption(f"📅 {audio_name}")
-    else:
-        st.info(
-            "아직 생성된 브리핑이 없습니다. "
-            "'지금 새로고침' 버튼을 눌러 첫 브리핑을 생성해 보세요!"
-        )
+        with st.expander("🎧 오늘의 AI 뉴스 브리핑 듣기 (클릭하여 펼치기)", expanded=False):
+            audio_date = latest_audio.stem.replace("briefing_", "")
+            st.caption(f"{audio_date} 자동 생성됨")
+            with open(latest_audio, "rb") as f:
+                st.audio(f.read(), format="audio/mp3")
 except Exception as e:
-    st.warning(f"오디오 로드 실패: {e}")
+    pass
 
-
-# ── 통합 뉴스 피드 ──────────────────────────────────────
-
-st.markdown("---")
-st.subheader("📰 통합 뉴스 피드")
-
+# ── 통합 뉴스 데이터 테이블 (어드민 뷰) ────────────────────────────
 try:
     from sheets_manager import SheetsManager
     sheets = SheetsManager()
     all_news = sheets.get_recent_news(limit=100)
 
     if all_news:
-        # 필터 컨트롤
-        filter_col1, filter_col2, filter_col3 = st.columns(3)
-
-        # 카테고리 목록 추출
+        # 필터 컨트롤 영역
+        st.markdown("<div style='margin-top:1rem;'></div>", unsafe_allow_html=True)
+        fcol1, fcol2, fcol3 = st.columns([1, 1, 1])
+        
         categories = sorted(set(n.get("카테고리", "") for n in all_news if n.get("카테고리")))
-        dates = sorted(set(n.get("날짜", "") for n in all_news if n.get("날짜")), reverse=True)
-
-        with filter_col1:
-            selected_categories = st.multiselect(
-                "카테고리 필터",
-                options=categories,
-                default=categories,
-                key="cat_filter",
-            )
-        with filter_col2:
-            selected_importance = st.multiselect(
-                "중요도 필터",
-                options=["상", "중", "하"],
-                default=["상", "중", "하"],
-                key="imp_filter",
-            )
-        with filter_col3:
-            selected_date = st.selectbox(
-                "날짜",
-                options=["전체"] + dates,
-                key="date_filter",
-            )
+        
+        with fcol1:
+             selected_categories = st.multiselect("분류 필터", options=categories, default=categories)
+        with fcol2:
+             selected_importance = st.multiselect("중요도 필터", options=["상", "중", "하"], default=["상", "중", "하"])
+        with fcol3:
+             # 달력(Date Input) 기반 날짜 필터. 기본값 오늘.
+             import datetime as dt
+             selected_date_val = st.date_input("기준 일자 선택", dt.datetime.today())
+             selected_date = selected_date_val.strftime("%Y-%m-%d")
 
         # 필터 적용
         filtered = [
@@ -472,106 +369,77 @@ try:
             and (selected_date == "전체" or n.get("날짜") == selected_date)
         ]
 
-        # 통계 카드 (Minimal Grid)
-        st.write("") # 간격
-        st.markdown('<div class="stat-container">', unsafe_allow_html=True)
-        stat1, stat2, stat3, stat4 = st.columns(4)
-        with stat1:
-            st.markdown(f'<div class="stat-card"><div class="stat-number">{len(filtered)}</div><div class="stat-label">Total News</div></div>', unsafe_allow_html=True)
-        with stat2:
-            high_count = sum(1 for n in filtered if n.get("중요도") == "상")
-            st.markdown(f'<div class="stat-card"><div class="stat-number" style="color:#f87171;">{high_count}</div><div class="stat-label">High Priority</div></div>', unsafe_allow_html=True)
-        with stat3:
-            st.markdown(f'<div class="stat-card"><div class="stat-number">{len(categories)}</div><div class="stat-label">Categories</div></div>', unsafe_allow_html=True)
-        with stat4:
-            st.markdown(f'<div class="stat-card"><div class="stat-number">{len(dates)}</div><div class="stat-label">Days Collected</div></div>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        # 요약 통계(Minimal)
+        st.markdown(f"""
+        <div class="stat-container">
+            <div class="stat-card">
+                <div class="stat-label">조회된 기사</div>
+                <div class="stat-number">{len(filtered)}<span style="font-size:0.8rem; font-weight:400; color:var(--text-muted);"> 건</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">핵심 중요도(상)</div>
+                <div class="stat-number" style="color:#2563eb;">{sum(1 for n in filtered if n.get("중요도") == "상")}<span style="font-size:0.8rem; font-weight:400; color:var(--text-muted);"> 건</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">수집 카테고리 종류</div>
+                <div class="stat-number">{len(categories)}<span style="font-size:0.8rem; font-weight:400; color:var(--text-muted);"> 개</span></div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("<h4 style='font-size:1rem; margin-top:2rem; margin-bottom:0.5rem;'>수집 목록</h4>", unsafe_allow_html=True)
 
-        # 뉴스 카드 렌더링 (Dark Minimal)
+        # 테이블 헤더 (columns 활용, 1:4:4:1 비율의 표 구성)
+        c_h1, c_h2, c_h3, c_h4 = st.columns([1.2, 3.8, 5, 1.5])
+        c_h1.markdown("<div class='table-header'>상태/분류</div>", unsafe_allow_html=True)
+        c_h2.markdown("<div class='table-header'>기사 제목 및 출처</div>", unsafe_allow_html=True)
+        c_h3.markdown("<div class='table-header'>네이버 자동 요약</div>", unsafe_allow_html=True)
+        c_h4.markdown("<div class='table-header' style='text-align:right;'>관리 액션</div>", unsafe_allow_html=True)
+        st.markdown("<hr style='margin:0; padding:0; border-color:var(--border-color);'>", unsafe_allow_html=True)
+
+        # 뉴스 루프 
         for news in filtered:
             importance = news.get("중요도", "중")
-            # 중요도 텍스트 스타일
-            if importance == "상":
-                badge_html = '<span class="badge-high">🔴 HIGH</span>'
-            elif importance == "중":
-                badge_html = '<span class="badge-mid">🟡 MID</span>'
-            else:
-                badge_html = '<span class="badge-low">🔵 LOW</span>'
-                
+            badge_class = "badge-mid"
+            if importance == "상": badge_class = "badge-high"
+            elif importance == "하": badge_class = "badge-low"
+            
             category = news.get("카테고리", "기타")
             title = news.get("제목", "제목 없음")
-            source = news.get("언론사", "알 수 없음")
-            naver_desc = news.get("네이버 요약", "")
-            summary = news.get("AI 요약", "")
-            link = news.get("링크", "")
+            source = news.get("언론사", "")
             date = news.get("날짜", "")
+            naver_desc = news.get("네이버 요약", "요약 정보 없음")
+            summary = news.get("AI 요약", "대기 중")
+            body = news.get("본문 전문", "")
+            link = news.get("링크", "")
 
-            # 네이버 요약이 있으면 표시, 없으면 무시
-            naver_desc_html = f'<div class="news-desc">{naver_desc}</div>' if naver_desc else ''
-
-            st.markdown(
-                f'<div class="news-card">'
-                f'<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem;">'
-                f'<span class="category-tag">{category}</span>'
-                f'{badge_html}'
-                f'</div>'
-                f'<h3>{title}</h3>'
-                f'{naver_desc_html}'
-                f'<div class="news-meta">'
-                f'<span>{source}</span>'
-                f'<span style="opacity:0.5;">|</span>'
-                f'<span>{date}</span>'
-                f'</div>'
-                f'<div class="summary-box">'
-                f'<p>{summary}</p>'
-                f'</div>'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
-
-            # 원문 보기 (Streamlit Link Button 활용하되 여백 최소화)
-            col_link, col_body = st.columns([1, 4])
-            with col_link:
+            # 행(row) 구조
+            col1, col2, col3, col4 = st.columns([1.2, 3.8, 5, 1.5])
+            
+            with col1:
+                st.markdown(f'<div style="padding-top:0.8rem;"><span class="badge {badge_class}">{importance}</span><br><span class="badge badge-cat">{category}</span></div>', unsafe_allow_html=True)
+            with col2:
+                st.markdown(f'<div style="padding-top:0.8rem;"><p class="row-title">{title}</p><p class="row-info">{source} | {date}</p></div>', unsafe_allow_html=True)
+            with col3:
+                st.markdown(f'<div style="padding-top:0.8rem;"><p class="row-desc">{naver_desc}</p></div>', unsafe_allow_html=True)
+            with col4:
+                st.markdown('<div style="padding-top:0.8rem; display:flex; flex-direction:column; gap:0.2rem; align-items:flex-end;">', unsafe_allow_html=True)
                 if link:
-                    st.link_button("↗ 원문 보기", link, use_container_width=True)
-            with col_body:
-                body = news.get("본문 전문", "")
-                if body and body != "(본문 추출 실패)":
-                    with st.expander("본문 전체 보기 (Expand)"):
-                        st.write(body[:5000])
-                        if len(body) > 5000:
-                            st.caption("(본문이 길어 일부만 표시)")
+                    st.link_button("↗ 원문", link)
+                with st.popover("자세히 보기"):
+                    st.markdown("**💡 AI 요약 브리핑**")
+                    st.info(summary)
+                    st.markdown("**📄 기사 전문 (발췌)**")
+                    st.caption(body[:1500] + "..." if len(body) > 1500 else body)
+                st.markdown('</div>', unsafe_allow_html=True)
+            
+            st.markdown("<hr style='margin:0; padding:0; border-color:#e2e8f0;'>", unsafe_allow_html=True)
 
-            st.markdown("<div style='height:1rem;'></div>", unsafe_allow_html=True)  # 뉴스 간 간격
+        if not filtered:
+            st.info("해당 일자 및 조건에 맞는 뉴스가 없습니다.")
 
     else:
-        st.info(
-            "아직 수집된 뉴스가 없습니다.\n\n"
-            "1. 사이드바 설정 영역에서 키워드를 확인하세요.\n"
-            "2. 상단의 '지금 새로고침' 버튼을 클릭하세요."
-        )
+        st.info("수집된 뉴스가 없습니다. ⚙️ 새로고침을 진행해주세요.")
 
 except Exception as e:
-    st.warning("Google Sheets 연결을 확인해 주세요.")
-    st.error(f"오류: {e}")
-
-    # 진단 정보 표시 (개발자 도구 숨김 처리 등으로 깔끔하게 보일 수 있으나 일단 유지)
-    with st.expander("System Diagnostic Info"):
-        from config import GOOGLE_SHEET_ID, GOOGLE_CREDENTIALS_PATH
-        import os
-
-        st.write("**GOOGLE_SHEET_ID:**", GOOGLE_SHEET_ID[:10] + "..." if len(GOOGLE_SHEET_ID) > 10 else GOOGLE_SHEET_ID or "❌ 미설정")
-        
-        try:
-            has_gcp = "gcp_service_account" in st.secrets
-            st.write("**st.secrets[gcp_service_account]:**", "✅ 있음" if has_gcp else "❌ 없음")
-        except Exception as se:
-            st.write(f"**st.secrets 접근 오류:** {se}")
-
-        st.write("**credentials 파일 존재:**", os.path.exists(GOOGLE_CREDENTIALS_PATH))
-
-
-# ── 푸터 (Streamlit 푸터가 아닌 커스텀 최소화 푸터) ────────────────
-st.markdown("<br><hr style='border-color:var(--border-color); opacity:0.3;'><div style='text-align:center; color:var(--text-muted); font-size:0.8rem; padding:1rem 0;'>AI News Intelligence Dashboard V2 <br>Powered by Gemini & Streamlit</div>", unsafe_allow_html=True)
+    st.error(f"데이터 로드 실패: {e}")
