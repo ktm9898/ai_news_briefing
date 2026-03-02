@@ -14,7 +14,6 @@ from config import SCHEDULE_HOUR, SCHEDULE_MINUTE
 from sheets_manager import SheetsManager
 from news_collector import NewsCollector
 from ai_analyzer import AIAnalyzer
-from tts_engine import TTSEngine
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +32,7 @@ def run_pipeline():
         "status": "실행 중",
         "collected": 0,
         "analyzed": 0,
-        "audio_path": None,
+        "briefing_saved": False,
         "error": None,
     }
 
@@ -42,7 +41,6 @@ def run_pipeline():
         sheets = SheetsManager()
         collector = NewsCollector(sheets)
         analyzer = AIAnalyzer()
-        tts = TTSEngine()
 
         # 2. 뉴스 수집
         logger.info("📰 뉴스 수집 시작...")
@@ -62,23 +60,14 @@ def run_pipeline():
 
         # 분석 결과를 시트에 업데이트
         sheets.append_news([])  # 이미 collect_all에서 저장됨
-        # 분석 결과(AI 요약, 중요도)를 시트에 업데이트하기 위해
-        # 새로 수집된 뉴스의 분석 결과만 반영
         _update_analysis_to_sheet(sheets, analyzed_news)
 
-        # 4. 브리핑 대본 생성
+        # 4. 브리핑 대본 생성 → 구글 시트에 저장
         logger.info("📝 브리핑 대본 생성 중...")
         script = analyzer.generate_briefing_script(analyzed_news)
-
-        # 5. 음성 합성
-        logger.info("🎙️ 음성 합성 시작...")
-        audio_path = tts.generate(script)
-        result["audio_path"] = str(audio_path) if audio_path else None
-
-        if audio_path:
-            logger.info(f"✅ 오디오 생성 완료: {audio_path}")
-        else:
-            logger.warning("⚠️ 오디오 생성 실패")
+        sheets.save_briefing(script)
+        result["briefing_saved"] = True
+        logger.info(f"✅ 브리핑 대본 저장 완료 ({len(script)}자)")
 
         result["status"] = "완료"
         elapsed = (datetime.now() - start_time).total_seconds()

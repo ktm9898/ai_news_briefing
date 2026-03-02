@@ -827,39 +827,78 @@ function doPost(e) {
         }
 
         function startTTS() {
-            const filtered = getCurrentFiltered();
-            const newsWithSummary = filtered.filter(n => n.AI요약);
-
-            if (newsWithSummary.length === 0) {
-                alert('읽어줄 AI 요약이 있는 뉴스가 없습니다.');
-                return;
-            }
-
             if (!window.speechSynthesis) {
                 alert('이 브라우저는 음성 읽기를 지원하지 않습니다.');
                 return;
             }
 
-            // 버튼 상태 변경
+            // 버튼 상태: 로딩
             isSpeaking = true;
             const btn = document.getElementById('ttsBtn');
             btn.classList.remove('bg-violet-600', 'hover:bg-violet-700');
             btn.classList.add('bg-rose-600', 'hover:bg-rose-700');
-            btn.innerHTML = `<svg class="w-3.5 h-3.5 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/></svg> 정지`;
+            btn.innerHTML = `<svg class="w-3.5 h-3.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> 로딩...`;
 
-            // 인트로 멘트
-            const today = new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
-            const intro = `${today} AI 뉴스 브리핑을 시작합니다. 총 ${newsWithSummary.length}건의 기사입니다.`;
+            // Briefing 탭에서 AI 대본 가져오기 시도
+            const url = localStorage.getItem(STORAGE_KEY);
+            if (url) {
+                fetch(url + '?tab=Briefing')
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data && data.length > 0) {
+                            const latest = data[data.length - 1];
+                            const script = latest['대본'] || latest['script'] || null;
+                            if (script) { playBriefingScript(script); return; }
+                        }
+                        playFallbackTTS();
+                    })
+                    .catch(() => playFallbackTTS());
+            } else {
+                playFallbackTTS();
+            }
+        }
 
-            speechQueue = [intro];
-            newsWithSummary.forEach((n, i) => {
-                speechQueue.push(`${i + 1}번째. ${n.카테고리}. ${n.제목}.`);
-                speechQueue.push(n.AI요약);
-            });
-            speechQueue.push('이상 AI 뉴스 브리핑을 마칩니다.');
-
+        function playBriefingScript(script) {
+            const sentences = script.split(/(?<=[.!?。])\s*/);
+            speechQueue = [];
+            let chunk = '';
+            for (const s of sentences) {
+                if ((chunk + s).length > 200) {
+                    if (chunk) speechQueue.push(chunk.trim());
+                    chunk = s;
+                } else {
+                    chunk += (chunk ? ' ' : '') + s;
+                }
+            }
+            if (chunk) speechQueue.push(chunk.trim());
+            updateTTSBtnPlaying();
             speakNext();
         }
+
+        function playFallbackTTS() {
+            const filtered = getCurrentFiltered();
+            const newsWithSummary = filtered.filter(n => n.AI요약);
+            if (newsWithSummary.length === 0) {
+                alert('브리핑 대본이 없고, AI 요약도 없습니다.\n뉴스를 먼저 수집해 주세요.');
+                stopTTS();
+                return;
+            }
+            const today = new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
+            speechQueue = [`${today} AI 뉴스 브리핑입니다. 총 ${newsWithSummary.length}건.`];
+            newsWithSummary.forEach((n, i) => {
+                speechQueue.push(`${i + 1}번. ${n.카테고리}. ${n.제목}.`);
+                speechQueue.push(n.AI요약);
+            });
+            speechQueue.push('이상 브리핑을 마칩니다.');
+            updateTTSBtnPlaying();
+            speakNext();
+        }
+
+        function updateTTSBtnPlaying() {
+            const btn = document.getElementById('ttsBtn');
+            btn.innerHTML = `<svg class="w-3.5 h-3.5 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/></svg> 정지`;
+        }
+
 
         function speakNext() {
             if (speechQueue.length === 0 || !isSpeaking) {

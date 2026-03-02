@@ -207,3 +207,35 @@ class SheetsManager:
         importance_col = NEWS_DATA_HEADERS.index("중요도") + 1
         ws.update_cell(row_index, summary_col, summary)
         ws.update_cell(row_index, importance_col, importance)
+
+    def save_briefing(self, script: str):
+        """
+        AI 브리핑 대본을 Briefing 탭에 저장.
+        매번 최신 대본으로 덮어씁니다.
+        """
+        tab_name = "Briefing"
+        existing = [ws.title for ws in self.spreadsheet.worksheets()]
+
+        if tab_name not in existing:
+            ws = self.spreadsheet.add_worksheet(title=tab_name, rows=10, cols=2)
+            ws.append_row(["날짜", "대본"])
+        else:
+            ws = self.spreadsheet.worksheet(tab_name)
+
+        from datetime import datetime
+        today = datetime.now().strftime("%Y-%m-%d")
+
+        # 기존 데이터 확인 → 오늘 날짜 행이 있으면 업데이트, 없으면 추가
+        data = ws.get_all_values()
+        updated = False
+        for idx, row in enumerate(data):
+            if idx == 0:
+                continue  # 헤더 건너뛰기
+            if row[0] == today:
+                ws.update_cell(idx + 1, 2, script)
+                updated = True
+                break
+
+        if not updated:
+            ws.append_row([today, script])
+
