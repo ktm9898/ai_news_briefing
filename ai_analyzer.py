@@ -42,8 +42,8 @@ class AIAnalyzer:
                 news["중요도"] = "중"
             return news_list
 
-        # 뉴스를 배치로 처리 (API 호출 절약)
-        batch_size = 5
+        # 뉴스를 배치로 처리 (한 번에 최대 30건)
+        batch_size = 30
         analyzed = []
 
         for i in range(0, len(news_list), batch_size):
