@@ -1003,24 +1003,57 @@
             btn.classList.add('opacity-70');
 
             try {
+                // 수집 전 마지막 워크플로우 ID 가져오기
+                let lastRunId = null;
+                try {
+                    const res = await fetch('https://api.github.com/repos/ktm9898/ai_news_briefing/actions/runs?per_page=1');
+                    const data = await res.json();
+                    if (data.workflow_runs && data.workflow_runs.length > 0) {
+                        lastRunId = data.workflow_runs[0].id;
+                    }
+                } catch (e) { console.error("Failed to fetch initial run status", e) }
+
                 await fetch(url, {
                     method: 'POST',
                     mode: 'no-cors',
                     headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify({ action: 'triggerWorkflow' }),
                 });
-                btn.innerHTML = `⏳ 수집 진행중 (3~5분 소요, 이후 새로고침 해주세요)`;
-                btn.classList.remove('bg-emerald-600');
-                btn.classList.add('bg-emerald-500');
 
-                alert('뉴스 수집이 백그라운드에서 시작되었습니다!\nAI 분석까지 약 3~5분이 소요됩니다. 잠시 후 우측 상단의 [새로고침] 버튼을 눌러 확인해 주세요.');
+                // GitHub Actions 상태 확인 (10초마다 폴링)
+                let pollCount = 0;
+                const checkInterval = setInterval(async () => {
+                    pollCount++;
+                    try {
+                        const res = await fetch('https://api.github.com/repos/ktm9898/ai_news_briefing/actions/runs?per_page=1');
+                        const data = await res.json();
+                        if (data.workflow_runs && data.workflow_runs.length > 0) {
+                            const latestRun = data.workflow_runs[0];
+                            // 새로운 실행이 시작되었고, 완료되었을 경우
+                            if (latestRun.id !== lastRunId && latestRun.status === 'completed') {
+                                clearInterval(checkInterval);
+                                // 데이터 시트에 반영될 시간 약간(2초) 대기 후 리로드
+                                setTimeout(async () => {
+                                    await loadData();
+                                    btn.innerHTML = originalHTML;
+                                    btn.disabled = false;
+                                    btn.classList.remove('opacity-70');
+                                }, 2000);
+                                return;
+                            }
+                        }
+                    } catch (e) { console.error("Failed to fetch run status", e) }
 
-                setTimeout(() => {
-                    btn.innerHTML = originalHTML;
-                    btn.disabled = false;
-                    btn.classList.remove('opacity-70', 'bg-emerald-500');
-                    btn.classList.add('bg-emerald-600');
-                }, 300000); // 5분 뒤 버튼 원상복구
+                    // 6분 초과 시(36회 폴링) 강제 종료 및 데이터 업데이트
+                    if (pollCount >= 36) {
+                        clearInterval(checkInterval);
+                        await loadData();
+                        btn.innerHTML = originalHTML;
+                        btn.disabled = false;
+                        btn.classList.remove('opacity-70');
+                    }
+                }, 10000);
+
             } catch (err) {
                 alert('뉴스 수집 요청 실패: ' + err.message);
                 btn.innerHTML = originalHTML;
