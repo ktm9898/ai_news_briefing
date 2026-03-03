@@ -3,6 +3,7 @@ google-auth
 google-generativeai
 requests
 newspaper4k
+lxml_html_clean
 nltk
 edge-tts
 gTTS
