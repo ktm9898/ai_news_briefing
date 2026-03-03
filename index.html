@@ -1003,12 +1003,12 @@
             btn.classList.add('opacity-70');
 
             try {
-                // POST 대신 GET으로 요청 (CORS 이슈 회피 및 안정성 목적)
-                await fetch(`${url}?action=triggerWorkflow`, {
-                    method: 'GET',
-                    mode: 'no-cors'
+                await fetch(url, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({ action: 'triggerWorkflow' }),
                 });
-                // no-cors 모드에서는 응답을 읽을 수 없지만 요청은 전달됨
                 btn.innerHTML = `✅ 수집 시작됨!`;
                 btn.classList.remove('bg-emerald-600');
                 btn.classList.add('bg-emerald-500');

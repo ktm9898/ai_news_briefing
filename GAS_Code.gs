@@ -16,9 +16,11 @@ function doGet(e) {
   // ── 수동 수집 트리거 (GitHub Actions) ──
   if (action === 'triggerWorkflow') {
     // PropertiesService에서 GitHub PAT 가져오기
-    const GITHUB_PAT = PropertiesService.getScriptProperties().getProperty('GITHUB_PAT');
+    const props = PropertiesService.getScriptProperties();
+    const GITHUB_PAT = props.getProperty('GITHUB_PAT') || props.getProperty('GITHUB_TOKEN');
+    
     if (!GITHUB_PAT) {
-      return createResponse({ error: 'GITHUB_PAT가 스크립트 속성에 설정되지 않았습니다.', ok: false });
+      return createResponse({ error: 'GITHUB_PAT 또는 GITHUB_TOKEN이 스크립트 속성에 설정되지 않았습니다.', ok: false });
     }
 
     const url = 'https://api.github.com/repos/ktm9898/ai_news_briefing/actions/workflows/collect.yml/dispatches';
@@ -156,8 +158,9 @@ function doPost(e) {
 
   // 레거시 action (수동 수집) fallback (GET 통신 방식 실패 시)
   if (action === 'triggerWorkflow') {
-    const GITHUB_PAT = PropertiesService.getScriptProperties().getProperty('GITHUB_PAT');
-    if (!GITHUB_PAT) return createResponse({ error: 'GITHUB_PAT 미설정', ok: false });
+    const props = PropertiesService.getScriptProperties();
+    const GITHUB_PAT = props.getProperty('GITHUB_PAT') || props.getProperty('GITHUB_TOKEN');
+    if (!GITHUB_PAT) return createResponse({ error: 'GITHUB_PAT/GITHUB_TOKEN 미설정', ok: false });
     const url = 'https://api.github.com/repos/ktm9898/ai_news_briefing/actions/workflows/collect.yml/dispatches';
     try {
       UrlFetchApp.fetch(url, {
