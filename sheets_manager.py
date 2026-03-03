@@ -1,7 +1,7 @@
 """
 sheets_manager.py - Google Sheets CRUD 관리 모듈
 
-Settings 탭: 카테고리-키워드 설정 관리
+Settings 탭: 주제-키워드 설정 관리
 News_Data 탭: 수집된 뉴스 통합 저장소
 
 인증 방식:
@@ -20,8 +20,10 @@ from config import (
     GOOGLE_CREDENTIALS_PATH,
     GOOGLE_SHEET_ID,
     SETTINGS_TAB,
+    TOPIC_SETTINGS_TAB,
     NEWS_DATA_TAB,
     SETTINGS_HEADERS,
+    TOPIC_SETTINGS_HEADERS,
     NEWS_DATA_HEADERS,
 )
 
@@ -88,11 +90,11 @@ class SheetsManager:
         """Settings / News_Data 탭이 없으면 자동 생성"""
         existing = [ws.title for ws in self.spreadsheet.worksheets()]
 
-        if SETTINGS_TAB not in existing:
+        if TOPIC_SETTINGS_TAB not in existing:
             ws = self.spreadsheet.add_worksheet(
-                title=SETTINGS_TAB, rows=100, cols=len(SETTINGS_HEADERS)
+                title=TOPIC_SETTINGS_TAB, rows=100, cols=len(TOPIC_SETTINGS_HEADERS)
             )
-            ws.append_row(SETTINGS_HEADERS)
+            ws.append_row(TOPIC_SETTINGS_HEADERS)
 
         if NEWS_DATA_TAB not in existing:
             ws = self.spreadsheet.add_worksheet(
@@ -104,9 +106,9 @@ class SheetsManager:
 
     def get_settings(self) -> list[dict]:
         """
-        Settings 탭에서 활성화된 키워드-카테고리 목록 반환.
+        Settings 탭에서 활성화된 키워드-주제 목록 반환.
         Returns:
-            [{"카테고리": "상권", "키워드": "용산구 골목상권", "활성화": "TRUE"}, ...]
+            [{"주제": "상권", "키워드": "용산구 골목상권", "활성화": "TRUE"}, ...]
         """
         ws = self.spreadsheet.worksheet(SETTINGS_TAB)
         records = ws.get_all_records()
@@ -123,27 +125,54 @@ class SheetsManager:
         """
         Settings 탭 전체를 새 데이터로 교체.
         Args:
-            data: [{"카테고리": ..., "키워드": ..., "활성화": ...}, ...]
+            data: [{"주제": ..., "키워드": ..., "활성화": ...}, ...]
         """
         ws = self.spreadsheet.worksheet(SETTINGS_TAB)
         ws.clear()
         ws.append_row(SETTINGS_HEADERS)
         for row in data:
             ws.append_row([
-                row.get("카테고리", ""),
+                row.get("주제", ""),
                 row.get("키워드", ""),
                 row.get("활성화", "TRUE"),
             ])
 
-    def add_setting(self, category: str, keyword: str, active: str = "TRUE"):
+    def add_setting(self, topic: str, keyword: str, active: str = "TRUE"):
         """Settings 탭에 새 항목 추가"""
         ws = self.spreadsheet.worksheet(SETTINGS_TAB)
-        ws.append_row([category, keyword, active])
+        ws.append_row([topic, keyword, active])
 
     def delete_setting(self, row_index: int):
         """Settings 탭에서 특정 행 삭제 (1-indexed, 헤더 = 1)"""
         ws = self.spreadsheet.worksheet(SETTINGS_TAB)
         ws.delete_rows(row_index)
+
+    # ── Topic_Settings 탭 ─────────────────────────────
+
+    def get_all_topic_criteria(self) -> dict[str, str]:
+        """주제별 AI 중요도 기준 맵 반환"""
+        try:
+            ws = self.spreadsheet.worksheet(TOPIC_SETTINGS_TAB)
+            records = ws.get_all_records()
+            return {r["Topic"]: r["Criteria"] for r in records if r.get("Topic") and r.get("Criteria")}
+        except Exception:
+            return {}
+
+    def update_topic_criteria(self, topic: str, criteria: str):
+        """특정 주제의 AI 중요도 기준 업데이트"""
+        ws = self.spreadsheet.worksheet(TOPIC_SETTINGS_TAB)
+        data = ws.get_all_records()
+        
+        found_row = -1
+        for idx, row in enumerate(data):
+            if row.get("Topic") == topic:
+                found_row = idx + 2
+                break
+        
+        if found_row != -1:
+            ws.update_cell(found_row, 2, criteria)
+        else:
+            ws.append_row([topic, criteria])
 
     # ── News_Data 탭 ─────────────────────────────────
 
@@ -161,7 +190,7 @@ class SheetsManager:
         """
         뉴스 데이터를 News_Data 탭에 추가.
         Args:
-            news_list: [{"날짜": ..., "카테고리": ..., ...}, ...]
+            news_list: [{"날짜": ..., "주제": ..., ...}, ...]
         """
         if not news_list:
             return
@@ -171,7 +200,7 @@ class SheetsManager:
         for news in news_list:
             rows.append([
                 news.get("날짜", ""),
-                news.get("카테고리", ""),
+                news.get("주제", ""),
                 news.get("언론사", ""),
                 news.get("제목", ""),
                 news.get("네이버 요약", ""),
@@ -190,11 +219,11 @@ class SheetsManager:
         records = ws.get_all_records()
         return [r for r in records if r.get("날짜", "") == date_str]
 
-    def get_news_by_category(self, category: str) -> list[dict]:
-        """특정 카테고리의 뉴스 반환"""
+    def get_news_by_topic(self, topic: str) -> list[dict]:
+        """특정 주제의 뉴스 반환"""
         ws = self.spreadsheet.worksheet(NEWS_DATA_TAB)
         records = ws.get_all_records()
-        return [r for r in records if r.get("카테고리", "") == category]
+        return [r for r in records if r.get("주제", "") == topic]
 
     def get_all_news(self) -> list[dict]:
         """모든 뉴스 반환"""

@@ -106,7 +106,7 @@ class NewsCollector:
     def collect_by_keyword(
         self,
         keyword: str,
-        category: str,
+        topic: str,
         existing_links: set[str],
     ) -> list[dict]:
         """
@@ -143,7 +143,7 @@ class NewsCollector:
 
             results.append({
                 "날짜": today,
-                "카테고리": category,
+                "주제": topic,
                 "언론사": source,
                 "제목": title,
                 "본문 전문": body[:40000] if body else "(본문 추출 실패)",
@@ -156,7 +156,7 @@ class NewsCollector:
             existing_links.add(link)  # 같은 배치 내 중복 방지
 
         logger.info(
-            f"[{category}] '{keyword}' → {len(results)}건 수집 "
+            f"[{topic}] '{keyword}' → {len(results)}건 수집 "
             f"({len(items)}건 검색, {len(items) - len(results)}건 중복/실패)"
         )
         return results
@@ -164,7 +164,7 @@ class NewsCollector:
     def collect_all(self) -> list[dict]:
         """
         Settings에 등록된 모든 활성 키워드에 대해 뉴스 수집 실행.
-        수집 결과를 News_Data 시트에 저장하고, 전체 수집 목록 반환.
+        전체 수집 목록 반환 (시트 저장은 필터링 후 수행).
         """
         settings = self.sheets.get_active_settings()
         if not settings:
@@ -175,21 +175,16 @@ class NewsCollector:
         all_news = []
 
         for setting in settings:
-            category = setting.get("카테고리", "기타")
+            topic = setting.get("주제", "기타")
             keyword = setting.get("키워드", "")
             if not keyword:
                 continue
 
             try:
-                news = self.collect_by_keyword(keyword, category, existing_links)
+                news = self.collect_by_keyword(keyword, topic, existing_links)
                 all_news.extend(news)
             except Exception as e:
-                logger.error(f"키워드 '{keyword}' 수집 중 오류: {e}")
+                logger.error(f"주제 '{topic}' (키워드: '{keyword}') 수집 중 오류: {e}")
                 continue
-
-        # Google Sheets에 저장
-        if all_news:
-            self.sheets.append_news(all_news)
-            logger.info(f"총 {len(all_news)}건의 뉴스를 저장했습니다.")
 
         return all_news

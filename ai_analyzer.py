@@ -4,7 +4,7 @@ ai_analyzer.py - Gemini API 기반 뉴스 분석 모듈
 기능:
   - 뉴스 중요도 판단 (상/중/하)
   - 핵심 내용 요약 (2~3문장)
-  - 브리핑 대본 생성 (카테고리별 핵심 뉴스 큐레이션)
+  - 브리핑 대본 생성 (주제별 핵심 뉴스 큐레이션)
 """
 
 import json
@@ -13,7 +13,7 @@ import time
 
 import google.generativeai as genai
 
-from config import GEMINI_API_KEY, GEMINI_MODEL
+from config import GEMINI_API_KEY, GEMINI_MODEL, DEFAULT_CRITERIA
 
 logger = logging.getLogger(__name__)
 
@@ -27,10 +27,14 @@ class AIAnalyzer:
     def __init__(self):
         self.model = genai.GenerativeModel(GEMINI_MODEL)
 
-    def analyze_news(self, news_list: list[dict]) -> list[dict]:
+    def analyze_news(
+        self,
+        news_list: list[dict],
+        topic_criteria: dict[str, str] = None,
+    ) -> list[dict]:
         """
         수집된 뉴스에 대해 중요도·요약을 생성.
-        각 뉴스 항목에 'AI 요약'과 '중요도' 필드를 채워 반환.
+        topic_criteria: {"주제명": "상/중/하 판단 기준..."}
         """
         if not news_list:
             return news_list
@@ -48,78 +52,94 @@ class AIAnalyzer:
         analyzed = []
         total_batches = (len(news_list) + batch_size - 1) // batch_size
         
-        logger.info(f"AI 분석 시작: 총 {len(news_list)}건, {total_batches}개 배치로 처리 (배치 크기: {batch_size})")
+        logger.info(f"AI 분석 시작: 총 {len(news_list)}건, {total_batches}개 배치로 처리")
 
         for i in range(0, len(news_list), batch_size):
             batch_num = (i // batch_size) + 1
             batch = news_list[i:i + batch_size]
             try:
-                logger.info(f"배치 실행 중 ({batch_num}/{total_batches}): {len(batch)}건 분석 요청...")
-                result = self._analyze_batch(batch)
+                result = self._analyze_batch(batch, topic_criteria)
                 analyzed.extend(result)
                 logger.info(f"배치 완료 ({batch_num}/{total_batches})")
             except Exception as e:
-                error_msg = str(e)
-                logger.error(f"AI 분석 배치 실패 (배치 {batch_num}, 인덱스 {i}~{i+len(batch)}): {error_msg}")
-                # 실패 시 에러 내용을 기록
+                logger.error(f"AI 분석 배치 실패 (배치 {batch_num}): {e}")
                 for news in batch:
-                    news["AI 요약"] = f"(분석 실패: {error_msg[:100]})"
-                    news["중요도"] = "중"
+                    news["AI 요약"] = "(분석 실패)"
+                    news["중요도"] = "하"
                 analyzed.extend(batch)
 
         return analyzed
 
-    def _analyze_batch(self, batch: list[dict]) -> list[dict]:
-        """뉴스 배치에 대해 Gemini로 중요도·요약 생성"""
-        news_texts = []
-        for idx, news in enumerate(batch):
-            body_preview = news.get("본문 전문", "")[:500]  # 토큰 절약 (요약엔 500자 충분)
-            news_texts.append(
-                f"[뉴스 {idx + 1}]\n"
-                f"제목: {news.get('제목', '')}\n"
-                f"카테고리: {news.get('카테고리', '')}\n"
-                f"본문(일부): {body_preview}\n"
-            )
+    def _analyze_batch(self, batch: list[dict], topic_criteria: dict[str, str] = None) -> list[dict]:
+        """주제별로 그룹화하여 Gemini 분석 요청"""
+        # 주제별 그룹화
+        topic_groups = {}
+        for news in batch:
+            t = news.get("주제", "기타")
+            topic_groups.setdefault(t, []).append(news)
 
-        prompt = f"""당신은 전문 뉴스 분석가입니다. 아래 뉴스들을 분석해 주세요.
+        final_batch_results = []
 
+        for topic, group in topic_groups.items():
+            criteria = (topic_criteria or {}).get(topic, DEFAULT_CRITERIA)
+            
+            news_texts = []
+            for idx, news in enumerate(group):
+                body_preview = news.get("본문 전문", "")[:2000]
+                news_texts.append(
+                    f"[뉴스 {idx + 1}]\n"
+                    f"제목: {news.get('제목', '')}\n"
+                    f"본문(일부): {body_preview}\n"
+                )
+
+            prompt = f"""당신은 베테랑 뉴스 에디터이자 AI 분석가입니다. 
+제공된 주제 '{topic}'에 대한 뉴스 목록을 읽고 분석해 주세요.
+
+[중요도 판단 기준 - {topic}]
+{criteria}
+
+[분석 지침]
+1. 각 뉴스의 핵심 내용을 1~2문장으로 한국어 요약해 주세요.
+2. 위 기준에 따라 중요도를 '상', '중', '하' 중 하나로 판별해 주세요.
+3. 결과는 반드시 다음과 같은 JSON 배열 형식으로만 응답해 주세요:
+[
+  {{"index": 1, "summary": "요약 내용...", "importance": "상"}},
+  ...
+]
+
+[뉴스 목록]
 {chr(10).join(news_texts)}
-
-각 뉴스에 대해 다음을 JSON 배열로 반환하세요:
-- "index": 뉴스 번호 (1부터)
-- "summary": 핵심 내용 2~3문장 요약 (한국어)
-- "importance": 중요도 ("상", "중", "하" 중 택1)
-
-판단 기준:
-- 상: 경제·정책적 파급력이 크거나, 다수에게 직접 영향을 미치는 뉴스
-- 중: 관련 분야 종사자에게 유의미한 뉴스
-- 하: 일반 정보성 뉴스
-
-반드시 유효한 JSON 배열만 반환하세요. 다른 텍스트는 포함하지 마세요.
 """
+            try:
+                response = self.model.generate_content(prompt)
+                text = response.text.strip()
 
-        response = self.model.generate_content(prompt)
-        text = response.text.strip()
+                if "```json" in text:
+                    text = text.split("```json")[1].split("```")[0].strip()
+                elif "```" in text:
+                    text = text.split("```")[1].split("```")[0].strip()
 
-        # JSON 블록 추출
-        if "```json" in text:
-            text = text.split("```json")[1].split("```")[0].strip()
-        elif "```" in text:
-            text = text.split("```")[1].split("```")[0].strip()
+                import json
+                results = json.loads(text)
 
-        results = json.loads(text)
+                for item in results:
+                    idx = item.get("index", 1) - 1
+                    if 0 <= idx < len(group):
+                        group[idx]["AI 요약"] = item.get("summary", "")
+                        group[idx]["중요도"] = item.get("importance", "중")
+            except Exception as e:
+                logger.error(f"AI 주제 분석 실패 ({topic}): {e}")
+                for news in group:
+                    news["AI 요약"] = "(분석 실패)"
+                    news["중요도"] = "하"
+            
+            final_batch_results.extend(group)
 
-        for item in results:
-            idx = item.get("index", 1) - 1
-            if 0 <= idx < len(batch):
-                batch[idx]["AI 요약"] = item.get("summary", "")
-                batch[idx]["중요도"] = item.get("importance", "중")
-
-        return batch
+        return final_batch_results
 
     def generate_briefing_script(self, news_list: list[dict]) -> str:
         """
-        카테고리별 핵심 뉴스를 엮어 라디오 브리핑 대본 생성.
+        주제별 핵심 뉴스를 엮어 라디오 브리핑 대본 생성.
 
         Args:
             news_list: AI 분석이 완료된 뉴스 목록
@@ -130,21 +150,21 @@ class AIAnalyzer:
         if not news_list:
             return "오늘은 수집된 뉴스가 없습니다."
 
-        # 중요도 '상' 우선, 카테고리별 그룹핑
+        # 중요도 '상' 우선, 주제별 그룹핑
         important_news = [n for n in news_list if n.get("중요도") == "상"]
         if not important_news:
             important_news = news_list[:10]  # 중요도 '상'이 없으면 상위 10개
 
-        # 카테고리별 분류
-        by_category = {}
+        # 주제별 분류
+        by_topic = {}
         for news in important_news:
-            cat = news.get("카테고리", "기타")
-            by_category.setdefault(cat, []).append(news)
+            topic = news.get("주제", "기타")
+            by_topic.setdefault(topic, []).append(news)
 
         news_summary_text = []
-        for cat, items in by_category.items():
-            news_summary_text.append(f"\n## [{cat}] 카테고리")
-            for n in items[:5]:  # 카테고리당 최대 5건
+        for topic, items in by_topic.items():
+            news_summary_text.append(f"\n## [{topic}] 주제")
+            for n in items[:5]:  # 주제당 최대 5건
                 news_summary_text.append(
                     f"- 제목: {n.get('제목', '')}\n"
                     f"  요약: {n.get('AI 요약', '')}"
@@ -157,7 +177,7 @@ class AIAnalyzer:
 
 대본 작성 규칙:
 1. "좋은 아침입니다"로 시작하여 날씨나 간단한 인사 후 뉴스로 진입
-2. 카테고리별로 자연스럽게 전환하며 핵심 내용 전달
+2. 주제별로 자연스럽게 전환하며 핵심 내용 전달
 3. 각 뉴스는 2~3문장으로 간결하게 설명
 4. 전체 대본은 3~5분 분량 (약 800~1200자)
 5. 마무리 인사로 끝맺음

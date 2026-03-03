@@ -177,7 +177,7 @@
                 <p id="statHigh" class="text-2xl font-bold mt-0.5 text-rose-600">-</p>
             </div>
             <div class="bg-white rounded-xl border border-border p-3">
-                <p class="text-xs font-semibold text-muted uppercase tracking-wide">카테고리</p>
+                <p class="text-xs font-semibold text-muted uppercase tracking-wide">주제</p>
                 <p id="statCat" class="text-2xl font-bold mt-0.5 text-accent">-</p>
             </div>
             <div class="bg-white rounded-xl border border-border p-3">
@@ -205,9 +205,9 @@
                     <button onclick="toggleImportance('하')" data-imp="하"
                         class="chip text-xs px-2.5 py-1 border border-border rounded-full font-medium active">하</button>
                 </div>
-                <!-- 카테고리 -->
+                <!-- 주제 -->
                 <div class="flex items-center gap-2">
-                    <label class="text-xs font-semibold text-muted">분류</label>
+                    <label class="text-xs font-semibold text-muted">주제</label>
                     <select id="filterCategory"
                         class="text-sm border border-border rounded-lg px-2 py-1 focus:ring-2 focus:ring-accent outline-none">
                         <option value="전체">전체</option>
@@ -284,7 +284,7 @@
         <div
             class="modal-content bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl max-h-[85vh] overflow-y-auto">
             <div class="sticky top-0 bg-white border-b border-border px-5 py-3 flex items-center justify-between">
-                <h2 class="text-sm font-bold">⚙️ 수집 키워드 관리</h2>
+                <h2 class="text-sm font-bold">⚙️ 주제 및 키워드 관리</h2>
                 <button onclick="closeSettingsModal()"
                     class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-100">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -293,26 +293,51 @@
                     </svg>
                 </button>
             </div>
-            <div class="px-5 py-4 space-y-4">
-                <!-- 새 키워드 추가 -->
-                <div class="bg-gray-50 rounded-xl p-3 space-y-2">
-                    <p class="text-xs font-bold text-muted uppercase">키워드 추가</p>
-                    <div class="flex gap-2">
-                        <input type="text" id="newCategory" placeholder="카테고리 (예: 상권)"
-                            class="flex-1 text-sm border border-border rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-accent outline-none">
-                        <input type="text" id="newKeyword" placeholder="키워드 (예: 소상공인 지원금)"
-                            class="flex-1 text-sm border border-border rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-accent outline-none">
-                        <button onclick="addKeyword()"
-                            class="px-3 py-1.5 bg-accent text-white text-xs font-semibold rounded-lg hover:bg-blue-700 whitespace-nowrap">
-                            + 추가
-                        </button>
+            <div class="px-5 py-4 space-y-5">
+                <!-- 주제 선택 및 기준 설정 -->
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-xs font-bold text-muted uppercase block mb-1.5">1. 주제 선택</label>
+                        <div class="flex gap-2">
+                            <select id="settingsTopicSelect" onchange="onSettingsTopicChange()"
+                                class="flex-1 text-sm border border-border rounded-lg px-3 py-2 focus:ring-2 focus:ring-accent outline-none bg-white">
+                                <option value="">주제 선택...</option>
+                            </select>
+                            <input type="text" id="newTopicInput" placeholder="새 주제 추가..."
+                                class="flex-1 text-sm border border-border rounded-lg px-3 py-2 focus:ring-2 focus:ring-accent outline-none">
+                            <button onclick="addNewTopic()"
+                                class="px-3 py-2 bg-gray-100 text-gray-700 text-xs font-bold rounded-lg hover:bg-gray-200 whitespace-nowrap border border-border">
+                                주제 추가
+                            </button>
+                        </div>
                     </div>
-                </div>
-                <!-- 키워드 목록 -->
-                <div>
-                    <p class="text-xs font-bold text-muted uppercase mb-2">등록된 키워드</p>
-                    <div id="settingsList" class="space-y-1">
-                        <p class="text-xs text-muted text-center py-4">불러오는 중...</p>
+
+                    <div id="topicDetailSection" class="hidden animate-in fade-in duration-300">
+                        <div class="bg-blue-50 rounded-xl p-3 border border-blue-100 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <label class="text-[11px] font-bold text-blue-700 uppercase">2. AI 중요도 판단 기준</label>
+                                <button onclick="saveTopicCriteria()"
+                                    class="text-[11px] font-bold text-white bg-blue-600 px-2.5 py-1 rounded-md hover:bg-blue-700">저장</button>
+                            </div>
+                            <textarea id="topicCriteria" rows="3"
+                                placeholder="이 주제의 뉴스 중요도를 판단하는 기준을 입력하세요... (예: 정책 변화는 '상')"
+                                class="w-full text-xs border border-blue-200 rounded-lg px-2.5 py-2 focus:ring-2 focus:ring-accent outline-none resize-none bg-white"></textarea>
+                        </div>
+
+                        <div class="mt-4">
+                            <label class="text-[11px] font-bold text-muted uppercase block mb-1.5">3. 키워드 목록</label>
+                            <div class="flex gap-2 mb-3">
+                                <input type="text" id="newKeyword" placeholder="새 키워드 입력 (예: 소상공인 대출)"
+                                    class="flex-1 text-sm border border-border rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-accent outline-none">
+                                <button onclick="addKeyword()"
+                                    class="px-4 py-1.5 bg-accent text-white text-xs font-bold rounded-lg hover:bg-blue-700 whitespace-nowrap">
+                                    + 추가
+                                </button>
+                            </div>
+                            <div id="settingsList" class="space-y-1.5 max-h-[30vh] overflow-y-auto pr-1">
+                                <p class="text-xs text-muted text-center py-4">주제를 선택하면 키워드가 나타납니다</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -322,21 +347,21 @@
 
         <!-- ═══════════ JavaScript ═══════════ -->
         <script>
-            // ── 전역 상태 ──
             let allNews = [];
+            let allSettings = []; // [{Topic, Keyword, 활성화}]
+            let topicCriteriaMap = {}; // {Topic: Criteria}
             let activeImportance = new Set(['상', '중', '하']);
 
             const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwtgUJ0QfKHPn6HLt2U41OLUog92RFVaKPyLLVwQodq03LMm50qm4dwQk798D3ovFcaHw/exec';
-            const STORAGE_KEY = 'ai_news_script_url'; // 하위 호환성 위해 유지 (삭제 가능)
             const CACHE_KEY = 'ai_news_cache';
 
             // ── 초기화 ──
             document.addEventListener('DOMContentLoaded', () => {
-                // 날짜 필터는 비워두기 (전체 날짜 보기)
+                // 오늘 날짜로 초기값 설정 (선택 사항, 여기서는 비워둠)
                 document.getElementById('filterDate').value = '';
 
                 // 필터 이벤트
-                document.getElementById('filterDate').addEventListener('change', applyFilters);
+                document.getElementById('filterDate').addEventListener('change', loadData); // 날짜 변경 시 서버에서 다시 가져옴
                 document.getElementById('filterCategory').addEventListener('change', applyFilters);
                 document.getElementById('filterSearch').addEventListener('input', applyFilters);
 
@@ -346,37 +371,43 @@
 
             // ── 데이터 로드 ──
             async function loadData() {
-                const url = SCRIPT_URL;
+                const dateVal = document.getElementById('filterDate').value;
+                const topicVal = document.getElementById('filterCategory').value;
+
+                let fetchUrl = SCRIPT_URL;
+                const params = [];
+                if (dateVal) params.push(`date=${dateVal}`);
+                if (topicVal && topicVal !== '전체') params.push(`topic=${encodeURIComponent(topicVal)}`);
+                if (params.length > 0) fetchUrl += '?' + params.join('&');
+
                 showLoading(true);
                 hideError();
 
                 try {
-                    const resp = await fetch(url);
+                    const resp = await fetch(fetchUrl);
                     if (!resp.ok) throw new Error('HTTP ' + resp.status);
                     const data = await resp.json();
 
                     allNews = data.map(row => ({
                         날짜: formatDate(row['날짜']),
-                        카테고리: row['카테고리'] || '기타',
+                        주제: row['주제'] || '기타',
                         언론사: row['언론사'] || '',
                         제목: row['제목'] || '제목 없음',
-                        네이버요약: row['네이버 요약'] || row['네이버요약'] || '',
                         본문: row['본문 전문'] || row['본문전문'] || '',
                         링크: row['링크'] || '',
                         AI요약: row['AI 요약'] || row['AI요약'] || '',
                         중요도: row['중요도'] || '중',
                     }));
 
-                    // 캐시
+                    // 캐시 (필터링된 결과 저장)
                     localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: allNews }));
                     document.getElementById('lastUpdate').textContent = '방금 갱신됨';
                     document.getElementById('lastUpdate').classList.remove('hidden');
 
-                    populateFilters();
+                    if (topicVal === '전체' || !topicVal) populateFilters();
                     applyFilters();
                 } catch (err) {
                     console.error(err);
-                    // 캐시 시도
                     const cache = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
                     if (cache && cache.data) {
                         allNews = cache.data;
@@ -413,14 +444,16 @@
 
             // ── 필터 채우기 ──
             function populateFilters() {
-                const cats = [...new Set(allNews.map(n => n.카테고리))].sort();
+                const topics = [...new Set(allNews.map(n => n.주제))].sort();
                 const sel = document.getElementById('filterCategory');
+                const current = sel.value;
                 sel.innerHTML = '<option value="전체">전체</option>';
-                cats.forEach(c => {
+                topics.forEach(t => {
                     const opt = document.createElement('option');
-                    opt.value = c; opt.textContent = c;
+                    opt.value = t; opt.textContent = t;
                     sel.appendChild(opt);
                 });
+                sel.value = current || '전체';
             }
 
             // ── 중요도 토글 ──
@@ -440,14 +473,12 @@
 
             // ── 필터 적용 ──
             function applyFilters() {
-                const dateVal = document.getElementById('filterDate').value;
                 const catVal = document.getElementById('filterCategory').value;
                 const searchVal = document.getElementById('filterSearch').value.toLowerCase().trim();
 
                 const filtered = allNews.filter(n => {
-                    if (dateVal && n.날짜 !== dateVal) return false;
                     if (!activeImportance.has(n.중요도)) return false;
-                    if (catVal !== '전체' && n.카테고리 !== catVal) return false;
+                    if (catVal !== '전체' && n.주제 !== catVal) return false;
                     if (searchVal && !n.제목.toLowerCase().includes(searchVal)) return false;
                     return true;
                 });
@@ -463,7 +494,7 @@
             function updateStats(data) {
                 document.getElementById('statTotal').textContent = data.length;
                 document.getElementById('statHigh').textContent = data.filter(n => n.중요도 === '상').length;
-                document.getElementById('statCat').textContent = new Set(data.map(n => n.카테고리)).size;
+                document.getElementById('statCat').textContent = new Set(data.map(n => n.주제)).size;
                 document.getElementById('statDays').textContent = new Set(data.map(n => n.날짜)).size;
             }
 
@@ -494,7 +525,7 @@
                 <!-- 상태/분류 -->
                 <div class="sm:w-[10%] flex sm:flex-col gap-1.5 mb-1.5 sm:mb-0 sm:pr-4">
                     <span class="inline-block text-[11px] font-bold px-2.5 py-1 rounded-md text-center ${badgeColor}">${n.중요도}</span>
-                    <span class="inline-block text-[11px] font-medium px-2.5 py-1 rounded-md bg-gray-100 text-gray-600 border border-gray-200 text-center">${n.카테고리}</span>
+                    <span class="inline-block text-[11px] font-medium px-2.5 py-1 rounded-md bg-gray-100 text-gray-600 border border-gray-200 text-center">${n.주제}</span>
                 </div>
                 <!-- 제목/출처 -->
                 <div class="sm:w-[35%] sm:pr-6 mb-1.5 sm:mb-0">
@@ -529,7 +560,7 @@
                 document.getElementById('modalBody').innerHTML = `
             <div class="flex items-center gap-2 flex-wrap">
                 <span class="text-xs font-bold px-2.5 py-1 rounded-full ${badgeColor}">${n.중요도}</span>
-                <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">${n.카테고리}</span>
+                <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">${n.주제}</span>
                 <span class="text-xs text-muted">${n.언론사} · ${n.날짜}</span>
             </div>
             <h3 class="text-lg font-bold leading-tight text-gray-900">${n.제목}</h3>
@@ -566,14 +597,12 @@
 
             // 현재 필터된 데이터 가져오기 (모달 인덱스용)
             function getCurrentFiltered() {
-                const dateVal = document.getElementById('filterDate').value;
                 const catVal = document.getElementById('filterCategory').value;
                 const searchVal = document.getElementById('filterSearch').value.toLowerCase().trim();
 
                 return allNews.filter(n => {
-                    if (dateVal && n.날짜 !== dateVal) return false;
                     if (!activeImportance.has(n.중요도)) return false;
-                    if (catVal !== '전체' && n.카테고리 !== catVal) return false;
+                    if (catVal !== '전체' && n.주제 !== catVal) return false;
                     if (searchVal && !n.제목.toLowerCase().includes(searchVal)) return false;
                     return true;
                 }).sort((a, b) => b.날짜.localeCompare(a.날짜));
@@ -600,103 +629,213 @@
                 // 하드코딩 방식으로 변경되어 사용하지 않음
             }
 
-            // ── 키워드 설정 관리 ──
+            // ── 키워드 및 주제 설정 관리 ──
             function openSettingsModal() {
                 document.getElementById('settingsModal').classList.remove('hidden');
                 document.body.style.overflow = 'hidden';
                 loadSettings();
             }
 
-            function closeSettingsModal() {
-                document.getElementById('settingsModal').classList.add('hidden');
-                document.body.style.overflow = '';
-            }
-
             async function loadSettings() {
                 const url = SCRIPT_URL;
-                document.getElementById('settingsList').innerHTML = '<p class="text-xs text-muted text-center py-4">불러오는 중...</p>';
+                showSettingsLoading(true);
 
                 try {
-                    const resp = await fetch(url + '?tab=Settings');
-                    const data = await resp.json();
-                    renderSettings(data);
+                    // 키워드와 주제별 기준을 동시에 로드
+                    const [settingsResp, criteriaResp] = await Promise.all([
+                        fetch(url + '?tab=Settings'),
+                        fetch(url + '?tab=Topic_Settings')
+                    ]);
+
+                    allSettings = await settingsResp.json();
+                    const criteriaData = await criteriaResp.json();
+
+                    topicCriteriaMap = {};
+                    criteriaData.forEach(item => {
+                        const t = item['주제'] || item['Topic'];
+                        const c = item['기준'] || item['Criteria'];
+                        if (t) topicCriteriaMap[t] = c;
+                    });
+
+                    populateSettingsTopicSelect();
                 } catch (err) {
+                    console.error('Settings load error:', err);
                     document.getElementById('settingsList').innerHTML = '<p class="text-xs text-rose-500 text-center py-4">설정을 불러올 수 없습니다.</p>';
+                } finally {
+                    showSettingsLoading(false);
                 }
             }
 
-            function renderSettings(settings) {
+            function populateSettingsTopicSelect() {
+                const topicsFromSettings = [...new Set(allSettings.map(s => s['주제'] || s['카테고리']))];
+                const topicsFromCriteria = Object.keys(topicCriteriaMap);
+                const allTopics = [...new Set([...topicsFromSettings, ...topicsFromCriteria])].filter(Boolean).sort();
+
+                const sel = document.getElementById('settingsTopicSelect');
+                const current = sel.value;
+                sel.innerHTML = '<option value="">주제 선택...</option>';
+                allTopics.forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t; opt.textContent = t;
+                    sel.appendChild(opt);
+                });
+                if (current && allTopics.includes(current)) {
+                    sel.value = current;
+                }
+            }
+
+            function onSettingsTopicChange() {
+                const topic = document.getElementById('settingsTopicSelect').value;
+                const detailSection = document.getElementById('topicDetailSection');
+
+                if (!topic) {
+                    detailSection.classList.add('hidden');
+                    return;
+                }
+
+                detailSection.classList.remove('hidden');
+
+                // 기준 로드
+                document.getElementById('topicCriteria').value = topicCriteriaMap[topic] || '';
+
+                // 키워드 목록 필터링 및 렌더링
+                renderFilteredKeywords(topic);
+            }
+
+            function renderFilteredKeywords(topic) {
                 const container = document.getElementById('settingsList');
-                if (settings.length === 0) {
+                const keywords = allSettings.filter(s => (s['주제'] || s['카테고리']) === topic);
+
+                if (keywords.length === 0) {
                     container.innerHTML = '<p class="text-xs text-muted text-center py-4">등록된 키워드가 없습니다</p>';
                     return;
                 }
-                container.innerHTML = settings.map((s, i) => {
+
+                container.innerHTML = keywords.map((s, i) => {
                     const isActive = String(s['활성화'] || '').toUpperCase() === 'TRUE';
                     return `
-            <div class="flex items-center gap-2 px-3 py-2 rounded-lg border border-border ${isActive ? 'bg-white' : 'bg-gray-50 opacity-60'}">
-                <button onclick="toggleSetting(${i + 1})" class="w-5 h-5 rounded border-2 flex items-center justify-center text-xs
-                    ${isActive ? 'border-accent bg-accent text-white' : 'border-gray-300 bg-white'}">
-                    ${isActive ? '✓' : ''}
-                </button>
-                <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">${s['카테고리'] || '기타'}</span>
-                <span class="text-sm font-medium flex-1">${s['키워드'] || ''}</span>
-                <button onclick="deleteSetting(${i + 1})" class="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-rose-500 hover:bg-rose-50 rounded transition-colors">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                    </svg>
-                </button>
-            </div>`;
+                    <div class="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-white shadow-sm">
+                        <button onclick="toggleKeyword('${topic}', '${s['키워드']}')" class="w-5 h-5 rounded border-2 flex items-center justify-center text-[10px]
+                            ${isActive ? 'border-accent bg-accent text-white' : 'border-gray-300 bg-white'}">
+                            ${isActive ? '✓' : ''}
+                        </button>
+                        <span class="text-sm font-medium flex-1 text-gray-700">${s['키워드'] || ''}</span>
+                        <button onclick="deleteKeyword('${topic}', '${s['키워드']}')" class="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-rose-500 hover:bg-rose-50 rounded transition-colors">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                        </button>
+                    </div>`;
                 }).join('');
             }
 
-            async function addKeyword() {
-                const url = SCRIPT_URL;
+            async function addNewTopic() {
+                const name = document.getElementById('newTopicInput').value.trim();
+                if (!name) return;
 
-                const category = document.getElementById('newCategory').value.trim();
-                const keyword = document.getElementById('newKeyword').value.trim();
-                if (!category || !keyword) { alert('카테고리와 키워드를 모두 입력해주세요.'); return; }
+                if (topicCriteriaMap[name]) {
+                    alert('이미 존재하는 주제입니다.');
+                    return;
+                }
 
+                showSettingsLoading(true);
                 try {
-                    await fetch(url, {
+                    await fetch(SCRIPT_URL, {
                         method: 'POST',
                         headers: { 'Content-Type': 'text/plain' },
-                        body: JSON.stringify({ action: 'add', category, keyword }),
+                        body: JSON.stringify({ action: 'updateTopicCriteria', topic: name, criteria: '' }),
                     });
-                    document.getElementById('newCategory').value = '';
+                    document.getElementById('newTopicInput').value = '';
+                    await loadSettings();
+                    document.getElementById('settingsTopicSelect').value = name;
+                    onSettingsTopicChange();
+                } catch (err) {
+                    alert('주제 추가 실패: ' + err.message);
+                } finally {
+                    showSettingsLoading(false);
+                }
+            }
+
+            async function saveTopicCriteria() {
+                const topic = document.getElementById('settingsTopicSelect').value;
+                const criteria = document.getElementById('topicCriteria').value.trim();
+                if (!topic) return;
+
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '저장 중...';
+                btn.disabled = true;
+
+                try {
+                    await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({ action: 'updateTopicCriteria', topic, criteria }),
+                    });
+                    topicCriteriaMap[topic] = criteria;
+                    btn.textContent = '✅ 저장됨';
+                    setTimeout(() => {
+                        btn.textContent = originalText;
+                        btn.disabled = false;
+                    }, 1500);
+                } catch (err) {
+                    alert('기준 저장 실패: ' + err.message);
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }
+            }
+
+            async function addKeyword() {
+                const topic = document.getElementById('settingsTopicSelect').value;
+                const keyword = document.getElementById('newKeyword').value.trim();
+                if (!topic || !keyword) { alert('주제와 키워드를 확인해주세요.'); return; }
+
+                try {
+                    await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({ action: 'addKeyword', topic, keyword }),
+                    });
                     document.getElementById('newKeyword').value = '';
-                    loadSettings();
+                    await loadSettings();
+                    onSettingsTopicChange();
                 } catch (err) {
                     alert('키워드 추가 실패: ' + err.message);
                 }
             }
 
-            async function deleteSetting(row) {
-                if (!confirm('이 키워드를 삭제하시겠습니까?')) return;
-                const url = SCRIPT_URL;
+            async function deleteKeyword(topic, keyword) {
+                if (!confirm(`'${keyword}' 키워드를 삭제하시겠습니까?`)) return;
                 try {
-                    await fetch(url, {
+                    await fetch(SCRIPT_URL, {
                         method: 'POST',
                         headers: { 'Content-Type': 'text/plain' },
-                        body: JSON.stringify({ action: 'delete', row }),
+                        body: JSON.stringify({ action: 'deleteKeyword', topic, keyword }),
                     });
-                    loadSettings();
+                    await loadSettings();
+                    onSettingsTopicChange();
                 } catch (err) {
                     alert('삭제 실패: ' + err.message);
                 }
             }
 
-            async function toggleSetting(row) {
-                const url = SCRIPT_URL;
+            async function toggleKeyword(topic, keyword) {
                 try {
-                    await fetch(url, {
+                    await fetch(SCRIPT_URL, {
                         method: 'POST',
                         headers: { 'Content-Type': 'text/plain' },
-                        body: JSON.stringify({ action: 'toggle', row }),
+                        body: JSON.stringify({ action: 'toggleKeyword', topic, keyword }),
                     });
-                    loadSettings();
+                    await loadSettings();
+                    onSettingsTopicChange();
                 } catch (err) {
-                    alert('변경 실패: ' + err.message);
+                    alert('상태 변경 실패: ' + err.message);
+                }
+            }
+
+            function showSettingsLoading(show) {
+                if (show) {
+                    document.getElementById('settingsList').innerHTML = '<div class="flex justify-center py-8"><div class="spinner w-6 h-6 border-2"></div></div>';
                 }
             }
 
@@ -789,7 +928,7 @@
                 const today = new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
                 speechQueue = [`${today} AI 뉴스 브리핑입니다. 총 ${newsWithSummary.length}건.`];
                 newsWithSummary.forEach((n, i) => {
-                    speechQueue.push(`${i + 1}번. ${n.카테고리}. ${n.제목}.`);
+                    speechQueue.push(`${i + 1}번. ${n.주제}. ${n.제목}.`);
                     speechQueue.push(n.AI요약);
                 });
                 speechQueue.push('이상 브리핑을 마칩니다.');
@@ -854,11 +993,10 @@
                 btn.classList.add('opacity-70');
 
                 try {
-                    await fetch(url, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        headers: { 'Content-Type': 'text/plain' },
-                        body: JSON.stringify({ action: 'triggerWorkflow' }),
+                    // POST 대신 GET으로 요청 (CORS 이슈 회피 및 안정성 목적)
+                    await fetch(`${url}?action=triggerWorkflow`, {
+                        method: 'GET',
+                        mode: 'no-cors'
                     });
                     // no-cors 모드에서는 응답을 읽을 수 없지만 요청은 전달됨
                     btn.innerHTML = `✅ 수집 시작됨!`;

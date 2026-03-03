@@ -35,11 +35,18 @@ CREDENTIALS_DIR.mkdir(exist_ok=True)
 NAVER_CLIENT_ID = _get_config("NAVER_CLIENT_ID")
 NAVER_CLIENT_SECRET = _get_config("NAVER_CLIENT_SECRET")
 NAVER_SEARCH_URL = "https://openapi.naver.com/v1/search/news.json"
-NAVER_NEWS_DISPLAY = 10  # 키워드당 최대 수집 건수
+NAVER_NEWS_DISPLAY = 20  # 주제별 최대 수집 건수 (필터링 전)
 
 # ── Google Gemini API ─────────────────────────────────
 GEMINI_API_KEY = _get_config("GEMINI_API_KEY")
-GEMINI_MODEL = "gemini-3-flash-preview"
+GEMINI_MODEL = "gemini-1.5-flash"  # 최신 모델 사용
+
+# 기본 중요도 판단 기준
+DEFAULT_CRITERIA = """
+상: 정책 변화, 큰 폭의 금리 변동, 업계에 직접적인 타격을 주는 사건
+중: 신규 서비스 출시, 통계 지표 발표, 전문가 의견
+하: 단순 홍보, 중복 기사, 개인의 단순 미담
+""".strip()
 
 # ── Google Sheets ─────────────────────────────────────
 GOOGLE_SHEET_ID = _get_config("GOOGLE_SHEET_ID")
@@ -50,14 +57,16 @@ GOOGLE_CREDENTIALS_PATH = _get_config(
 
 # 시트 탭 이름
 SETTINGS_TAB = "Settings"
+TOPIC_SETTINGS_TAB = "Topic_Settings"
 NEWS_DATA_TAB = "News_Data"
 
 # Settings 탭 헤더
-SETTINGS_HEADERS = ["카테고리", "키워드", "활성화"]
+SETTINGS_HEADERS = ["주제", "키워드", "활성화"]
+TOPIC_SETTINGS_HEADERS = ["Topic", "Criteria"]
 
 # News_Data 탭 헤더
 NEWS_DATA_HEADERS = [
-    "날짜", "카테고리", "언론사", "제목", "네이버 요약",
+    "날짜", "주제", "언론사", "제목", "네이버 요약",
     "본문 전문", "링크", "AI 요약", "중요도"
 ]
 
