@@ -653,12 +653,16 @@
                     fetch(url + '?tab=Topic_Settings')
                 ]);
 
-                allSettings = await settingsResp.json();
-                const criteriaData = await criteriaResp.json();
+                let sData = await settingsResp.json();
+                let cData = await criteriaResp.json();
+
+                // GAS에서 탭이 없으면 객체(에러 메시지)를 리턴할 수 있으므로 배열인지 확인
+                allSettings = Array.isArray(sData) ? sData : [];
+                const criteriaData = Array.isArray(cData) ? cData : [];
 
                 topicCriteriaMap = {};
                 criteriaData.forEach(item => {
-                    const t = item['주제'] || item['Topic'];
+                    const t = item['주제'] || item['Topic'] || item['카테고리'];
                     const c = item['기준'] || item['Criteria'];
                     if (t) topicCriteriaMap[t] = c;
                 });
