@@ -38,16 +38,23 @@ def _get_credentials():
     1순위: GOOGLE_CREDENTIALS_JSON 환경변수 (base64 인코딩된 서비스 계정 JSON)
     2순위: 로컬 JSON 파일
     """
-    # 1순위: 환경변수에서 base64 디코딩 (GitHub Actions용)
-    creds_b64 = os.getenv("GOOGLE_CREDENTIALS_JSON", "")
-    if creds_b64:
+    # 1순위: 환경변수 (GitHub Actions용)
+    creds_raw = os.getenv("GOOGLE_CREDENTIALS_JSON", "").strip()
+    if creds_raw:
         try:
-            creds_json = base64.b64decode(creds_b64).decode("utf-8")
-            creds_dict = json.loads(creds_json)
+            # 먼저 생 JSON인지 확인
+            if creds_raw.startswith("{"):
+                creds_dict = json.loads(creds_raw)
+            else:
+                # 아니면 base64로 시도
+                creds_json = base64.b64decode(creds_raw).decode("utf-8")
+                creds_dict = json.loads(creds_json)
+            
             creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
             return creds
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"환경변수 인증 정보 로드 실패: {e}")
+            # 여기서 멈추지 않고 로컬 파일 확인으로 넘어감
 
     # 2순위: 로컬 JSON 파일
     if os.path.exists(GOOGLE_CREDENTIALS_PATH):
