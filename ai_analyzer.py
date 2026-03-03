@@ -110,28 +110,49 @@ class AIAnalyzer:
 [뉴스 목록]
 {chr(10).join(news_texts)}
 """
-            try:
-                response = self.model.generate_content(prompt)
-                text = response.text.strip()
+            import time
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    # JSON 모드 강제
+                    response = self.model.generate_content(
+                        prompt,
+                        generation_config=genai.types.GenerationConfig(
+                            response_mime_type="application/json",
+                        )
+                    )
+                    text = response.text.strip()
 
-                if "```json" in text:
-                    text = text.split("```json")[1].split("```")[0].strip()
-                elif "```" in text:
-                    text = text.split("```")[1].split("```")[0].strip()
+                    if "```json" in text:
+                        text = text.split("```json")[1].split("```")[0].strip()
+                    elif "```" in text:
+                        text = text.split("```")[1].split("```")[0].strip()
 
-                import json
-                results = json.loads(text)
+                    # 가장 바깥쪽 대괄호를 찾아 추출 (안전한 파싱)
+                    start_idx = text.find('[')
+                    end_idx = text.rfind(']')
+                    if start_idx != -1 and end_idx != -1:
+                        text = text[start_idx:end_idx+1]
+                        
+                    import json
+                    results = json.loads(text)
 
-                for item in results:
-                    idx = item.get("index", 1) - 1
-                    if 0 <= idx < len(group):
-                        group[idx]["AI 요약"] = item.get("summary", "")
-                        group[idx]["중요도"] = item.get("importance", "중")
-            except Exception as e:
-                logger.error(f"AI 주제 분석 실패 ({topic}): {e}")
-                for news in group:
-                    news["AI 요약"] = "(분석 실패)"
-                    news["중요도"] = "중" # 실패 시 배제하지 않도록 '중'으로 기본값 변경
+                    for item in results:
+                        idx = item.get("index", 1) - 1
+                        if 0 <= idx < len(group):
+                            group[idx]["AI 요약"] = item.get("summary", "")
+                            group[idx]["중요도"] = item.get("importance", "중")
+                    
+                    break # 성공 시 루프 탈출
+                        
+                except Exception as e:
+                    logger.error(f"AI 주제 분석 (시도 {attempt+1}/{max_retries}) 실패 ({topic}): {e}")
+                    if attempt == max_retries - 1:
+                        for news in group:
+                            news["AI 요약"] = "(분석 실패)"
+                            news["중요도"] = "중" # 실패 시 배제하지 않도록 '중'으로 기본값 변경
+                    else:
+                        time.sleep(2) # 재시도 전 대기
 
             
             final_batch_results.extend(group)

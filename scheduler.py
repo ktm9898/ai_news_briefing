@@ -51,20 +51,20 @@ def run_pipeline():
         analyzed_news = analyzer.analyze_news(all_collected, topic_criteria)
         result["analyzed"] = len(analyzed_news)
 
-        # 4. 필터링 및 제한 (상/중 중요도만, 주제별 최대 5건)
+        # 4. 필터링 및 제한 (주제별 최대 5건, 중요도 높은 순)
         by_topic = {}
         for news in analyzed_news:
-            if news.get("중요도") in ["상", "중"]:
-                t = news.get("주제", "기타")
-                by_topic.setdefault(t, []).append(news)
+            t = news.get("주제", "기타")
+            by_topic.setdefault(t, []).append(news)
         
         final_news_to_save = []
+        importance_order = {"상": 0, "중": 1, "하": 2}
         for topic, group in by_topic.items():
-            # 중요도 '상'을 우선순위로 정렬
-            group.sort(key=lambda x: 0 if x.get("중요도") == "상" else 1)
+            # 중요도(상, 중, 하) 우선순위로 정렬
+            group.sort(key=lambda x: importance_order.get(x.get("중요도", "하"), 3))
             selected = group[:5]
             final_news_to_save.extend(selected)
-            logger.info(f"주제 '{topic}': {len(group)}건 중 {len(selected)}건 선별")
+            logger.info(f"주제 '{topic}': {len(group)}건 중 최우선 {len(selected)}건 선별")
 
         result["filtered"] = len(final_news_to_save)
 
