@@ -1009,17 +1009,18 @@
                     headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify({ action: 'triggerWorkflow' }),
                 });
-                btn.innerHTML = `✅ 수집 시작됨!`;
+                btn.innerHTML = `⏳ 수집 진행중 (3~5분 소요, 이후 새로고침 해주세요)`;
                 btn.classList.remove('bg-emerald-600');
                 btn.classList.add('bg-emerald-500');
-                // 2분 후 자동 새로고침
+
+                alert('뉴스 수집이 백그라운드에서 시작되었습니다!\nAI 분석까지 약 3~5분이 소요됩니다. 잠시 후 우측 상단의 [새로고침] 버튼을 눌러 확인해 주세요.');
+
                 setTimeout(() => {
-                    loadData();
                     btn.innerHTML = originalHTML;
                     btn.disabled = false;
                     btn.classList.remove('opacity-70', 'bg-emerald-500');
                     btn.classList.add('bg-emerald-600');
-                }, 120000);
+                }, 300000); // 5분 뒤 버튼 원상복구
             } catch (err) {
                 alert('뉴스 수집 요청 실패: ' + err.message);
                 btn.innerHTML = originalHTML;

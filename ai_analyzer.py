@@ -64,8 +64,9 @@ class AIAnalyzer:
             except Exception as e:
                 logger.error(f"AI 분석 배치 실패 (배치 {batch_num}): {e}")
                 for news in batch:
-                    news["AI 요약"] = "(분석 실패)"
-                    news["중요도"] = "하"
+                    error_msg = str(e)[:200]
+                    news["AI 요약"] = f"(배치 분석 실패: {error_msg})"
+                    news["중요도"] = "중"
                 analyzed.extend(batch)
 
         return analyzed
