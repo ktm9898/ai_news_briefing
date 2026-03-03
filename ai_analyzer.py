@@ -149,7 +149,8 @@ class AIAnalyzer:
                     logger.error(f"AI 주제 분석 (시도 {attempt+1}/{max_retries}) 실패 ({topic}): {e}")
                     if attempt == max_retries - 1:
                         for news in group:
-                            news["AI 요약"] = "(분석 실패)"
+                            error_msg = str(e)[:200] # 길어질 수 있으므로 자름
+                            news["AI 요약"] = f"(분석 실패: {error_msg})"
                             news["중요도"] = "중" # 실패 시 배제하지 않도록 '중'으로 기본값 변경
                     else:
                         time.sleep(2) # 재시도 전 대기
