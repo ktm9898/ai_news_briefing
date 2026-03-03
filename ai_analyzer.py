@@ -25,7 +25,7 @@ class AIAnalyzer:
     """Gemini 기반 뉴스 분석기"""
 
     def __init__(self):
-        self.model = genai.GenerativeModel(GEMINI_MODEL)
+        self.model = genai.GenerativeModel('gemini-2.5-flash')
 
     def analyze_news(
         self,
