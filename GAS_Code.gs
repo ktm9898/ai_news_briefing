@@ -11,6 +11,38 @@ function doGet(e) {
   const tab = e.parameter.tab || 'News_Data';
   const dateStr = e.parameter.date; // YYYY-MM-DD
   const topic = e.parameter.topic; // 주제 필터
+  const action = e.parameter.action;
+
+  // ── 수동 수집 트리거 (GitHub Actions) ──
+  if (action === 'triggerWorkflow') {
+    // PropertiesService에서 GitHub PAT 가져오기
+    const GITHUB_PAT = PropertiesService.getScriptProperties().getProperty('GITHUB_PAT');
+    if (!GITHUB_PAT) {
+      return createResponse({ error: 'GITHUB_PAT가 스크립트 속성에 설정되지 않았습니다.', ok: false });
+    }
+
+    const url = 'https://api.github.com/repos/ktm9898/ai_news_briefing/actions/workflows/collect.yml/dispatches';
+    const options = {
+      method: 'post',
+      headers: {
+        'Accept': 'application/vnd.github.v3+json',
+        'Authorization': 'Bearer ' + GITHUB_PAT
+      },
+      payload: JSON.stringify({ ref: 'master' }),
+      muteHttpExceptions: true
+    };
+
+    try {
+      const response = UrlFetchApp.fetch(url, options);
+      if (response.getResponseCode() >= 200 && response.getResponseCode() < 300) {
+        return createResponse({ ok: true, success: true });
+      } else {
+        return createResponse({ error: 'GitHub API 오류: ' + response.getContentText(), ok: false });
+      }
+    } catch (err) {
+      return createResponse({ error: '요청 실패: ' + err.toString(), ok: false });
+    }
+  }
 
   const sheet = ss.getSheetByName(tab);
   if (!sheet) return createResponse({ error: 'Tab not found' });
@@ -70,7 +102,7 @@ function doPost(e) {
     if (!sheet) return createResponse({ error: 'Settings tab not found' });
     const data = sheet.getDataRange().getValues();
     const headers = data[0];
-    const topicIdx = headers.indexOf('주제');
+    const topicIdx = headers.indexOf('주제') !== -1 ? headers.indexOf('주제') : headers.indexOf('카테고리');
     const keyIdx = headers.indexOf('키워드');
     
     for (let i = 1; i < data.length; i++) {
@@ -82,13 +114,35 @@ function doPost(e) {
     return createResponse({ error: 'Keyword not found' });
   }
 
+  // 키워드 토글 (Settings 탭)
+  if (action === 'toggleKeyword') {
+    const sheet = ss.getSheetByName('Settings');
+    if (!sheet) return createResponse({ error: 'Settings tab not found' });
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    const topicIdx = headers.indexOf('주제') !== -1 ? headers.indexOf('주제') : headers.indexOf('카테고리');
+    const keyIdx = headers.indexOf('키워드');
+    const activeIdx = headers.indexOf('활성화');
+    
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][topicIdx] === params.topic && data[i][keyIdx] === params.keyword) {
+        let currentValue = data[i][activeIdx];
+        let newValue = (String(currentValue).toUpperCase() === 'TRUE') ? 'FALSE' : 'TRUE';
+        sheet.getRange(i + 1, activeIdx + 1).setValue(newValue);
+        return createResponse({ success: true });
+      }
+    }
+    return createResponse({ error: 'Keyword not found' });
+  }
+
   // 주제별 AI 기준 설정 (Topic_Settings 탭)
-  if (action === 'updateCriteria') {
+  if (action === 'updateTopicCriteria') {
     const sheet = getOrCreateTab(ss, 'Topic_Settings', ['Topic', 'Criteria']);
     const data = sheet.getDataRange().getValues();
     let found = false;
     for (let i = 1; i < data.length; i++) {
-      if (data[i][0] === params.topic) {
+      const dbTopic = data[i][0] || data[i][headers.indexOf('주제')];
+      if (dbTopic === params.topic) {
         sheet.getRange(i + 1, 2).setValue(params.criteria);
         found = true;
         break;
@@ -100,8 +154,26 @@ function doPost(e) {
     return createResponse({ success: true });
   }
 
+  // 레거시 action (수동 수집) fallback (GET 통신 방식 실패 시)
+  if (action === 'triggerWorkflow') {
+    const GITHUB_PAT = PropertiesService.getScriptProperties().getProperty('GITHUB_PAT');
+    if (!GITHUB_PAT) return createResponse({ error: 'GITHUB_PAT 미설정', ok: false });
+    const url = 'https://api.github.com/repos/ktm9898/ai_news_briefing/actions/workflows/collect.yml/dispatches';
+    try {
+      UrlFetchApp.fetch(url, {
+        method: 'post',
+        headers: { 'Accept': 'application/vnd.github.v3+json', 'Authorization': 'Bearer ' + GITHUB_PAT },
+        payload: JSON.stringify({ ref: 'master' })
+      });
+      return createResponse({ ok: true, success: true });
+    } catch (err) {
+        return createResponse({ error: err.toString(), ok: false });
+    }
+  }
+
   return createResponse({ error: 'Invalid action' });
 }
+
 
 function getOrCreateTab(ss, name, headers) {
   let sheet = ss.getSheetByName(name);
