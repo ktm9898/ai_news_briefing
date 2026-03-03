@@ -85,7 +85,7 @@ class AIAnalyzer:
             
             news_texts = []
             for idx, news in enumerate(group):
-                body_preview = news.get("본문 전문", "")[:2000]
+                body_preview = news.get("본문 전문", "")[:1000] # 토큰 및 출력 길이 제한 방지 (2000 -> 1000)
                 news_texts.append(
                     f"[뉴스 {idx + 1}]\n"
                     f"제목: {news.get('제목', '')}\n"
@@ -131,7 +131,8 @@ class AIAnalyzer:
                 logger.error(f"AI 주제 분석 실패 ({topic}): {e}")
                 for news in group:
                     news["AI 요약"] = "(분석 실패)"
-                    news["중요도"] = "하"
+                    news["중요도"] = "중" # 실패 시 배제하지 않도록 '중'으로 기본값 변경
+
             
             final_batch_results.extend(group)
 
