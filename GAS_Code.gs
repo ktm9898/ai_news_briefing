@@ -73,7 +73,21 @@ function doGet(e) {
   // News_Data 탭의 경우 날짜 및 주제 필터 적용
   if (tab === 'News_Data') {
     if (dateStr) {
-      result = result.filter(item => item['날짜'] === dateStr);
+      result = result.filter(item => {
+        // 날짜 값을 문자열로 정규화하여 비교
+        let itemDate = item['날짜'];
+        if (itemDate instanceof Date) {
+          itemDate = Utilities.formatDate(itemDate, "GMT+9", "yyyy-MM-dd");
+        } else if (itemDate) {
+          itemDate = String(itemDate).trim();
+          // "2026. 3. 4." 같은 형식도 처리
+          const match = String(itemDate).match(/(\d{4})[\.\-\/\s]+(\d{1,2})[\.\-\/\s]+(\d{1,2})/);
+          if (match) {
+            itemDate = match[1] + '-' + ('0' + match[2]).slice(-2) + '-' + ('0' + match[3]).slice(-2);
+          }
+        }
+        return itemDate === dateStr;
+      });
     }
     if (topic && topic !== '전체') {
       result = result.filter(item => item['주제'] === topic);

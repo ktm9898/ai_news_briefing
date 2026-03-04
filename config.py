@@ -35,7 +35,7 @@ CREDENTIALS_DIR.mkdir(exist_ok=True)
 NAVER_CLIENT_ID = _get_config("NAVER_CLIENT_ID")
 NAVER_CLIENT_SECRET = _get_config("NAVER_CLIENT_SECRET")
 NAVER_SEARCH_URL = "https://openapi.naver.com/v1/search/news.json"
-NAVER_NEWS_DISPLAY = 20  # 주제별 최대 수집 건수 (필터링 전)
+NAVER_NEWS_DISPLAY = 10  # 주제별 최대 수집 건수 (AI 1차 선별 전)
 
 # ── Google Gemini API ─────────────────────────────────
 GEMINI_API_KEY = _get_config("GEMINI_API_KEY")

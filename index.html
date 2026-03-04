@@ -358,8 +358,12 @@
 
         // ── 초기화 ──
         document.addEventListener('DOMContentLoaded', () => {
-            // 오늘 날짜로 초기값 설정 (선택 사항, 여기서는 비워둠)
-            document.getElementById('filterDate').value = '';
+            // 오늘 날짜로 초기값 설정
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            document.getElementById('filterDate').value = `${yyyy}-${mm}-${dd}`;
 
             // 필터 이벤트
             document.getElementById('filterDate').addEventListener('change', loadData); // 날짜 변경 시 서버에서 다시 가져옴

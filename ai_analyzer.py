@@ -1,10 +1,9 @@
 """
 ai_analyzer.py - Gemini API 기반 뉴스 분석 모듈
 
-기능:
-  - 뉴스 중요도 판단 (상/중/하)
-  - 핵심 내용 요약 (2~3문장)
-  - 브리핑 대본 생성 (주제별 핵심 뉴스 큐레이션)
+2단계 AI 파이프라인:
+  Stage 1: 제목+설명만으로 중요도 선별 (크롤링 전)
+  Stage 2: 선별된 기사의 요약 + 브리핑 대본 동시 생성 (1회 호출)
 """
 
 import json
@@ -22,100 +21,75 @@ genai.configure(api_key=GEMINI_API_KEY)
 
 
 class AIAnalyzer:
-    """Gemini 기반 뉴스 분석기"""
+    """Gemini 기반 뉴스 분석기 (2단계 파이프라인)"""
 
     def __init__(self):
         self.model = genai.GenerativeModel('gemini-2.5-flash')
 
-    def analyze_news(
+    # ═══════════════════════════════════════════════════
+    # Stage 1: 중요도 선별 (크롤링 전, 제목+설명만 사용)
+    # ═══════════════════════════════════════════════════
+
+    def screen_importance(
         self,
         news_list: list[dict],
         topic_criteria: dict[str, str] = None,
     ) -> list[dict]:
         """
-        수집된 뉴스에 대해 중요도·요약을 생성.
-        topic_criteria: {"주제명": "상/중/하 판단 기준..."}
+        제목과 네이버 요약만으로 중요도를 판별.
+        크롤링 전에 불필요한 기사를 걸러내기 위한 1차 필터링.
+
+        Args:
+            news_list: [{"제목": ..., "네이버 요약": ..., "주제": ..., ...}]
+            topic_criteria: {"주제명": "판단 기준..."}
+
+        Returns:
+            중요도가 채워진 news_list
         """
         if not news_list:
             return news_list
 
-        # API 키 확인
         if not GEMINI_API_KEY:
             logger.error("GEMINI_API_KEY가 설정되지 않았습니다.")
             for news in news_list:
-                news["AI 요약"] = "(GEMINI_API_KEY 미설정)"
                 news["중요도"] = "중"
             return news_list
 
-        # 뉴스를 배치로 처리 (한 번에 최대 30건)
-        batch_size = 30
-        analyzed = []
-        total_batches = (len(news_list) + batch_size - 1) // batch_size
-        
-        logger.info(f"AI 분석 시작: 총 {len(news_list)}건, {total_batches}개 배치로 처리")
-
-        for i in range(0, len(news_list), batch_size):
-            batch_num = (i // batch_size) + 1
-            batch = news_list[i:i + batch_size]
-            try:
-                result = self._analyze_batch(batch, topic_criteria)
-                analyzed.extend(result)
-                logger.info(f"배치 완료 ({batch_num}/{total_batches})")
-            except Exception as e:
-                logger.error(f"AI 분석 배치 실패 (배치 {batch_num}): {e}")
-                for news in batch:
-                    error_msg = str(e)[:200]
-                    news["AI 요약"] = f"(배치 분석 실패: {error_msg})"
-                    news["중요도"] = "중"
-                analyzed.extend(batch)
-
-        return analyzed
-
-    def _analyze_batch(self, batch: list[dict], topic_criteria: dict[str, str] = None) -> list[dict]:
-        """주제별로 그룹화하여 Gemini 분석 요청"""
         # 주제별 그룹화
         topic_groups = {}
-        for news in batch:
+        for news in news_list:
             t = news.get("주제", "기타")
             topic_groups.setdefault(t, []).append(news)
 
-        final_batch_results = []
+        logger.info(f"AI 1차 선별 시작: {len(news_list)}건, {len(topic_groups)}개 주제")
 
         for topic, group in topic_groups.items():
             criteria = (topic_criteria or {}).get(topic, DEFAULT_CRITERIA)
-            
+
             news_texts = []
             for idx, news in enumerate(group):
-                body_preview = news.get("본문 전문", "")[:1000] # 토큰 및 출력 길이 제한 방지 (2000 -> 1000)
                 news_texts.append(
-                    f"[뉴스 {idx + 1}]\n"
-                    f"제목: {news.get('제목', '')}\n"
-                    f"본문(일부): {body_preview}\n"
+                    f"[{idx + 1}] 제목: {news.get('제목', '')}\n"
+                    f"    설명: {news.get('네이버 요약', '')}"
                 )
 
-            prompt = f"""당신은 베테랑 뉴스 에디터이자 AI 분석가입니다. 
-제공된 주제 '{topic}'에 대한 뉴스 목록을 읽고 분석해 주세요.
+            prompt = f"""당신은 베테랑 뉴스 에디터입니다.
+아래 '{topic}' 주제의 뉴스 목록에서 제목과 설명만 보고 중요도를 판별해 주세요.
 
 [중요도 판단 기준 - {topic}]
 {criteria}
 
-[분석 지침]
-1. 각 뉴스의 핵심 내용을 1~2문장으로 한국어 요약해 주세요.
-2. 위 기준에 따라 중요도를 '상', '중', '하' 중 하나로 판별해 주세요.
-3. 결과는 반드시 다음과 같은 JSON 배열 형식으로만 응답해 주세요:
-[
-  {{"index": 1, "summary": "요약 내용...", "importance": "상"}},
-  ...
-]
+[규칙]
+1. 각 뉴스의 중요도를 '상', '중', '하' 중 하나로 판별
+2. 결과는 반드시 JSON 배열로만 응답:
+[{{"index": 1, "importance": "상"}}, ...]
 
 [뉴스 목록]
 {chr(10).join(news_texts)}
 """
-            import time
             max_retries = 3
             for attempt in range(max_retries):
                 try:
-                    # JSON 모드 강제
                     response = self.model.generate_content(
                         prompt,
                         generation_config=genai.types.GenerationConfig(
@@ -124,97 +98,157 @@ class AIAnalyzer:
                     )
                     text = response.text.strip()
 
-                    if "```json" in text:
-                        text = text.split("```json")[1].split("```")[0].strip()
-                    elif "```" in text:
-                        text = text.split("```")[1].split("```")[0].strip()
-
-                    # 가장 바깥쪽 대괄호를 찾아 추출 (안전한 파싱)
+                    # JSON 파싱
                     start_idx = text.find('[')
                     end_idx = text.rfind(']')
                     if start_idx != -1 and end_idx != -1:
-                        text = text[start_idx:end_idx+1]
-                        
-                    import json
+                        text = text[start_idx:end_idx + 1]
+
                     results = json.loads(text)
 
                     for item in results:
                         idx = item.get("index", 1) - 1
                         if 0 <= idx < len(group):
-                            group[idx]["AI 요약"] = item.get("summary", "")
                             group[idx]["중요도"] = item.get("importance", "중")
-                    
-                    break # 성공 시 루프 탈출
-                        
+
+                    logger.info(
+                        f"[{topic}] 1차 선별 완료: "
+                        f"상={sum(1 for n in group if n.get('중요도') == '상')}건, "
+                        f"중={sum(1 for n in group if n.get('중요도') == '중')}건, "
+                        f"하={sum(1 for n in group if n.get('중요도') == '하')}건"
+                    )
+                    break
+
                 except Exception as e:
-                    logger.error(f"AI 주제 분석 (시도 {attempt+1}/{max_retries}) 실패 ({topic}): {e}")
+                    logger.error(f"AI 1차 선별 실패 ({topic}, 시도 {attempt + 1}/{max_retries}): {e}")
                     if attempt == max_retries - 1:
                         for news in group:
-                            error_msg = str(e)[:200] # 길어질 수 있으므로 자름
-                            news["AI 요약"] = f"(분석 실패: {error_msg})"
-                            news["중요도"] = "중" # 실패 시 배제하지 않도록 '중'으로 기본값 변경
+                            news["중요도"] = "중"  # 실패 시 기본값
                     else:
-                        time.sleep(2) # 재시도 전 대기
+                        time.sleep(2)
 
-            
-            final_batch_results.extend(group)
+        return news_list
 
-        return final_batch_results
+    # ═══════════════════════════════════════════════════
+    # Stage 2: 요약 + 브리핑 대본 동시 생성 (1회 AI 호출)
+    # ═══════════════════════════════════════════════════
 
-    def generate_briefing_script(self, news_list: list[dict]) -> str:
+    def summarize_and_brief(self, news_list: list[dict]) -> tuple[list[dict], str]:
         """
-        주제별 핵심 뉴스를 엮어 라디오 브리핑 대본 생성.
+        크롤링 완료된 중요 기사에 대해:
+        - 각 기사별 AI 요약 (2~3문장)
+        - 오늘의 브리핑 대본 (라디오 스타일)
+        을 한 번의 AI 호출로 생성.
 
         Args:
-            news_list: AI 분석이 완료된 뉴스 목록
+            news_list: 본문 크롤링이 완료된 중요 기사 목록
 
         Returns:
-            브리핑 대본 텍스트
+            (요약이 채워진 news_list, 브리핑 대본 문자열)
         """
         if not news_list:
-            return "오늘은 수집된 뉴스가 없습니다."
+            return news_list, "오늘은 주요 뉴스가 없습니다."
 
-        # 중요도 '상' 우선, 주제별 그룹핑
-        important_news = [n for n in news_list if n.get("중요도") == "상"]
-        if not important_news:
-            important_news = news_list[:10]  # 중요도 '상'이 없으면 상위 10개
+        if not GEMINI_API_KEY:
+            logger.error("GEMINI_API_KEY가 설정되지 않았습니다.")
+            for news in news_list:
+                news["AI 요약"] = "(GEMINI_API_KEY 미설정)"
+            return news_list, "API 키 미설정으로 대본 생성 불가"
 
-        # 주제별 분류
-        by_topic = {}
-        for news in important_news:
-            topic = news.get("주제", "기타")
-            by_topic.setdefault(topic, []).append(news)
+        # 뉴스 텍스트 구성
+        news_texts = []
+        for idx, news in enumerate(news_list):
+            body_preview = news.get("본문 전문", "")[:1500]
+            naver_desc = news.get("네이버 요약", "")
+            news_texts.append(
+                f"[뉴스 {idx + 1}]\n"
+                f"주제: {news.get('주제', '기타')}\n"
+                f"제목: {news.get('제목', '')}\n"
+                f"네이버 요약: {naver_desc}\n"
+                f"본문(일부): {body_preview}\n"
+            )
 
-        news_summary_text = []
-        for topic, items in by_topic.items():
-            news_summary_text.append(f"\n## [{topic}] 주제")
-            for n in items[:5]:  # 주제당 최대 5건
-                news_summary_text.append(
-                    f"- 제목: {n.get('제목', '')}\n"
-                    f"  요약: {n.get('AI 요약', '')}"
-                )
+        prompt = f"""당신은 베테랑 뉴스 에디터이자 인기 아침 라디오 진행자입니다.
+아래 오늘의 주요 뉴스를 읽고 두 가지 작업을 수행해 주세요.
 
-        prompt = f"""당신은 인기 있는 아침 뉴스 라디오의 진행자입니다.
-아래 오늘의 핵심 뉴스들을 바탕으로 자연스럽고 친근한 아침 브리핑 대본을 작성해 주세요.
+[작업 1] 각 뉴스의 핵심 내용을 1~2문장으로 한국어 요약
+[작업 2] 뉴스를 엮어 자연스럽고 친근한 아침 브리핑 대본 작성
 
-{chr(10).join(news_summary_text)}
+대본 규칙:
+- "좋은 아침입니다"로 시작
+- 주제별로 자연스럽게 전환하며 핵심 전달
+- 각 뉴스 2~3문장으로 간결하게
+- 전체 약 800~1200자
+- 마무리 인사로 끝맺음
+- 한국어로 작성
 
-대본 작성 규칙:
-1. "좋은 아침입니다"로 시작하여 날씨나 간단한 인사 후 뉴스로 진입
-2. 주제별로 자연스럽게 전환하며 핵심 내용 전달
-3. 각 뉴스는 2~3문장으로 간결하게 설명
-4. 전체 대본은 3~5분 분량 (약 800~1200자)
-5. 마무리 인사로 끝맺음
-6. 한국어로 작성
+반드시 아래 JSON 형식으로만 응답:
+{{
+  "summaries": [
+    {{"index": 1, "summary": "요약..."}},
+    ...
+  ],
+  "briefing_script": "대본 전문..."
+}}
 
-대본만 반환해 주세요. 다른 설명은 포함하지 마세요.
+[뉴스 목록]
+{chr(10).join(news_texts)}
 """
 
-        try:
-            response = self.model.generate_content(prompt)
-            script = response.text.strip()
-            logger.info(f"브리핑 대본 생성 완료 ({len(script)}자)")
-            return script
-        except Exception as e:
-            logger.error(f"브리핑 대본 생성 실패: {e}")
-            return "브리핑 대본 생성에 실패했습니다. 잠시 후 다시 시도해 주세요."
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                response = self.model.generate_content(
+                    prompt,
+                    generation_config=genai.types.GenerationConfig(
+                        response_mime_type="application/json",
+                    )
+                )
+                text = response.text.strip()
+
+                # JSON 파싱 (중괄호 추출)
+                start_idx = text.find('{')
+                end_idx = text.rfind('}')
+                if start_idx != -1 and end_idx != -1:
+                    text = text[start_idx:end_idx + 1]
+
+                result = json.loads(text)
+
+                # 요약 채우기
+                summaries = result.get("summaries", [])
+                for item in summaries:
+                    idx = item.get("index", 1) - 1
+                    if 0 <= idx < len(news_list):
+                        news_list[idx]["AI 요약"] = item.get("summary", "")
+
+                briefing = result.get("briefing_script", "대본 생성 실패")
+
+                logger.info(
+                    f"AI 2차 완료: {len(summaries)}건 요약, "
+                    f"대본 {len(briefing)}자"
+                )
+                return news_list, briefing
+
+            except Exception as e:
+                logger.error(f"AI 2차 처리 실패 (시도 {attempt + 1}/{max_retries}): {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(2)
+
+        # 모든 재시도 실패
+        for news in news_list:
+            if not news.get("AI 요약"):
+                news["AI 요약"] = "(AI 요약 생성 실패)"
+        return news_list, "브리핑 대본 생성에 실패했습니다."
+
+    # ═══════════════════════════════════════════════════
+    # (레거시 호환) 기존 메서드 유지
+    # ═══════════════════════════════════════════════════
+
+    def analyze_news(self, news_list, topic_criteria=None):
+        """레거시 호환 — screen_importance로 래핑"""
+        return self.screen_importance(news_list, topic_criteria)
+
+    def generate_briefing_script(self, news_list):
+        """레거시 호환 — 사용되지 않음"""
+        _, briefing = self.summarize_and_brief(news_list)
+        return briefing
