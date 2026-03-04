@@ -162,23 +162,54 @@
             </div>
         </div>
 
-        <!-- 음성 브리핑 진행바 -->
+        <!-- 음성 브리핑 플레이어 -->
         <div id="ttsProgressContainer"
-            class="hidden mt-3 p-3 bg-violet-50/50 border border-violet-100 rounded-xl max-w-md ml-auto shadow-sm">
-            <div class="flex items-center justify-between mb-2">
-                <span id="ttsStatus" class="text-[11px] font-bold text-violet-700">브리핑 재생 중...</span>
-                <span id="ttsPercent" class="text-[11px] font-black text-violet-600">0%</span>
+            class="hidden mt-3 p-4 bg-white border border-violet-100 rounded-2xl max-w-lg ml-auto shadow-xl ring-1 ring-violet-500/10">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                    <div class="w-2 h-2 rounded-full bg-violet-500 animate-pulse"></div>
+                    <span id="ttsStatus" class="text-xs font-bold text-violet-700">브리핑 재생 중...</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span id="ttsPercent" class="text-[11px] font-black text-violet-400">0%</span>
+                    <button onclick="stopTTS()"
+                        class="p-1 hover:bg-rose-50 rounded-full text-rose-400 transition-colors" title="종료 및 닫기">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
             </div>
-            <!-- 클릭 가능한 진행바 영역 -->
-            <div onclick="seekTTS(event)"
-                class="group relative w-full bg-violet-200/50 rounded-full h-2.5 overflow-hidden cursor-pointer active:scale-[0.99] transition-transform">
-                <div id="ttsProgressBar"
-                    class="bg-gradient-to-r from-violet-400 to-violet-600 h-full shadow-[0_0_10px_rgba(139,92,246,0.3)]"
-                    style="width: 0%"></div>
-                <!-- 호버 시 가이드 라인 (옵션) -->
-                <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+
+            <div class="flex items-center gap-4">
+                <!-- 플레이어 내 메인 제어 버튼 -->
+                <button onclick="togglePlayback()" id="ttsPlayPauseBtn"
+                    class="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-violet-600 text-white rounded-full shadow-lg shadow-violet-200 hover:bg-violet-700 hover:scale-105 transition-all outline-none">
+                    <svg id="playIcon" class="hidden w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z" />
+                    </svg>
+                    <svg id="pauseIcon" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                    </svg>
+                </button>
+
+                <!-- 진행바 및 시간 -->
+                <div class="flex-1">
+                    <div onclick="seekTTS(event)"
+                        class="group relative w-full bg-violet-100 rounded-full h-2 mb-1.5 cursor-pointer overflow-hidden">
+                        <div id="ttsProgressBar"
+                            class="bg-violet-600 h-full rounded-full shadow-[0_0_12px_rgba(124,58,237,0.4)] transition-all duration-300 ease-out"
+                            style="width: 0%"></div>
+                    </div>
+                    <div class="flex justify-between text-[10px] font-medium text-violet-400">
+                        <span id="ttsCurrentTime">0:00</span>
+                        <span id="ttsTotalTime">0:00</span>
+                    </div>
+                </div>
             </div>
-            <p class="text-[9px] text-violet-400 mt-1.5 text-right font-medium">* 바를 클릭하면 해당 위치부터 다시 읽어줍니다.</p>
+        </div>
+        <p class="text-[9px] text-violet-400 mt-1.5 text-right font-medium">* 바를 클릭하면 해당 위치부터 다시 읽어줍니다.</p>
         </div>
     </header>
 
@@ -512,18 +543,15 @@
             // 정렬 로직: 1.주요뉴스 우선, 2.중요도(상-중-하), 3.날짜(최신순)
             const importanceMap = { '상': 0, '중': 1, '하': 2 };
             filtered.sort((a, b) => {
-                // 1순위: 주제가 '📌 주요뉴스'인 것 (기존 '오늘의 주요뉴스' 포함 검색)
                 const isAPrio = a.주제.includes('주요뉴스');
                 const isBPrio = b.주제.includes('주요뉴스');
                 if (isAPrio && !isBPrio) return -1;
                 if (!isAPrio && isBPrio) return 1;
 
-                // 2순위: 중요도 (상 > 중 > 하)
                 const impA = importanceMap[a.중요도] ?? 9;
                 const impB = importanceMap[b.중요도] ?? 9;
                 if (impA !== impB) return impA - impB;
 
-                // 3순위: 날짜 최신순
                 return b.날짜.localeCompare(a.날짜);
             });
 
@@ -560,6 +588,7 @@
                         'bg-amber-100 text-amber-700';
                 const desc = n.AI요약 || 'AI 요약 대기 중...';
 
+                // 정렬된 순서대로 i를 openModal에 전달
                 return `
             <div class="news-row flex flex-col sm:flex-row sm:items-start px-3 py-4 border-b border-border cursor-pointer transition-colors"
                  onclick="openModal(${i})" data-idx="${i}">
@@ -636,17 +665,35 @@
         // ESC로 모달 닫기
         document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-        // 현재 필터된 데이터 가져오기 (모달 인덱스용)
+        // 현재 필터/정렬된 데이터 가져오기 (매칭용 핵심 함수)
         function getCurrentFiltered() {
+            const dateVal = document.getElementById('filterDate').value;
             const catVal = document.getElementById('filterCategory').value;
             const searchVal = document.getElementById('filterSearch').value.toLowerCase().trim();
 
-            return allNews.filter(n => {
+            const filtered = allNews.filter(n => {
                 if (!activeImportance.has(n.중요도)) return false;
+                if (dateVal && n.날짜 !== dateVal) return false;
                 if (catVal !== '전체' && n.주제 !== catVal) return false;
                 if (searchVal && !n.제목.toLowerCase().includes(searchVal)) return false;
                 return true;
-            }).sort((a, b) => b.날짜.localeCompare(a.날짜));
+            });
+
+            // applyFilters와 동일한 정렬 로직 적용
+            const importanceMap = { '상': 0, '중': 1, '하': 2 };
+            filtered.sort((a, b) => {
+                const isAPrio = a.주제.includes('주요뉴스');
+                const isBPrio = b.주제.includes('주요뉴스');
+                if (isAPrio && !isBPrio) return -1;
+                if (!isAPrio && isBPrio) return 1;
+
+                const impA = importanceMap[a.중요도] ?? 9;
+                const impB = importanceMap[b.중요도] ?? 9;
+                if (impA !== impB) return impA - impB;
+
+                return b.날짜.localeCompare(a.날짜);
+            });
+            return filtered;
         }
 
         // ── 초기 설정 모달 ──
@@ -918,14 +965,18 @@
 
         function toggleTTS() {
             if (isSpeaking) {
-                if (isPaused) {
-                    resumeTTS();
-                } else {
-                    pauseTTS();
-                }
+                // 이미 재생 중이면 플레이어 UI만 다시 보여줌 (숨겨졌을 경우 대비)
+                showTTSProgress(true);
                 return;
             }
             startTTS();
+        }
+
+        // 플레이어 내 전용 재생/일시정지 토글
+        function togglePlayback() {
+            if (!isSpeaking) return;
+            if (isPaused) resumeTTS();
+            else pauseTTS();
         }
 
         function startTTS() {
@@ -960,10 +1011,10 @@
                     document.getElementById('ttsProgressBar').style.width = percent + '%';
                     document.getElementById('ttsPercent').textContent = Math.round(percent) + '%';
 
-                    // 시간 표시
                     const cur = formatTime(briefingAudio.currentTime);
                     const total = formatTime(briefingAudio.duration);
-                    document.getElementById('ttsStatus').textContent = `🎧 ${cur} / ${total}`;
+                    document.getElementById('ttsCurrentTime').textContent = cur;
+                    document.getElementById('ttsTotalTime').textContent = total;
                 });
             });
 
@@ -989,13 +1040,14 @@
             document.getElementById('ttsStatus').textContent = '⏸ 일시정지됨';
         }
 
-        function resumeTTS() {
-            if (!isSpeaking || !isPaused) return;
-            isPaused = false;
-            if (briefingAudio) briefingAudio.play();
-            else if (usingSpeechSynthesis) speechSynthesis.resume();
-            updateTTSBtnPlaying();
-            document.getElementById('ttsStatus').textContent = '🎧 브리핑 재생 중...';
+        function updateTTSBtnPlaying() {
+            document.getElementById('playIcon').classList.add('hidden');
+            document.getElementById('pauseIcon').classList.remove('hidden');
+        }
+
+        function updateTTSBtnPaused() {
+            document.getElementById('playIcon').classList.remove('hidden');
+            document.getElementById('pauseIcon').classList.add('hidden');
         }
 
         function stopTTS() {
@@ -1009,11 +1061,6 @@
             if (speechSynthesis.speaking) {
                 speechSynthesis.cancel();
             }
-
-            const btn = document.getElementById('ttsBtn');
-            btn.classList.remove('bg-rose-600', 'hover:bg-rose-700');
-            btn.classList.add('bg-violet-600', 'hover:bg-violet-700');
-            btn.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg> 브리핑`;
 
             showTTSProgress(false);
         }
@@ -1059,15 +1106,6 @@
             }
         }
 
-        function updateTTSBtnPlaying() {
-            const btn = document.getElementById('ttsBtn');
-            btn.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> 일시정지`;
-        }
-
-        function updateTTSBtnPaused() {
-            const btn = document.getElementById('ttsBtn');
-            btn.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> 재생`;
-        }
 
 
         // ── speechSynthesis 폴백 ──
