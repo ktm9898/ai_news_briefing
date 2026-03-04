@@ -59,40 +59,37 @@ def run_pipeline():
         topic_criteria = sheets.get_all_topic_criteria()
         all_collected = analyzer.screen_importance(all_collected, topic_criteria)
 
-        # 중요 기사(상) 선별 + 주제별 최대 5건 제한
-        important_news = [n for n in all_collected if n.get("중요도") == "상"]
-        other_news = [n for n in all_collected if n.get("중요도") != "상"]
-
-        # 주제별 '상' 기사 수 제한 (주제당 최대 5건)
-        by_topic = {}
-        for news in important_news:
+        # 주제별 그룹화 및 중요도 순 정렬
+        topic_groups = {}
+        for news in all_collected:
             t = news.get("주제", "기타")
-            by_topic.setdefault(t, []).append(news)
+            topic_groups.setdefault(t, []).append(news)
 
         selected_for_crawl = []
-        for topic, group in by_topic.items():
-            selected = group[:5]
+        importance_map = {"상": 0, "중": 1, "하": 2, "": 3}
+
+        for topic, group in topic_groups.items():
+            # 중요도 순으로 정렬 (상 -> 중 -> 하)
+            sorted_group = sorted(group, key=lambda x: importance_map.get(x.get("중요도", ""), 3))
+            selected = sorted_group[:5]  # 주제별 최대 5건
             selected_for_crawl.extend(selected)
-            logger.info(f"선별 [{topic}]: {len(group)}건 중 {len(selected)}건")
+            
+            logger.info(
+                f"[{topic}] 총 {len(group)}건 중 상위 {len(selected)}건 선별 "
+                f"(상:{sum(1 for n in selected if n.get('중요도') == '상')}, "
+                f"중:{sum(1 for n in selected if n.get('중요도') == '중')}, "
+                f"하:{sum(1 for n in selected if n.get('중요도') == '하')})"
+            )
 
         result["screened"] = len(selected_for_crawl)
 
         elapsed_2 = (datetime.now() - start_time).total_seconds()
-        logger.info(f"STEP 2 완료: {len(selected_for_crawl)}건 선별 ({elapsed_2:.1f}초)")
+        logger.info(f"STEP 2 완료: 총 {len(selected_for_crawl)}건 선별 ({elapsed_2:.1f}초)")
 
         if not selected_for_crawl:
-            logger.info("중요도 '상' 기사가 없습니다. 전체를 '중'으로 저장합니다.")
-            # 중요 기사가 없으면 주제별 상위 3건씩 선별
-            for news in all_collected:
-                t = news.get("주제", "기타")
-                by_topic.setdefault(t, [])
-            by_topic_all = {}
-            for news in all_collected:
-                t = news.get("주제", "기타")
-                by_topic_all.setdefault(t, []).append(news)
-            for topic, group in by_topic_all.items():
-                selected_for_crawl.extend(group[:3])
-            result["screened"] = len(selected_for_crawl)
+            logger.info("선별된 기사가 없습니다.")
+            result["status"] = "완료 (기사 없음)"
+            return result
 
         # ── 3단계: 선별된 기사만 본문 크롤링 (병렬) ──
         logger.info(f"STEP 3/5: 선별된 {len(selected_for_crawl)}건 본문 크롤링 (병렬)")
