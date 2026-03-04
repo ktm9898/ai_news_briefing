@@ -300,20 +300,27 @@ class NewsCollector:
                 logger.error(f"주제 '{topic}' (키워드: '{keyword}') 수집 중 오류: {e}")
                 continue
 
-        # 주제별 중복 및 건수 제한 처리
-        all_news = []
-        for topic, news_list in topic_news.items():
-            # 1. 유사도 기반 중복 기사 제거
-            dedup_list = self.deduplicate_by_similarity(news_list)
-            
-            # 2. MAX_PER_TOPIC으로 제한
-            capped = dedup_list[:MAX_PER_TOPIC]
-            all_news.extend(capped)
-            
-            if len(news_list) > len(dedup_list):
-                logger.info(f"[{topic}] 유사도 중복 {len(news_list) - len(dedup_list)}건 제거")
-            if len(dedup_list) > MAX_PER_TOPIC:
-                logger.info(f"[{topic}] {len(dedup_list)}건 → {MAX_PER_TOPIC}건으로 제한")
+        # 주제별 기사를 하나의 리스트로 통합 및 전역 중복 제거 처리
+        all_collected_raw = []
+        for news_list in topic_news.values():
+            all_collected_raw.extend(news_list)
 
-        logger.info(f"총 수집: {len(all_news)}건 ({len(topic_news)}개 주제)")
+        # 1. 전역 유사도 기반 중복 기사 제거 (주제 무관)
+        dedup_list = self.deduplicate_by_similarity(all_collected_raw)
+        
+        # 2. 주제별으로 다시 분류하여 건수 제한 (MAX_PER_TOPIC)
+        final_topic_news = {}
+        for news in dedup_list:
+            t = news.get("주제", "기타")
+            if len(final_topic_news.get(t, [])) < MAX_PER_TOPIC:
+                final_topic_news.setdefault(t, []).append(news)
+        
+        all_news = []
+        for t, news_list in final_topic_news.items():
+            all_news.extend(news_list)
+
+        if len(all_collected_raw) > len(dedup_list):
+            logger.info(f"전역 유사도 중복 {len(all_collected_raw) - len(dedup_list)}건 제거 완료")
+        
+        logger.info(f"최종 수집: {len(all_news)}건 ({len(final_topic_news)}개 주제)")
         return all_news

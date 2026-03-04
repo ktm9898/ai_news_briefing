@@ -77,8 +77,27 @@ def run_pipeline():
         for topic, group in topic_groups.items():
             # 중요도 순으로 정렬 (상 -> 중 -> 하)
             sorted_group = sorted(group, key=lambda x: importance_map.get(x.get("중요도", ""), 3))
-            selected = sorted_group[:5]  # 주제별 최대 5건
+            
+            # Top5에 선정된 기사는 일반 주제 목록에서 제외 (중복 방지)
+            filtered_group = []
+            for item in sorted_group:
+                # all_collected에서의 인덱스를 찾아 top5_indices와 비교
+                try:
+                    orig_idx = all_collected.index(item)
+                    if orig_idx not in top5_indices:
+                        filtered_group.append(item)
+                except ValueError:
+                    filtered_group.append(item)
+
+            selected = filtered_group[:5]  # 주제별 최대 5건
             selected_for_crawl.extend(selected)
+            
+            logger.info(
+                f"[{topic}] 총 {len(group)}건 중 {len(selected)}건 선별 (주요뉴스 제외) "
+                f"(상:{sum(1 for n in selected if n.get('중요도') == '상')}, "
+                f"중:{sum(1 for n in selected if n.get('중요도') == '중')}, "
+                f"하:{sum(1 for n in selected if n.get('중요도') == '하')})"
+            )
             
         # Top5 주요뉴스는 주제별 순위와 관계없이 크롤링 대상에 무조건 포함
         for idx in top5_indices:
@@ -87,13 +106,6 @@ def run_pipeline():
                 if news_item not in selected_for_crawl:
                     selected_for_crawl.append(news_item)
                     logger.info(f"Top5 기사 크롤링 대상 추가: {news_item.get('제목')[:20]}...")
-            
-            logger.info(
-                f"[{topic}] 총 {len(group)}건 중 상위 {len(selected)}건 선별 "
-                f"(상:{sum(1 for n in selected if n.get('중요도') == '상')}, "
-                f"중:{sum(1 for n in selected if n.get('중요도') == '중')}, "
-                f"하:{sum(1 for n in selected if n.get('중요도') == '하')})"
-            )
 
         result["screened"] = len(selected_for_crawl)
 
