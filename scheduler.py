@@ -54,10 +54,32 @@ def run_pipeline():
         elapsed_1 = (datetime.now() - start_time).total_seconds()
         logger.info(f"STEP 1 완료: {len(all_collected)}건 ({elapsed_1:.1f}초)")
 
-        # ── 2단계: AI 1차 선별 (제목+설명만으로 중요도 판별) ──
-        logger.info("STEP 2/5: AI 1차 중요도 선별")
+        # ── 2단계: AI 1차 선별 (중요도 판별 + Top5 선정) ──
+        logger.info("STEP 2/6: AI 1차 중요도 선별 + Top5 선정")
         topic_criteria = sheets.get_all_topic_criteria()
-        all_collected = analyzer.screen_importance(all_collected, topic_criteria)
+        all_collected, top5_results = analyzer.screen_importance(all_collected, topic_criteria)
+
+        # Top5 기사 처리 및 저장
+        top5_news = []
+        if top5_results:
+            today = datetime.now().strftime("%Y-%m-%d")
+            for item in top5_results:
+                idx = item.get("index", 1) - 1
+                if 0 <= idx < len(all_collected):
+                    source_news = all_collected[idx]
+                    top5_entry = {
+                        "날짜": today,
+                        "주제": "📌 오늘의 주요뉴스",
+                        "언론사": source_news.get("언론사", ""),
+                        "제목": source_news.get("제목", ""),
+                        "네이버 요약": source_news.get("네이버 요약", ""),
+                        "본문 전문": "",
+                        "링크": source_news.get("링크", ""),
+                        "AI 요약": item.get("summary", ""),
+                        "중요도": "상",
+                    }
+                    top5_news.append(top5_entry)
+            logger.info(f"Top5 주요뉴스 {len(top5_news)}건 선정 완료")
 
         # 주제별 그룹화 및 중요도 순 정렬
         topic_groups = {}
@@ -92,7 +114,7 @@ def run_pipeline():
             return result
 
         # ── 3단계: 선별된 기사만 본문 크롤링 (병렬) ──
-        logger.info(f"STEP 3/5: 선별된 {len(selected_for_crawl)}건 본문 크롤링 (병렬)")
+        logger.info(f"STEP 3/6: 선별된 {len(selected_for_crawl)}건 본문 크롤링 (병렬)")
         selected_for_crawl = collector.crawl_selected_articles(selected_for_crawl)
         result["crawled"] = len(selected_for_crawl)
 
@@ -100,7 +122,7 @@ def run_pipeline():
         logger.info(f"STEP 3 완료: 크롤링 완료 ({elapsed_3:.1f}초)")
 
         # ── 4단계: AI 2차 — 요약 + 브리핑 대본 동시 생성 ──
-        logger.info("STEP 4/5: AI 2차 요약 + 브리핑 대본 생성")
+        logger.info("STEP 4/6: AI 2차 요약 + 브리핑 대본 생성")
         selected_for_crawl, briefing_script = analyzer.summarize_and_brief(selected_for_crawl)
         result["analyzed"] = len(selected_for_crawl)
 
@@ -108,7 +130,7 @@ def run_pipeline():
         logger.info(f"STEP 4 완료: 요약 + 대본 생성 ({elapsed_4:.1f}초)")
 
         # ── 5단계: 시트 저장 ──
-        logger.info("STEP 5/5: Google Sheets 저장")
+        logger.info("STEP 5/6: Google Sheets 저장")
 
         # 저장할 데이터 준비 (선별된 중요 기사 + 비선별 기사 요약 없이)
         # 중요 기사만 저장
@@ -119,11 +141,29 @@ def run_pipeline():
             sheets.append_news(selected_for_crawl)
             logger.info(f"최종 {len(selected_for_crawl)}건 시트 저장 완료")
 
+            # Top5 주요뉴스도 시트에 저장
+            if top5_news:
+                sheets.append_news(top5_news)
+                logger.info(f"Top5 주요뉴스 {len(top5_news)}건 시트 저장 완료")
+
             # 브리핑 대본 저장
             sheets.save_briefing(briefing_script)
             logger.info("브리핑 대본 저장 완료")
         else:
             logger.info("저장할 뉴스가 없습니다.")
+
+        # ── 6단계: TTS 음성 생성 ──
+        logger.info("STEP 6/6: TTS 음성 파일 생성")
+        try:
+            from tts_engine import TTSEngine
+            tts = TTSEngine()
+            audio_path = tts.generate(briefing_script)
+            if audio_path:
+                logger.info(f"음성 파일 생성 완료: {audio_path}")
+            else:
+                logger.warning("음성 파일 생성 실패 (대본은 저장됨)")
+        except Exception as e:
+            logger.error(f"TTS 생성 중 오류 (무시): {e}")
 
         result["status"] = "완료"
         elapsed = (datetime.now() - start_time).total_seconds()

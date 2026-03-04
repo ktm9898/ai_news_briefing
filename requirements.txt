@@ -7,5 +7,6 @@ lxml_html_clean
 nltk
 edge-tts
 gTTS
+google-cloud-texttospeech
 python-dotenv
 apscheduler

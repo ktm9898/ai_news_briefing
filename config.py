@@ -74,6 +74,8 @@ NEWS_DATA_HEADERS = [
 
 # ── TTS ────────────────────────────────────────────────
 TTS_VOICE = _get_config("TTS_VOICE", "ko-KR-SunHiNeural")
+GOOGLE_TTS_VOICE = _get_config("GOOGLE_TTS_VOICE", "ko-KR-Neural2-A")
+AUDIO_RETENTION_DAYS = int(_get_config("AUDIO_RETENTION_DAYS", "30"))
 
 # ── 스케줄러 ───────────────────────────────────────────
 SCHEDULE_HOUR = 7   # 매일 실행 시각 (시)

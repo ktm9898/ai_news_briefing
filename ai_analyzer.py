@@ -34,100 +34,124 @@ class AIAnalyzer:
         self,
         news_list: list[dict],
         topic_criteria: dict[str, str] = None,
-    ) -> list[dict]:
+    ) -> tuple[list[dict], list[dict]]:
         """
-        제목과 네이버 요약만으로 중요도를 판별.
-        크롤링 전에 불필요한 기사를 걸러내기 위한 1차 필터링.
+        1차 AI 호출: 중요도 판별 + 경제·경영 Top5 선정을 동시에 처리.
+
+        - 모든 기사의 제목과 설명을 AI에게 전달
+        - 각 기사의 중요도(상/중/하)를 판별
+        - 전체 기사 중 경제·경영 관점에서 가장 중요한 Top5를 선정하고 요약
 
         Args:
             news_list: [{"제목": ..., "네이버 요약": ..., "주제": ..., ...}]
             topic_criteria: {"주제명": "판단 기준..."}
 
         Returns:
-            중요도가 채워진 news_list
+            (중요도가 채워진 news_list, top5 뉴스 리스트)
+            top5: [{"index": N, "summary": "..."}, ...]
         """
+        top5_results = []
+
         if not news_list:
-            return news_list
+            return news_list, top5_results
 
         if not GEMINI_API_KEY:
             logger.error("GEMINI_API_KEY가 설정되지 않았습니다.")
             for news in news_list:
                 news["중요도"] = "중"
-            return news_list
+            return news_list, top5_results
 
-        # 주제별 그룹화
-        topic_groups = {}
-        for news in news_list:
-            t = news.get("주제", "기타")
-            topic_groups.setdefault(t, []).append(news)
-
-        logger.info(f"AI 1차 선별 시작: {len(news_list)}건, {len(topic_groups)}개 주제")
-
-        for topic, group in topic_groups.items():
+        # 주제별 기준 텍스트 생성
+        criteria_text = ""
+        all_topics = set(n.get("주제", "기타") for n in news_list)
+        for topic in sorted(all_topics):
             criteria = (topic_criteria or {}).get(topic, DEFAULT_CRITERIA)
+            criteria_text += f"\n[{topic}]\n{criteria}\n"
 
-            news_texts = []
-            for idx, news in enumerate(group):
-                news_texts.append(
-                    f"[{idx + 1}] 제목: {news.get('제목', '')}\n"
-                    f"    설명: {news.get('네이버 요약', '')}"
-                )
+        # 전체 뉴스 목록 텍스트 생성
+        news_texts = []
+        for idx, news in enumerate(news_list):
+            news_texts.append(
+                f"[{idx + 1}] 주제: {news.get('주제', '기타')} | "
+                f"제목: {news.get('제목', '')}\n"
+                f"    설명: {news.get('네이버 요약', '')}"
+            )
 
-            prompt = f"""당신은 베테랑 뉴스 에디터입니다.
-아래 '{topic}' 주제의 뉴스 목록에서 제목과 설명만 보고 중요도를 판별해 주세요.
+        logger.info(f"AI 1차 선별 시작: {len(news_list)}건, {len(all_topics)}개 주제")
 
-[중요도 판단 기준 - {topic}]
-{criteria}
+        prompt = f"""당신은 베테랑 뉴스 에디터입니다.
+아래 뉴스 목록을 보고 2가지 작업을 수행해 주세요.
 
-[규칙]
-1. 각 뉴스의 중요도를 '상', '중', '하' 중 하나로 판별
-2. 결과는 반드시 JSON 배열로만 응답:
-[{{"index": 1, "importance": "상"}}, ...]
+[작업 1] 각 뉴스의 중요도를 '상', '중', '하' 중 하나로 판별
 
-[뉴스 목록]
+[주제별 중요도 판단 기준]
+{criteria_text}
+
+[작업 2] 전체 뉴스 중에서 오늘의 경제·경영 주요뉴스 Top5를 선정
+- 주제에 관계없이, 경제·경영 관점에서 가장 중요한 뉴스 5개를 골라주세요.
+- 각 Top5 뉴스에 대해 핵심 내용을 1~2문장으로 요약해 주세요.
+
+반드시 아래 JSON 형식으로만 응답:
+{{
+  "importance": [{{"index": 1, "importance": "상"}}, ...],
+  "top5": [{{"index": 3, "summary": "요약 내용..."}}, ...]
+}}
+
+[뉴스 목록 ({len(news_list)}건)]
 {chr(10).join(news_texts)}
 """
-            max_retries = 3
-            for attempt in range(max_retries):
-                try:
-                    response = self.model.generate_content(
-                        prompt,
-                        generation_config=genai.types.GenerationConfig(
-                            response_mime_type="application/json",
-                        )
+
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                response = self.model.generate_content(
+                    prompt,
+                    generation_config=genai.types.GenerationConfig(
+                        response_mime_type="application/json",
                     )
-                    text = response.text.strip()
+                )
+                text = response.text.strip()
 
-                    # JSON 파싱
-                    start_idx = text.find('[')
-                    end_idx = text.rfind(']')
-                    if start_idx != -1 and end_idx != -1:
-                        text = text[start_idx:end_idx + 1]
+                # JSON 파싱
+                start_idx = text.find('{')
+                end_idx = text.rfind('}')
+                if start_idx != -1 and end_idx != -1:
+                    text = text[start_idx:end_idx + 1]
 
-                    results = json.loads(text)
+                result = json.loads(text)
 
-                    for item in results:
-                        idx = item.get("index", 1) - 1
-                        if 0 <= idx < len(group):
-                            group[idx]["중요도"] = item.get("importance", "중")
+                # 중요도 채우기
+                importance_list = result.get("importance", [])
+                for item in importance_list:
+                    idx = item.get("index", 1) - 1
+                    if 0 <= idx < len(news_list):
+                        news_list[idx]["중요도"] = item.get("importance", "중")
 
-                    logger.info(
-                        f"[{topic}] 1차 선별 완료: "
-                        f"상={sum(1 for n in group if n.get('중요도') == '상')}건, "
-                        f"중={sum(1 for n in group if n.get('중요도') == '중')}건, "
-                        f"하={sum(1 for n in group if n.get('중요도') == '하')}건"
-                    )
-                    break
+                # Top5 결과
+                top5_results = result.get("top5", [])
 
-                except Exception as e:
-                    logger.error(f"AI 1차 선별 실패 ({topic}, 시도 {attempt + 1}/{max_retries}): {e}")
-                    if attempt == max_retries - 1:
-                        for news in group:
-                            news["중요도"] = "중"  # 실패 시 기본값
-                    else:
-                        time.sleep(2)
+                # 중요도 통계 로깅
+                imp_counts = {"상": 0, "중": 0, "하": 0}
+                for n in news_list:
+                    imp = n.get("중요도", "중")
+                    imp_counts[imp] = imp_counts.get(imp, 0) + 1
 
-        return news_list
+                logger.info(
+                    f"AI 1차 완료: 상={imp_counts['상']}건, "
+                    f"중={imp_counts['중']}건, 하={imp_counts['하']}건, "
+                    f"Top5={len(top5_results)}건"
+                )
+                break
+
+            except Exception as e:
+                logger.error(f"AI 1차 선별 실패 (시도 {attempt + 1}/{max_retries}): {e}")
+                if attempt == max_retries - 1:
+                    for news in news_list:
+                        news["중요도"] = "중"  # 실패 시 기본값
+                else:
+                    time.sleep(2)
+
+        return news_list, top5_results
 
     # ═══════════════════════════════════════════════════
     # Stage 2: 요약 + 브리핑 대본 동시 생성 (1회 AI 호출)
@@ -246,8 +270,9 @@ class AIAnalyzer:
     # ═══════════════════════════════════════════════════
 
     def analyze_news(self, news_list, topic_criteria=None):
-        """레거시 호환 — screen_importance로 래핑"""
-        return self.screen_importance(news_list, topic_criteria)
+        """레거시 호환 — screen_importance로 래핑 (중요도만 반환)"""
+        result, _ = self.screen_importance(news_list, topic_criteria)
+        return result
 
     def generate_briefing_script(self, news_list):
         """레거시 호환 — 사용되지 않음"""
