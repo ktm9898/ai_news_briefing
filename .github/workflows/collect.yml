@@ -10,6 +10,8 @@ jobs:
   collect-news:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: write
 
     steps:
       - name: 📥 코드 체크아웃
