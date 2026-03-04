@@ -41,6 +41,7 @@ TRUSTED_MEDIA_DOMAINS = {
     # 방송사
     'kbs.co.kr', 'mbc.co.kr', 'sbs.co.kr', 'jtbc.co.kr',
     'ytn.co.kr', 'mbn.co.kr', 'tvchosun.com', 'ichannela.com',
+    'yonhapnewstv.co.kr', 'ebs.co.kr',
     # 주요 일간지
     'chosun.com', 'joongang.co.kr', 'donga.com',
     'hankookilbo.com', 'khan.co.kr', 'hani.co.kr',
