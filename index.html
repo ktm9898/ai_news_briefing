@@ -164,16 +164,21 @@
 
         <!-- 음성 브리핑 진행바 -->
         <div id="ttsProgressContainer"
-            class="hidden mt-3 p-3 bg-violet-50/50 border border-violet-100 rounded-xl max-w-md ml-auto">
-            <div class="flex items-center justify-between mb-1.5">
-                <span id="ttsStatus" class="text-[11px] font-semibold text-violet-700">브리핑 준비 중...</span>
-                <span id="ttsPercent" class="text-[11px] font-bold text-violet-600">0%</span>
+            class="hidden mt-3 p-3 bg-violet-50/50 border border-violet-100 rounded-xl max-w-md ml-auto shadow-sm">
+            <div class="flex items-center justify-between mb-2">
+                <span id="ttsStatus" class="text-[11px] font-bold text-violet-700">브리핑 재생 중...</span>
+                <span id="ttsPercent" class="text-[11px] font-black text-violet-600">0%</span>
             </div>
-            <div class="w-full bg-violet-100 rounded-full h-1.5 overflow-hidden">
+            <!-- 클릭 가능한 진행바 영역 -->
+            <div onclick="seekTTS(event)"
+                class="group relative w-full bg-violet-200/50 rounded-full h-2.5 overflow-hidden cursor-pointer active:scale-[0.99] transition-transform">
                 <div id="ttsProgressBar"
-                    class="bg-violet-500 h-full transition-all duration-300 shadow-[0_0_8px_rgba(139,92,246,0.3)]"
+                    class="bg-gradient-to-r from-violet-400 to-violet-600 h-full transition-all duration-300 shadow-[0_0_10px_rgba(139,92,246,0.3)]"
                     style="width: 0%"></div>
+                <!-- 호버 시 가이드 라인 (옵션) -->
+                <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
             </div>
+            <p class="text-[9px] text-violet-400 mt-1.5 text-right font-medium">* 바를 클릭하면 해당 위치부터 다시 읽어줍니다.</p>
         </div>
     </header>
 
@@ -887,8 +892,8 @@
         // ── 🔊 음성 브리핑 (Web Speech API) ──
         // ══════════════════════════════════════════
         let isSpeaking = false;
-        let speechQueue = [];
-        let totalSpeechCount = 0;
+        let speechSentences = []; // 전체 문장 리스트 보관 (이동용)
+        let currentSpeechIndex = 0; // 현재 읽고 있는 문장 인덱스
         let currentUtterance = null;
 
         function toggleTTS() {
@@ -906,11 +911,15 @@
             }
 
             // 버튼 상태: 로딩
-            isSpeaking = true;
             const btn = document.getElementById('ttsBtn');
+            btn.innerHTML = `<svg class="w-3.5 h-3.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> 로딩...`;
+
+            isSpeaking = true;
             btn.classList.remove('bg-violet-600', 'hover:bg-violet-700');
             btn.classList.add('bg-rose-600', 'hover:bg-rose-700');
-            btn.innerHTML = `<svg class="w-3.5 h-3.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> 로딩...`;
+
+            showTTSProgress(true);
+            document.getElementById('ttsStatus').textContent = '대본 불러오는 중...';
 
             // Briefing 탭에서 AI 대본 가져오기 시도
             const url = SCRIPT_URL;
@@ -932,21 +941,20 @@
         }
 
         function playBriefingScript(script) {
-            const sentences = script.split(/(?<=[.!?。])\s*/);
-            speechQueue = [];
+            const sentences = script.split(/(?<=[.!?。])\s+/);
+            speechSentences = [];
             let chunk = '';
             for (const s of sentences) {
                 if ((chunk + s).length > 200) {
-                    if (chunk) speechQueue.push(chunk.trim());
+                    if (chunk) speechSentences.push(chunk.trim());
                     chunk = s;
                 } else {
                     chunk += (chunk ? ' ' : '') + s;
                 }
             }
-            if (chunk) speechQueue.push(chunk.trim());
+            if (chunk) speechSentences.push(chunk.trim());
 
-            totalSpeechCount = speechQueue.length;
-            showTTSProgress(true);
+            currentSpeechIndex = 0;
             updateTTSBtnPlaying();
             speakNext();
         }
@@ -960,14 +968,30 @@
         }
 
         function updateTTSProgress() {
-            if (totalSpeechCount === 0) return;
-            const remaining = speechQueue.length;
-            const current = totalSpeechCount - remaining;
-            const percent = Math.round((current / totalSpeechCount) * 100);
+            if (speechSentences.length === 0) return;
+            const current = currentSpeechIndex + 1; // 1-based
+            const total = speechSentences.length;
+            const percent = Math.round((current / total) * 100);
 
             document.getElementById('ttsProgressBar').style.width = percent + '%';
             document.getElementById('ttsPercent').textContent = percent + '%';
-            document.getElementById('ttsStatus').textContent = `브리핑 진행 중 (${current}/${totalSpeechCount})`;
+            document.getElementById('ttsStatus').textContent = `브리핑 진행 중 (${current}/${total})`;
+        }
+
+        function seekTTS(event) {
+            if (!isSpeaking || speechSentences.length === 0) return;
+
+            const rect = event.currentTarget.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const width = rect.width;
+            const percent = x / width;
+
+            const targetIndex = Math.floor(percent * speechSentences.length);
+            const finalIndex = Math.min(Math.max(0, targetIndex), speechSentences.length - 1);
+
+            speechSynthesis.cancel();
+            currentSpeechIndex = finalIndex;
+            speakNext();
         }
 
         function playFallbackTTS() {
@@ -979,12 +1003,14 @@
                 return;
             }
             const today = new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
-            speechQueue = [`${today} AI 뉴스 브리핑입니다. 총 ${newsWithSummary.length}건.`];
+            speechSentences = [`${today} AI 뉴스 브리핑입니다. 총 ${newsWithSummary.length}건.`];
             newsWithSummary.forEach((n, i) => {
-                speechQueue.push(`${i + 1}번. ${n.주제}. ${n.제목}.`);
-                speechQueue.push(n.AI요약);
+                speechSentences.push(`${i + 1}번. ${n.주제}. ${n.제목}.`);
+                speechSentences.push(n.AI요약);
             });
-            speechQueue.push('이상 브리핑을 마칩니다.');
+            speechSentences.push('이상 브리핑을 마칩니다.');
+
+            currentSpeechIndex = 0;
             updateTTSBtnPlaying();
             speakNext();
         }
@@ -996,29 +1022,47 @@
 
 
         function speakNext() {
-            if (speechQueue.length === 0 || !isSpeaking) {
+            if (currentSpeechIndex >= speechSentences.length || !isSpeaking) {
                 stopTTS();
                 return;
             }
 
             updateTTSProgress();
-            const text = speechQueue.shift();
+            const text = speechSentences[currentSpeechIndex];
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'ko-KR';
             utterance.rate = 1.2;
             utterance.pitch = 1.0;
 
-            // 한국어 음성 선택 시도 (더 자연스러운 음성 우선순위)
+            // ── 한국어 음성 최적화 (가장 품질 좋은 엔진 검색) ──
             const voices = speechSynthesis.getVoices();
-            // 1순위: Google 한국어, 2순위: Heami, 3순위: 기타 Ko
-            let koVoice = voices.find(v => v.name.includes('Google') && v.lang.startsWith('ko'));
-            if (!koVoice) koVoice = voices.find(v => v.name.includes('Heami') && v.lang.startsWith('ko'));
-            if (!koVoice) koVoice = voices.find(v => v.lang.startsWith('ko'));
 
-            if (koVoice) utterance.voice = koVoice;
+            // 우선순위 1: Google 한국어 (Chrome 온라인 고품질)
+            // 우선순위 2: Heami (Windows 기본 고품질)
+            // 우선순위 3: SunHi / InJoon (Edge 등 전용)
+            // 우선순위 4: generic ko-KR
+            let bestVoice = voices.find(v => (v.name.includes('Google') || v.name.includes('Neural')) && v.lang.startsWith('ko'));
+            if (!bestVoice) bestVoice = voices.find(v => v.name.includes('Heami') && v.lang.startsWith('ko'));
+            if (!bestVoice) bestVoice = voices.find(v => v.lang.startsWith('ko'));
 
-            utterance.onend = () => speakNext();
-            utterance.onerror = () => speakNext();
+            if (bestVoice) {
+                utterance.voice = bestVoice;
+                // Neural 또는 고품질 음성일 경우 속도를 미세하게 다시 조정해도 좋음
+                if (bestVoice.name.includes('Google') || bestVoice.name.includes('Neural')) {
+                    utterance.rate = 1.15; // 고품질은 더 자연스럽게 1.15배
+                }
+            }
+
+            utterance.onend = () => {
+                if (isSpeaking) {
+                    currentSpeechIndex++;
+                    speakNext();
+                }
+            };
+            utterance.onerror = () => {
+                currentSpeechIndex++;
+                speakNext();
+            };
 
             currentUtterance = utterance;
             speechSynthesis.speak(utterance);
@@ -1026,8 +1070,8 @@
 
         function stopTTS() {
             isSpeaking = false;
-            speechQueue = [];
-            totalSpeechCount = 0;
+            speechSentences = [];
+            currentSpeechIndex = 0;
             speechSynthesis.cancel();
             showTTSProgress(false);
 
