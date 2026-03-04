@@ -202,6 +202,51 @@ class NewsCollector:
         )
         return results
 
+    def collect_headlines(self, existing_links: set[str]) -> list[dict]:
+        """
+        주요 경제지(매경, 한경 등)의 최신/헤드라인 뉴스를 직접 검색하여 수집.
+        네이버 검색 API의 언론사 필터링 기능을 활용 (정확한 기계적 필터는 아니지만 높은 확률로 타겟팅).
+        """
+        target_press = ["매일경제", "한국경제", "서울경제", "머니투데이", "연합뉴스"]
+        headline_news = []
+        today = datetime.now().strftime("%Y-%m-%d")
+        
+        # '경제', '경영', '산업', '반도체', '증시' 키워드로 주요 경제지 필터링 검색
+        # 네이버 API 팁: "query (언론사명)" 형태로 검색하면 해당 언론사가 포함된 결과 위주로 나옴
+        for press in target_press:
+            keyword = f"{press} 경제 메인" # 주요 언론사의 경제 메인 소식 타겟팅
+            items = self.search_naver_news(keyword)
+            
+            for item in items:
+                link = item.get("originallink") or item.get("link", "")
+                if link in existing_links:
+                    continue
+                    
+                title = self._clean_html(item.get("title", ""))
+                description = self._clean_html(item.get("description", ""))
+                source = self._extract_source(item.get("originallink", ""), item.get("link", ""))
+                
+                # 명시된 언론사 도메인 화이트리스트 재검색 (퀄리티 보장)
+                if not self._is_trusted_media(link):
+                    continue
+                
+                headline_news.append({
+                    "날짜": today,
+                    "주제": "경제헤드라인", # 내부 처리용 주제명
+                    "언론사": source,
+                    "제목": title,
+                    "본문 전문": "",
+                    "링크": link,
+                    "네이버링크": item.get("link", ""),
+                    "AI 요약": "",
+                    "중요도": "",
+                    "네이버 요약": description,
+                })
+                existing_links.add(link)
+                
+        logger.info(f"경제지 헤드라인 직접 수집 완료: {len(headline_news)}건")
+        return headline_news
+
     def crawl_selected_articles(self, news_list: list[dict], max_workers: int = 5) -> list[dict]:
         """
         선별된 기사만 병렬로 본문 크롤링.
@@ -270,27 +315,22 @@ class NewsCollector:
 
     def collect_all(self) -> list[dict]:
         """
-        Settings에 등록된 모든 활성 키워드에 대해 뉴스 수집 실행.
-        본문 크롤링 없이 제목+설명만 빠르게 수집.
-        주제당 최대 MAX_PER_TOPIC건으로 제한.
+        1. 주요 경제지 헤드라인 수집
+        2. Settings에 등록된 모든 활성 키워드 수집
+        3. 전체 기사 전역 중복 제거 적용
         """
         settings = self.sheets.get_active_settings()
-        if not settings:
-            logger.warning("활성화된 키워드가 없습니다.")
-            return []
-
         existing_links = self.sheets.get_existing_links()
-        topic_news: dict[str, list[dict]] = {}  # 주제별 수집 결과
-
+        
+        # ── 1단계: 주요 경제 매체 헤드라인 수집 (Top 5 후보군 확보) ──
+        headline_news = self.collect_headlines(existing_links)
+        
+        # ── 2단계: 주제별 키워드 수집 ──
+        topic_news: dict[str, list[dict]] = {}
         for setting in settings:
             topic = setting.get("주제", "기타")
             keyword = setting.get("키워드", "")
-            if not keyword:
-                continue
-
-            # 이미 주제별 최대 건수에 도달했으면 스킵
-            if len(topic_news.get(topic, [])) >= MAX_PER_TOPIC:
-                logger.info(f"[{topic}] 주제 최대 {MAX_PER_TOPIC}건 도달, 키워드 '{keyword}' 스킵")
+            if not keyword or len(topic_news.get(topic, [])) >= MAX_PER_TOPIC:
                 continue
 
             try:
@@ -298,21 +338,23 @@ class NewsCollector:
                 topic_news.setdefault(topic, []).extend(news)
             except Exception as e:
                 logger.error(f"주제 '{topic}' (키워드: '{keyword}') 수집 중 오류: {e}")
-                continue
 
-        # 주제별 기사를 하나의 리스트로 통합 및 전역 중복 제거 처리
-        all_collected_raw = []
+        # 전체 수집 결과 통합 (헤드라인 + 키워드 뉴스)
+        all_collected_raw = headline_news[:]
         for news_list in topic_news.values():
             all_collected_raw.extend(news_list)
 
-        # 1. 전역 유사도 기반 중복 기사 제거 (주제 무관)
+        # ── 3단계: 전역 중복 제거 (유사도 기준 강화) ──
         dedup_list = self.deduplicate_by_similarity(all_collected_raw)
         
-        # 2. 주제별으로 다시 분류하여 건수 제한 (MAX_PER_TOPIC)
-        final_topic_news = {}
+        # ── 4단계: 주제별 건수 재조정 및 최종 리스트화 ──
+        # 헤드라인 뉴스는 그대로 유지하고, 주제별 뉴스는 다시 캡핑 적용
+        final_topic_news = {"경제헤드라인": []}
         for news in dedup_list:
             t = news.get("주제", "기타")
-            if len(final_topic_news.get(t, [])) < MAX_PER_TOPIC:
+            if t == "경제헤드라인":
+                final_topic_news["경제헤드라인"].append(news)
+            elif len(final_topic_news.get(t, [])) < MAX_PER_TOPIC:
                 final_topic_news.setdefault(t, []).append(news)
         
         all_news = []
@@ -320,7 +362,7 @@ class NewsCollector:
             all_news.extend(news_list)
 
         if len(all_collected_raw) > len(dedup_list):
-            logger.info(f"전역 유사도 중복 {len(all_collected_raw) - len(dedup_list)}건 제거 완료")
+            logger.info(f"전역 중복 {len(all_collected_raw) - len(dedup_list)}건 제거 완료")
         
-        logger.info(f"최종 수집: {len(all_news)}건 ({len(final_topic_news)}개 주제)")
+        logger.info(f"최종 수집 완료: 총 {len(all_news)}건 (헤드라인 {len(final_topic_news['경제헤드라인'])}건 포함)")
         return all_news
