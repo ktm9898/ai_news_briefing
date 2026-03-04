@@ -30,10 +30,33 @@ from config import (
     NAVER_CLIENT_SECRET,
     NAVER_SEARCH_URL,
     NAVER_NEWS_DISPLAY,
+    MAX_PER_TOPIC,
 )
 from sheets_manager import SheetsManager
 
 logger = logging.getLogger(__name__)
+
+# 공신력 있는 주요 언론사 도메인 화이트리스트
+TRUSTED_MEDIA_DOMAINS = {
+    # 방송사
+    'kbs.co.kr', 'mbc.co.kr', 'sbs.co.kr', 'jtbc.co.kr',
+    'ytn.co.kr', 'mbn.co.kr', 'tvchosun.com', 'ichannela.com',
+    # 주요 일간지
+    'chosun.com', 'joongang.co.kr', 'donga.com',
+    'hankookilbo.com', 'khan.co.kr', 'hani.co.kr',
+    'seoul.co.kr', 'segye.com', 'kmib.co.kr', 'munhwa.com',
+    # 통신사
+    'yna.co.kr', 'newsis.com', 'news1.kr',
+    # 경제지
+    'hankyung.com', 'mk.co.kr', 'mt.co.kr', 'edaily.co.kr',
+    'sedaily.com', 'fnnews.com', 'heraldcorp.com',
+    'asiae.co.kr', 'ajunews.com',
+    # IT/전문
+    'dt.co.kr', 'etnews.com', 'zdnet.co.kr', 'bloter.net',
+    # 온라인 매체
+    'newspim.com', 'kukinews.com', 'biz.chosun.com',
+    'news.jtbc.co.kr', 'imnews.imbc.com',
+}
 
 
 class NewsCollector:
@@ -52,15 +75,29 @@ class NewsCollector:
         text = re.sub(r"<[^>]+>", "", text)
         return text.strip()
 
-    def _extract_source(self, original_link: str, naver_link: str) -> str:
-        """언론사명 추출 시도"""
+    def _extract_domain(self, url: str) -> str:
+        """URL에서 도메인 추출"""
         try:
             from urllib.parse import urlparse
-            domain = urlparse(original_link or naver_link).netloc
-            domain = domain.replace("www.", "").replace(".co.kr", "").replace(".com", "")
-            return domain
+            return urlparse(url).netloc.replace("www.", "")
         except Exception:
-            return "알 수 없음"
+            return ""
+
+    def _extract_source(self, original_link: str, naver_link: str) -> str:
+        """언론사명 추출 시도"""
+        domain = self._extract_domain(original_link or naver_link)
+        return domain.replace(".co.kr", "").replace(".com", "") or "알 수 없음"
+
+    def _is_trusted_media(self, url: str) -> bool:
+        """공신력 있는 주요 언론사인지 확인"""
+        domain = self._extract_domain(url)
+        if not domain:
+            return False
+        # 정확히 일치하거나 서브도메인 매칭
+        for trusted in TRUSTED_MEDIA_DOMAINS:
+            if domain == trusted or domain.endswith('.' + trusted):
+                return True
+        return False
 
     def search_naver_news(self, keyword: str) -> list[dict]:
         """
@@ -117,12 +154,20 @@ class NewsCollector:
         results = []
         today = datetime.now().strftime("%Y-%m-%d")
 
+        skipped_media = 0
         for item in items:
             link = item.get("originallink") or item.get("link", "")
 
+            # 주요 언론사 필터
+            if not self._is_trusted_media(link):
+                # 네이버 링크로 재확인
+                naver_link = item.get("link", "")
+                if not self._is_trusted_media(item.get("originallink", "")):
+                    skipped_media += 1
+                    continue
+
             # 중복 검사
             if link in existing_links:
-                logger.info(f"중복 스킵: {link}")
                 continue
 
             title = self._clean_html(item.get("title", ""))
@@ -149,7 +194,8 @@ class NewsCollector:
 
         logger.info(
             f"[{topic}] '{keyword}' → {len(results)}건 수집 "
-            f"({len(items)}건 검색, {len(items) - len(results)}건 중복)"
+            f"({len(items)}건 검색, {skipped_media}건 비주요언론 제외, "
+            f"{len(items) - len(results) - skipped_media}건 중복)"
         )
         return results
 
@@ -196,6 +242,7 @@ class NewsCollector:
         """
         Settings에 등록된 모든 활성 키워드에 대해 뉴스 수집 실행.
         본문 크롤링 없이 제목+설명만 빠르게 수집.
+        주제당 최대 MAX_PER_TOPIC건으로 제한.
         """
         settings = self.sheets.get_active_settings()
         if not settings:
@@ -203,7 +250,7 @@ class NewsCollector:
             return []
 
         existing_links = self.sheets.get_existing_links()
-        all_news = []
+        topic_news: dict[str, list[dict]] = {}  # 주제별 수집 결과
 
         for setting in settings:
             topic = setting.get("주제", "기타")
@@ -211,11 +258,25 @@ class NewsCollector:
             if not keyword:
                 continue
 
+            # 이미 주제별 최대 건수에 도달했으면 스킵
+            if len(topic_news.get(topic, [])) >= MAX_PER_TOPIC:
+                logger.info(f"[{topic}] 주제 최대 {MAX_PER_TOPIC}건 도달, 키워드 '{keyword}' 스킵")
+                continue
+
             try:
                 news = self.collect_by_keyword(keyword, topic, existing_links)
-                all_news.extend(news)
+                topic_news.setdefault(topic, []).extend(news)
             except Exception as e:
                 logger.error(f"주제 '{topic}' (키워드: '{keyword}') 수집 중 오류: {e}")
                 continue
 
+        # 주제별 MAX_PER_TOPIC으로 제한
+        all_news = []
+        for topic, news_list in topic_news.items():
+            capped = news_list[:MAX_PER_TOPIC]
+            all_news.extend(capped)
+            if len(news_list) > MAX_PER_TOPIC:
+                logger.info(f"[{topic}] {len(news_list)}건 → {MAX_PER_TOPIC}건으로 제한")
+
+        logger.info(f"총 수집: {len(all_news)}건 ({len(topic_news)}개 주제)")
         return all_news

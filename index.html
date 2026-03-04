@@ -366,7 +366,7 @@
             document.getElementById('filterDate').value = `${yyyy}-${mm}-${dd}`;
 
             // 필터 이벤트
-            document.getElementById('filterDate').addEventListener('change', loadData); // 날짜 변경 시 서버에서 다시 가져옴
+            document.getElementById('filterDate').addEventListener('change', applyFilters); // 날짜 필터는 클라이언트에서 처리
             document.getElementById('filterCategory').addEventListener('change', applyFilters);
             document.getElementById('filterSearch').addEventListener('input', applyFilters);
 
@@ -379,9 +379,9 @@
             const dateVal = document.getElementById('filterDate').value;
             const topicVal = document.getElementById('filterCategory').value;
 
+            // 날짜 필터는 클라이언트에서 처리 (GAS 날짜 포맷 불일치 방지)
             let fetchUrl = SCRIPT_URL;
             const params = [];
-            if (dateVal) params.push(`date=${dateVal}`);
             if (topicVal && topicVal !== '전체') params.push(`topic=${encodeURIComponent(topicVal)}`);
             if (params.length > 0) fetchUrl += '?' + params.join('&');
 
@@ -409,7 +409,7 @@
                 document.getElementById('lastUpdate').textContent = '방금 갱신됨';
                 document.getElementById('lastUpdate').classList.remove('hidden');
 
-                if (topicVal === '전체' || !topicVal) populateFilters();
+                populateFilters();
                 applyFilters();
             } catch (err) {
                 console.error(err);
@@ -478,11 +478,13 @@
 
         // ── 필터 적용 ──
         function applyFilters() {
+            const dateVal = document.getElementById('filterDate').value;
             const catVal = document.getElementById('filterCategory').value;
             const searchVal = document.getElementById('filterSearch').value.toLowerCase().trim();
 
             const filtered = allNews.filter(n => {
                 if (!activeImportance.has(n.중요도)) return false;
+                if (dateVal && n.날짜 !== dateVal) return false;
                 if (catVal !== '전체' && n.주제 !== catVal) return false;
                 if (searchVal && !n.제목.toLowerCase().includes(searchVal)) return false;
                 return true;
@@ -965,7 +967,7 @@
             const text = speechQueue.shift();
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'ko-KR';
-            utterance.rate = 1.05;
+            utterance.rate = 1.2;
             utterance.pitch = 1.0;
 
             // 한국어 음성 선택 시도
