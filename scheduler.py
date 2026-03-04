@@ -59,11 +59,18 @@ def run_pipeline():
         topic_criteria = sheets.get_all_topic_criteria()
         all_collected, top5_results = analyzer.screen_importance(all_collected, topic_criteria)
 
-        # Top5 주요뉴스 인덱스 추출 및 크롤링 대상 강제 포함 (크롤링 이후에 최종 생성)
+        # Top5 주요뉴스 인덱스 및 링크 추출
         top5_indices = []
+        top5_links = set()
         if top5_results:
-            top5_indices = [item.get("index", 1) - 1 for item in top5_results]
-            logger.info(f"Top5 주요뉴스 인덱스: {top5_indices}")
+            for item in top5_results:
+                idx = item.get("index", 1) - 1
+                top5_indices.append(idx)
+                if 0 <= idx < len(all_collected):
+                    link = all_collected[idx].get("링크", "")
+                    if link:
+                        top5_links.add(link)
+            logger.info(f"Top5 주요뉴스 {len(top5_indices)}건 선정 (인덱스: {top5_indices})")
 
         # 주제별 그룹화 및 중요도 순 정렬
         topic_groups = {}
@@ -78,34 +85,25 @@ def run_pipeline():
             # 중요도 순으로 정렬 (상 -> 중 -> 하)
             sorted_group = sorted(group, key=lambda x: importance_map.get(x.get("중요도", ""), 3))
             
-            # Top5에 선정된 기사는 일반 주제 목록에서 제외 (중복 방지)
-            filtered_group = []
-            for item in sorted_group:
-                # all_collected에서의 인덱스를 찾아 top5_indices와 비교
-                try:
-                    orig_idx = all_collected.index(item)
-                    if orig_idx not in top5_indices:
-                        filtered_group.append(item)
-                except ValueError:
-                    filtered_group.append(item)
+            # Top5에 선정된 기사는 일반 주제 목록에서 제외 (링크 기반 중복 방지)
+            filtered_group = [item for item in sorted_group 
+                              if item.get("링크", "") not in top5_links]
 
             selected = filtered_group[:5]  # 주제별 최대 5건
             selected_for_crawl.extend(selected)
             
+            excluded = len(sorted_group) - len(filtered_group)
             logger.info(
-                f"[{topic}] 총 {len(group)}건 중 {len(selected)}건 선별 (주요뉴스 제외) "
-                f"(상:{sum(1 for n in selected if n.get('중요도') == '상')}, "
-                f"중:{sum(1 for n in selected if n.get('중요도') == '중')}, "
-                f"하:{sum(1 for n in selected if n.get('중요도') == '하')})"
+                f"[{topic}] {len(group)}건 → Top5 제외 {excluded}건 → {len(selected)}건 선별"
             )
             
-        # Top5 주요뉴스는 주제별 순위와 관계없이 크롤링 대상에 무조건 포함
+        # Top5 주요뉴스도 크롤링 대상에 추가 (본문 확보용, 저장 시에는 별도 처리)
         for idx in top5_indices:
             if 0 <= idx < len(all_collected):
                 news_item = all_collected[idx]
                 if news_item not in selected_for_crawl:
                     selected_for_crawl.append(news_item)
-                    logger.info(f"Top5 기사 크롤링 대상 추가: {news_item.get('제목')[:20]}...")
+                    logger.info(f"Top5 기사 크롤링 대상 추가: {news_item.get('제목', '')[:20]}...")
 
         result["screened"] = len(selected_for_crawl)
 
@@ -157,21 +155,23 @@ def run_pipeline():
                     }
                     top5_news.append(top5_entry)
 
-        # 저장할 데이터 준비 (선별된 중요 기사 + 비선별 기사 요약 없이)
-        # 중요 기사만 저장
+        # 저장할 데이터 준비: Top5 기사는 일반 목록에서 제외하고, 주요뉴스로만 저장
         if selected_for_crawl:
-            # 네이버링크 필드 제거 (시트에 불필요)
             import copy
-            save_list = copy.deepcopy(selected_for_crawl)
+            
+            # selected_for_crawl에서 Top5 기사를 제거 (링크 기반)
+            regular_news = [n for n in selected_for_crawl 
+                           if n.get("링크", "") not in top5_links]
+            
+            # 네이버링크 필드 제거 (시트에 불필요)
+            save_list = copy.deepcopy(regular_news)
             for news in save_list:
                 news.pop("네이버링크", None)
-            sheets.append_news(save_list)
-            logger.info(f"최종 {len(save_list)}건 시트 저장 완료")
-
-            # Top5 주요뉴스도 시트에 저장
-            if top5_news:
-                sheets.append_news(top5_news)
-                logger.info(f"Top5 주요뉴스 {len(top5_news)}건 시트 저장 완료")
+            
+            # Top5 주요뉴스 + 일반 기사를 합쳐서 저장 (Top5가 먼저)
+            final_save = top5_news + save_list
+            sheets.append_news(final_save)
+            logger.info(f"최종 저장: Top5 {len(top5_news)}건 + 일반 {len(save_list)}건 = 총 {len(final_save)}건")
 
             # 브리핑 대본 저장
             sheets.save_briefing(briefing_script)
