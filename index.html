@@ -161,6 +161,20 @@
                 </button>
             </div>
         </div>
+
+        <!-- 음성 브리핑 진행바 -->
+        <div id="ttsProgressContainer"
+            class="hidden mt-3 p-3 bg-violet-50/50 border border-violet-100 rounded-xl max-w-md ml-auto">
+            <div class="flex items-center justify-between mb-1.5">
+                <span id="ttsStatus" class="text-[11px] font-semibold text-violet-700">브리핑 준비 중...</span>
+                <span id="ttsPercent" class="text-[11px] font-bold text-violet-600">0%</span>
+            </div>
+            <div class="w-full bg-violet-100 rounded-full h-1.5 overflow-hidden">
+                <div id="ttsProgressBar"
+                    class="bg-violet-500 h-full transition-all duration-300 shadow-[0_0_8px_rgba(139,92,246,0.3)]"
+                    style="width: 0%"></div>
+            </div>
+        </div>
     </header>
 
     <!-- ═══════════ 메인 ═══════════ -->
@@ -874,6 +888,7 @@
         // ══════════════════════════════════════════
         let isSpeaking = false;
         let speechQueue = [];
+        let totalSpeechCount = 0;
         let currentUtterance = null;
 
         function toggleTTS() {
@@ -929,8 +944,30 @@
                 }
             }
             if (chunk) speechQueue.push(chunk.trim());
+
+            totalSpeechCount = speechQueue.length;
+            showTTSProgress(true);
             updateTTSBtnPlaying();
             speakNext();
+        }
+
+        function showTTSProgress(show) {
+            document.getElementById('ttsProgressContainer').classList.toggle('hidden', !show);
+            if (!show) {
+                document.getElementById('ttsProgressBar').style.width = '0%';
+                document.getElementById('ttsPercent').textContent = '0%';
+            }
+        }
+
+        function updateTTSProgress() {
+            if (totalSpeechCount === 0) return;
+            const remaining = speechQueue.length;
+            const current = totalSpeechCount - remaining;
+            const percent = Math.round((current / totalSpeechCount) * 100);
+
+            document.getElementById('ttsProgressBar').style.width = percent + '%';
+            document.getElementById('ttsPercent').textContent = percent + '%';
+            document.getElementById('ttsStatus').textContent = `브리핑 진행 중 (${current}/${totalSpeechCount})`;
         }
 
         function playFallbackTTS() {
@@ -964,15 +1001,20 @@
                 return;
             }
 
+            updateTTSProgress();
             const text = speechQueue.shift();
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'ko-KR';
             utterance.rate = 1.2;
             utterance.pitch = 1.0;
 
-            // 한국어 음성 선택 시도
+            // 한국어 음성 선택 시도 (더 자연스러운 음성 우선순위)
             const voices = speechSynthesis.getVoices();
-            const koVoice = voices.find(v => v.lang.startsWith('ko'));
+            // 1순위: Google 한국어, 2순위: Heami, 3순위: 기타 Ko
+            let koVoice = voices.find(v => v.name.includes('Google') && v.lang.startsWith('ko'));
+            if (!koVoice) koVoice = voices.find(v => v.name.includes('Heami') && v.lang.startsWith('ko'));
+            if (!koVoice) koVoice = voices.find(v => v.lang.startsWith('ko'));
+
             if (koVoice) utterance.voice = koVoice;
 
             utterance.onend = () => speakNext();
@@ -985,7 +1027,9 @@
         function stopTTS() {
             isSpeaking = false;
             speechQueue = [];
+            totalSpeechCount = 0;
             speechSynthesis.cancel();
+            showTTSProgress(false);
 
             const btn = document.getElementById('ttsBtn');
             btn.classList.remove('bg-rose-600', 'hover:bg-rose-700');

@@ -13,6 +13,7 @@ import html
 import logging
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from difflib import SequenceMatcher
 
 import requests
 import nltk
@@ -31,6 +32,7 @@ from config import (
     NAVER_SEARCH_URL,
     NAVER_NEWS_DISPLAY,
     MAX_PER_TOPIC,
+    SIMILARITY_THRESHOLD,
 )
 from sheets_manager import SheetsManager
 
@@ -239,6 +241,33 @@ class NewsCollector:
         logger.info(f"크롤링 완료: {len(news_list)}건")
         return news_list
 
+    def deduplicate_by_similarity(self, news_list: list[dict]) -> list[dict]:
+        """
+        제목 유사도를 기반으로 중복 기사 제거.
+        유사도가 SIMILARITY_THRESHOLD 이상인 경우 하나만 남김.
+        """
+        if not news_list:
+            return news_list
+
+        unique_news = []
+        for news in news_list:
+            is_duplicate = False
+            title = news.get("제목", "")
+            
+            for existing in unique_news:
+                existing_title = existing.get("제목", "")
+                # 유사도 계산
+                similarity = SequenceMatcher(None, title, existing_title).ratio()
+                if similarity >= SIMILARITY_THRESHOLD:
+                    is_duplicate = True
+                    logger.info(f"뉴스 중복 판정 (유사도 {similarity:.2f}): '{title}' vs '{existing_title}'")
+                    break
+            
+            if not is_duplicate:
+                unique_news.append(news)
+        
+        return unique_news
+
     def collect_all(self) -> list[dict]:
         """
         Settings에 등록된 모든 활성 키워드에 대해 뉴스 수집 실행.
@@ -271,13 +300,20 @@ class NewsCollector:
                 logger.error(f"주제 '{topic}' (키워드: '{keyword}') 수집 중 오류: {e}")
                 continue
 
-        # 주제별 MAX_PER_TOPIC으로 제한
+        # 주제별 중복 및 건수 제한 처리
         all_news = []
         for topic, news_list in topic_news.items():
-            capped = news_list[:MAX_PER_TOPIC]
+            # 1. 유사도 기반 중복 기사 제거
+            dedup_list = self.deduplicate_by_similarity(news_list)
+            
+            # 2. MAX_PER_TOPIC으로 제한
+            capped = dedup_list[:MAX_PER_TOPIC]
             all_news.extend(capped)
-            if len(news_list) > MAX_PER_TOPIC:
-                logger.info(f"[{topic}] {len(news_list)}건 → {MAX_PER_TOPIC}건으로 제한")
+            
+            if len(news_list) > len(dedup_list):
+                logger.info(f"[{topic}] 유사도 중복 {len(news_list) - len(dedup_list)}건 제거")
+            if len(dedup_list) > MAX_PER_TOPIC:
+                logger.info(f"[{topic}] {len(dedup_list)}건 → {MAX_PER_TOPIC}건으로 제한")
 
         logger.info(f"총 수집: {len(all_news)}건 ({len(topic_news)}개 주제)")
         return all_news
