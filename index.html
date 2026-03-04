@@ -448,7 +448,7 @@
                     주제: row['주제'] || '기타',
                     언론사: row['언론사'] || '',
                     제목: row['제목'] || '제목 없음',
-                    본문: row['본문 전문'] || row['본문전문'] || '',
+                    본문: row['본문 전문'] || row['본문전문'] || row['본문 전재'] || row['기사 전문'] || row['Full_Text'] || '',
                     링크: row['링크'] || '',
                     AI요약: row['AI 요약'] || row['AI요약'] || '',
                     중요도: row['중요도'] || '중',
@@ -646,10 +646,10 @@
             <div class="bg-amber-50 border border-amber-100 rounded-lg p-4">
                 <p class="text-sm text-amber-700 font-medium">⌛ AI 요약이 생성되지 않았습니다. 다음 뉴스 수집 시 생성됩니다.</p>
             </div>`}
-            ${n.본문 ? `
+            ${(n.본문 && n.본문.trim()) ? `
             <div class="pt-2">
                 <p class="text-xs font-bold text-muted uppercase mb-2 tracking-wider">기사 전문</p>
-                <div class="text-sm text-gray-600 leading-relaxed max-h-[40vh] overflow-y-auto bg-gray-50 rounded-xl p-4 border border-border shadow-inner">${n.본문.substring(0, 3000)}${n.본문.length > 3000 ? '...' : ''}</div>
+                <div class="text-sm text-gray-600 leading-relaxed max-h-[40vh] overflow-y-auto bg-gray-50 rounded-xl p-4 border border-border shadow-inner whitespace-pre-wrap">${n.본문.substring(0, 5000)}${n.본문.length > 5000 ? '...' : ''}</div>
             </div>` : ''}
         `;
 
@@ -1037,7 +1037,16 @@
             if (briefingAudio) briefingAudio.pause();
             else if (usingSpeechSynthesis) speechSynthesis.pause();
             updateTTSBtnPaused();
-            document.getElementById('ttsStatus').textContent = '⏸ 일시정지됨';
+            document.getElementById('ttsStatus').textContent = '⏸ 일시정지됨 (제작 중단된 지점)';
+        }
+
+        function resumeTTS() {
+            if (!isSpeaking || !isPaused) return;
+            isPaused = false;
+            if (briefingAudio) briefingAudio.play();
+            else if (usingSpeechSynthesis) speechSynthesis.resume();
+            updateTTSBtnPlaying();
+            document.getElementById('ttsStatus').textContent = '🎧 브리핑 재생 중...';
         }
 
         function updateTTSBtnPlaying() {
