@@ -10,7 +10,10 @@ scheduler.py - APScheduler 기반 자동 실행 스케줄러
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+
+# KST (UTC+9) 타임존 정의
+KST = timezone(timedelta(hours=9))
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -24,8 +27,8 @@ logger = logging.getLogger(__name__)
 
 def run_pipeline():
     """2단계 AI 파이프라인 실행"""
-    start_time = datetime.now()
-    logger.info(f"=== 파이프라인 실행 시작: {start_time.strftime('%Y-%m-%d %H:%M:%S')} ===")
+    start_time = datetime.now(KST)
+    logger.info(f"=== 파이프라인 실행 시작: {start_time.strftime('%Y-%m-%d %H:%M:%S')} (KST) ===")
 
     result = {
         "status": "실행 중",
@@ -51,7 +54,7 @@ def run_pipeline():
             result["status"] = "완료 (수집 없음)"
             return result
 
-        elapsed_1 = (datetime.now() - start_time).total_seconds()
+        elapsed_1 = (datetime.now(KST) - start_time).total_seconds()
         logger.info(f"STEP 1 완료: {len(all_collected)}건 ({elapsed_1:.1f}초)")
 
         # ── 2단계: AI 1차 선별 (중요도 판별 + Top5 선정) ──
@@ -76,6 +79,9 @@ def run_pipeline():
         topic_groups = {}
         for news in all_collected:
             t = news.get("주제", "기타")
+            # '경제헤드라인'은 Top 5 선정을 위한 내부 풀이므로 일반 주제 목록에 포함하지 않음
+            if t == "경제헤드라인":
+                continue
             topic_groups.setdefault(t, []).append(news)
 
         selected_for_crawl = []
@@ -107,7 +113,7 @@ def run_pipeline():
 
         result["screened"] = len(selected_for_crawl)
 
-        elapsed_2 = (datetime.now() - start_time).total_seconds()
+        elapsed_2 = (datetime.now(KST) - start_time).total_seconds()
         logger.info(f"STEP 2 완료: 총 {len(selected_for_crawl)}건 선별 ({elapsed_2:.1f}초)")
 
         if not selected_for_crawl:
@@ -120,7 +126,7 @@ def run_pipeline():
         selected_for_crawl = collector.crawl_selected_articles(selected_for_crawl)
         result["crawled"] = len(selected_for_crawl)
 
-        elapsed_3 = (datetime.now() - start_time).total_seconds()
+        elapsed_3 = (datetime.now(KST) - start_time).total_seconds()
         logger.info(f"STEP 3 완료: 크롤링 완료 ({elapsed_3:.1f}초)")
 
         # ── 4단계: AI 2차 — 요약 + 브리핑 대본 동시 생성 ──
@@ -128,7 +134,7 @@ def run_pipeline():
         selected_for_crawl, briefing_script = analyzer.summarize_and_brief(selected_for_crawl)
         result["analyzed"] = len(selected_for_crawl)
 
-        elapsed_4 = (datetime.now() - start_time).total_seconds()
+        elapsed_4 = (datetime.now(KST) - start_time).total_seconds()
         logger.info(f"STEP 4 완료: 요약 + 대본 생성 ({elapsed_4:.1f}초)")
 
         # ── 5단계: 시트 저장 ──
@@ -137,13 +143,13 @@ def run_pipeline():
         # 크롤링 완료된 결과에서 Top5 주요뉴스 리스트 최종 생성 (본문 포함)
         top5_news = []
         if top5_results:
-            today = datetime.now().strftime("%Y-%m-%d")
+            today_str = datetime.now(KST).strftime("%Y-%m-%d")
             for item in top5_results:
                 idx = item.get("index", 1) - 1
                 if 0 <= idx < len(all_collected):
                     source_news = all_collected[idx]
                     top5_entry = {
-                        "날짜": today,
+                        "날짜": today_str,
                         "주제": "📌 주요뉴스",
                         "언론사": source_news.get("언론사", ""),
                         "제목": source_news.get("제목", ""),
@@ -193,7 +199,7 @@ def run_pipeline():
             logger.error(f"TTS 생성 중 오류 (무시): {e}")
 
         result["status"] = "완료"
-        elapsed = (datetime.now() - start_time).total_seconds()
+        elapsed = (datetime.now(KST) - start_time).total_seconds()
         logger.info(f"=== 파이프라인 완료 ({elapsed:.1f}초) ===")
 
     except Exception as e:

@@ -11,7 +11,10 @@ news_collector.py - 네이버 뉴스 API + newspaper4k 기반 뉴스 수집 엔�
 import re
 import html
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+
+# KST (UTC+9) 타임존 정의
+KST = timezone(timedelta(hours=9))
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from difflib import SequenceMatcher
 
@@ -155,7 +158,7 @@ class NewsCollector:
         """
         items = self.search_naver_news(keyword)
         results = []
-        today = datetime.now().strftime("%Y-%m-%d")
+        today = datetime.now(KST).strftime("%Y-%m-%d")
 
         skipped_media = 0
         for item in items:
@@ -209,7 +212,7 @@ class NewsCollector:
         """
         target_press = ["매일경제", "한국경제", "서울경제", "머니투데이", "연합뉴스"]
         headline_news = []
-        today = datetime.now().strftime("%Y-%m-%d")
+        today = datetime.now(KST).strftime("%Y-%m-%d")
         
         # '경제', '경영', '산업', '반도체', '증시' 키워드로 주요 경제지 필터링 검색
         # 네이버 API 팁: "query (언론사명)" 형태로 검색하면 해당 언론사가 포함된 결과 위주로 나옴

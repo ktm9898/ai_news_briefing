@@ -261,8 +261,9 @@ class SheetsManager:
         else:
             ws = self.spreadsheet.worksheet(tab_name)
 
-        from datetime import datetime
-        today = datetime.now().strftime("%Y-%m-%d")
+        from datetime import datetime, timedelta, timezone
+        KST = timezone(timedelta(hours=9))
+        today = datetime.now(KST).strftime("%Y-%m-%d")
 
         # 기존 데이터 확인 → 오늘 날짜 행이 있으면 업데이트, 없으면 추가
         data = ws.get_all_values()
