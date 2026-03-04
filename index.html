@@ -260,7 +260,7 @@
                 <div class="w-[10%]">상태</div>
                 <div class="w-[35%]">기사</div>
                 <div class="w-[48%]">요약</div>
-                <div class="w-[7%] text-right font-bold">원문</div>
+                <div class="w-[7%] text-center font-bold">원문</div>
             </div>
 
             <!-- 뉴스 행 컨테이너 -->
@@ -509,8 +509,23 @@
                 return true;
             });
 
-            // 최신순 정렬
-            filtered.sort((a, b) => b.날짜.localeCompare(a.날짜));
+            // 정렬 로직: 1.주요뉴스 우선, 2.중요도(상-중-하), 3.날짜(최신순)
+            const importanceMap = { '상': 0, '중': 1, '하': 2 };
+            filtered.sort((a, b) => {
+                // 1순위: 주제가 '📌 주요뉴스'인 것 (기존 '오늘의 주요뉴스' 포함 검색)
+                const isAPrio = a.주제.includes('주요뉴스');
+                const isBPrio = b.주제.includes('주요뉴스');
+                if (isAPrio && !isBPrio) return -1;
+                if (!isAPrio && isBPrio) return 1;
+
+                // 2순위: 중요도 (상 > 중 > 하)
+                const impA = importanceMap[a.중요도] ?? 9;
+                const impB = importanceMap[b.중요도] ?? 9;
+                if (impA !== impB) return impA - impB;
+
+                // 3순위: 날짜 최신순
+                return b.날짜.localeCompare(a.날짜);
+            });
 
             updateStats(filtered);
             renderNews(filtered);
@@ -892,6 +907,7 @@
         // ── 🔊 음성 브리핑 (HTML5 Audio + speechSynthesis 폴백) ──
         // ══════════════════════════════════════════
         let isSpeaking = false;
+        let isPaused = false;
         let briefingAudio = null;
 
         // ── speechSynthesis 폴백용 변수 ──
@@ -902,7 +918,11 @@
 
         function toggleTTS() {
             if (isSpeaking) {
-                stopTTS();
+                if (isPaused) {
+                    resumeTTS();
+                } else {
+                    pauseTTS();
+                }
                 return;
             }
             startTTS();
@@ -960,6 +980,44 @@
             });
         }
 
+        function pauseTTS() {
+            if (!isSpeaking || isPaused) return;
+            isPaused = true;
+            if (briefingAudio) briefingAudio.pause();
+            else if (usingSpeechSynthesis) speechSynthesis.pause();
+            updateTTSBtnPaused();
+            document.getElementById('ttsStatus').textContent = '⏸ 일시정지됨';
+        }
+
+        function resumeTTS() {
+            if (!isSpeaking || !isPaused) return;
+            isPaused = false;
+            if (briefingAudio) briefingAudio.play();
+            else if (usingSpeechSynthesis) speechSynthesis.resume();
+            updateTTSBtnPlaying();
+            document.getElementById('ttsStatus').textContent = '🎧 브리핑 재생 중...';
+        }
+
+        function stopTTS() {
+            isSpeaking = false;
+            isPaused = false;
+
+            if (briefingAudio) {
+                briefingAudio.pause();
+                briefingAudio = null;
+            }
+            if (speechSynthesis.speaking) {
+                speechSynthesis.cancel();
+            }
+
+            const btn = document.getElementById('ttsBtn');
+            btn.classList.remove('bg-rose-600', 'hover:bg-rose-700');
+            btn.classList.add('bg-violet-600', 'hover:bg-violet-700');
+            btn.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg> 브리핑`;
+
+            showTTSProgress(false);
+        }
+
         function formatTime(seconds) {
             const m = Math.floor(seconds / 60);
             const s = Math.floor(seconds % 60);
@@ -976,12 +1034,14 @@
             if (briefingAudio && briefingAudio.duration) {
                 // HTML5 Audio 구간 이동
                 briefingAudio.currentTime = percent * briefingAudio.duration;
+                if (isPaused) resumeTTS(); // 이동 시 자동 재개
             } else if (usingSpeechSynthesis && speechSentences.length > 0) {
                 // speechSynthesis 폴백 구간 이동
                 const targetIndex = Math.floor(percent * speechSentences.length);
                 const finalIndex = Math.min(Math.max(0, targetIndex), speechSentences.length - 1);
                 speechSynthesis.cancel();
                 currentSpeechIndex = finalIndex;
+                isPaused = false;
                 speakNext();
             }
         }
@@ -1001,34 +1061,14 @@
 
         function updateTTSBtnPlaying() {
             const btn = document.getElementById('ttsBtn');
-            btn.innerHTML = `<svg class="w-3.5 h-3.5 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/></svg> 정지`;
+            btn.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> 일시정지`;
         }
 
-        function stopTTS() {
-            isSpeaking = false;
-
-            // HTML5 Audio 정지
-            if (briefingAudio) {
-                briefingAudio.pause();
-                briefingAudio.currentTime = 0;
-                briefingAudio = null;
-            }
-
-            // speechSynthesis 정지 (폴백 모드)
-            if (usingSpeechSynthesis) {
-                speechSynthesis.cancel();
-                speechSentences = [];
-                currentSpeechIndex = 0;
-                usingSpeechSynthesis = false;
-            }
-
-            showTTSProgress(false);
-
+        function updateTTSBtnPaused() {
             const btn = document.getElementById('ttsBtn');
-            btn.classList.remove('bg-rose-600', 'hover:bg-rose-700');
-            btn.classList.add('bg-violet-600', 'hover:bg-violet-700');
-            btn.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg> 음성`;
+            btn.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> 재생`;
         }
+
 
         // ── speechSynthesis 폴백 ──
 

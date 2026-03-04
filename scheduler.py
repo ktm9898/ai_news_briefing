@@ -69,7 +69,7 @@ def run_pipeline():
                     source_news = all_collected[idx]
                     top5_entry = {
                         "날짜": today,
-                        "주제": "📌 오늘의 주요뉴스",
+                        "주제": "📌 주요뉴스",
                         "언론사": source_news.get("언론사", ""),
                         "제목": source_news.get("제목", ""),
                         "네이버 요약": source_news.get("네이버 요약", ""),
