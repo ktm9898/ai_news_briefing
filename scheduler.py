@@ -59,27 +59,11 @@ def run_pipeline():
         topic_criteria = sheets.get_all_topic_criteria()
         all_collected, top5_results = analyzer.screen_importance(all_collected, topic_criteria)
 
-        # Top5 기사 처리 및 저장
-        top5_news = []
+        # Top5 주요뉴스 인덱스 추출 및 크롤링 대상 강제 포함 (크롤링 이후에 최종 생성)
+        top5_indices = []
         if top5_results:
-            today = datetime.now().strftime("%Y-%m-%d")
-            for item in top5_results:
-                idx = item.get("index", 1) - 1
-                if 0 <= idx < len(all_collected):
-                    source_news = all_collected[idx]
-                    top5_entry = {
-                        "날짜": today,
-                        "주제": "📌 주요뉴스",
-                        "언론사": source_news.get("언론사", ""),
-                        "제목": source_news.get("제목", ""),
-                        "네이버 요약": source_news.get("네이버 요약", ""),
-                        "본문 전문": "",
-                        "링크": source_news.get("링크", ""),
-                        "AI 요약": item.get("summary", ""),
-                        "중요도": "상",
-                    }
-                    top5_news.append(top5_entry)
-            logger.info(f"Top5 주요뉴스 {len(top5_news)}건 선정 완료")
+            top5_indices = [item.get("index", 1) - 1 for item in top5_results]
+            logger.info(f"Top5 주요뉴스 인덱스: {top5_indices}")
 
         # 주제별 그룹화 및 중요도 순 정렬
         topic_groups = {}
@@ -95,6 +79,14 @@ def run_pipeline():
             sorted_group = sorted(group, key=lambda x: importance_map.get(x.get("중요도", ""), 3))
             selected = sorted_group[:5]  # 주제별 최대 5건
             selected_for_crawl.extend(selected)
+            
+        # Top5 주요뉴스는 주제별 순위와 관계없이 크롤링 대상에 무조건 포함
+        for idx in top5_indices:
+            if 0 <= idx < len(all_collected):
+                news_item = all_collected[idx]
+                if news_item not in selected_for_crawl:
+                    selected_for_crawl.append(news_item)
+                    logger.info(f"Top5 기사 크롤링 대상 추가: {news_item.get('제목')[:20]}...")
             
             logger.info(
                 f"[{topic}] 총 {len(group)}건 중 상위 {len(selected)}건 선별 "
@@ -132,14 +124,37 @@ def run_pipeline():
         # ── 5단계: 시트 저장 ──
         logger.info("STEP 5/6: Google Sheets 저장")
 
+        # 크롤링 완료된 결과에서 Top5 주요뉴스 리스트 최종 생성 (본문 포함)
+        top5_news = []
+        if top5_results:
+            today = datetime.now().strftime("%Y-%m-%d")
+            for item in top5_results:
+                idx = item.get("index", 1) - 1
+                if 0 <= idx < len(all_collected):
+                    source_news = all_collected[idx]
+                    top5_entry = {
+                        "날짜": today,
+                        "주제": "📌 주요뉴스",
+                        "언론사": source_news.get("언론사", ""),
+                        "제목": source_news.get("제목", ""),
+                        "네이버 요약": source_news.get("네이버 요약", ""),
+                        "본문 전문": source_news.get("본문 전문", ""),
+                        "링크": source_news.get("링크", ""),
+                        "AI 요약": item.get("summary", ""),
+                        "중요도": "상",
+                    }
+                    top5_news.append(top5_entry)
+
         # 저장할 데이터 준비 (선별된 중요 기사 + 비선별 기사 요약 없이)
         # 중요 기사만 저장
         if selected_for_crawl:
             # 네이버링크 필드 제거 (시트에 불필요)
-            for news in selected_for_crawl:
+            import copy
+            save_list = copy.deepcopy(selected_for_crawl)
+            for news in save_list:
                 news.pop("네이버링크", None)
-            sheets.append_news(selected_for_crawl)
-            logger.info(f"최종 {len(selected_for_crawl)}건 시트 저장 완료")
+            sheets.append_news(save_list)
+            logger.info(f"최종 {len(save_list)}건 시트 저장 완료")
 
             # Top5 주요뉴스도 시트에 저장
             if top5_news:
