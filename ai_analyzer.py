@@ -36,30 +36,30 @@ class AIAnalyzer:
         topic_criteria: dict[str, str] = None,
     ) -> tuple[list[dict], list[dict]]:
         """
-        1차 AI 호출: 중요도 판별 + 경제·경영 Top5 선정을 동시에 처리.
+        1차 AI 호출: 중요도 판별 + 주요뉴스 Top6 선정 (국내 3 + 해외 3).
 
         - 모든 기사의 제목과 설명을 AI에게 전달
         - 각 기사의 중요도(상/중/하)를 판별
-        - 전체 기사 중 경제·경영 관점에서 가장 중요한 Top5를 선정하고 요약
+        - 전체 기사 중 국내 주요뉴스 3건, 해외 주요뉴스 3건을 선정하고 요약
 
         Args:
             news_list: [{"제목": ..., "네이버 요약": ..., "주제": ..., ...}]
             topic_criteria: {"주제명": "판단 기준..."}
 
         Returns:
-            (중요도가 채워진 news_list, top5 뉴스 리스트)
-            top5: [{"index": N, "summary": "..."}, ...]
+            (중요도가 채워진 news_list, top6 뉴스 리스트)
+            top6: [{"index": N, "region": "국내|해외", "summary": "..."}, ...]
         """
-        top5_results = []
+        top6_results = []
 
         if not news_list:
-            return news_list, top5_results
+            return news_list, top6_results
 
         if not GEMINI_API_KEY:
             logger.error("GEMINI_API_KEY가 설정되지 않았습니다.")
             for news in news_list:
                 news["중요도"] = "중"
-            return news_list, top5_results
+            return news_list, top6_results
 
         # 주제별 기준 텍스트 생성
         criteria_text = ""
@@ -91,18 +91,19 @@ class AIAnalyzer:
 [주제별 중요도 판단 기준]
 {criteria_text}
 
-[작업 2] 전체 뉴스 중에서 오늘의 경영·경제 주요뉴스 Top5를 선정
+[작업 2] 전체 뉴스 중에서 오늘의 경영·경제 주요뉴스를 **국내 3건 + 해외 3건 = 총 6건** 선정
 - **절대적 기준**: 한 언론사의 메인 헤드라인에 오를 만한 묵직한 뉴스만 선정하세요. 특히 '경제헤드라인' 주제로 분류된 기사들을 우선적으로 검토하세요.
-- **선정 예시**: 한국은행 금리 결정, 환율 급변동, 글로벌 대기업(삼성, 애플 등)의 중대 결정, 공급망/자원 안보 이슈, 반도체/AI 혁신 기술 등
-- **절대 제외**: 개별 매장 오픈(음식점 등), 지엽적 상권 소식, 개인적인 미담, 소규모 지원금 공고 등은 Top 5에서 절대 제외하세요.
-- 국내외를 가리지 말고 전 국민/전 세계 경제에 임팩트가 큰 소식 5개를 엄선하세요.
-- 만약 헤드라인급 뉴스가 부족하다면 5개를 다 채우지 않아도 좋습니다 (최소 0개 ~ 최대 5개).
-- 각 Top 5 뉴스에 대해 핵심 내용을 1~2문장으로 품격 있게 요약해 주세요.
+- **국내 뉴스 3건**: 한국 경제에 직접적인 영향을 미치는 뉴스. 예: 한국은행 금리 결정, 코스피/코스닥 급등락, 국내 대기업 중대 발표, 정부 경제 정책 등
+- **해외 뉴스 3건**: 글로벌 경제에 영향을 미치는 뉴스. 예: 미국 증시 변동, 환율 급변동, 글로벌 대기업(애플, 테슬라 등) 중대 결정, 국제 통상 이슈, AI/반도체 글로벌 동향 등
+- **절대 제외**: 개별 매장 오픈(음식점 등), 지엽적 상권 소식, 개인적인 미담, 소규모 지원금 공고 등은 주요뉴스에서 절대 제외하세요.
+- 만약 헤드라인급 뉴스가 부족하다면 각각 3건을 다 채우지 않아도 좋습니다 (국내 0~3건, 해외 0~3건).
+- 각 주요뉴스에 대해 핵심 내용을 1~2문장으로 품격 있게 요약해 주세요.
+- 반드시 region 필드에 "국내" 또는 "해외"를 명시해 주세요.
 
 반드시 아래 JSON 형식으로만 응답:
 {{
   "importance": [{{"index": 1, "importance": "상"}}, ...],
-  "top5": [{{"index": 3, "summary": "요약 내용..."}}, ...]
+  "top6": [{{"index": 3, "region": "국내", "summary": "요약 내용..."}}, ...]
 }}
 
 [뉴스 목록 ({len(news_list)}건)]
@@ -135,8 +136,8 @@ class AIAnalyzer:
                     if 0 <= idx < len(news_list):
                         news_list[idx]["중요도"] = item.get("importance", "중")
 
-                # Top5 결과
-                top5_results = result.get("top5", [])
+                # Top6 결과 (국내 3 + 해외 3)
+                top6_results = result.get("top6", [])
 
                 # 중요도 통계 로깅
                 imp_counts = {"상": 0, "중": 0, "하": 0}
@@ -144,10 +145,12 @@ class AIAnalyzer:
                     imp = n.get("중요도", "중")
                     imp_counts[imp] = imp_counts.get(imp, 0) + 1
 
+                domestic = len([t for t in top6_results if t.get('region') == '국내'])
+                foreign = len([t for t in top6_results if t.get('region') == '해외'])
                 logger.info(
                     f"AI 1차 완료: 상={imp_counts['상']}건, "
                     f"중={imp_counts['중']}건, 하={imp_counts['하']}건, "
-                    f"Top5={len(top5_results)}건"
+                    f"주요뉴스={len(top6_results)}건 (국내 {domestic} + 해외 {foreign})"
                 )
                 break
 
@@ -159,7 +162,7 @@ class AIAnalyzer:
                 else:
                     time.sleep(2)
 
-        return news_list, top5_results
+        return news_list, top6_results
 
     # ═══════════════════════════════════════════════════
     # Stage 2: 요약 + 브리핑 대본 동시 생성 (1회 AI 호출)
