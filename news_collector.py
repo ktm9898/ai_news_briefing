@@ -314,14 +314,22 @@ class NewsCollector:
         logger.info(f"선별된 {len(news_list)}건 기사 본문 크롤링 시작 (병렬 {max_workers})")
 
         def _crawl_one(news: dict) -> dict:
+            title = news.get("제목", "")[:20]
             link = news.get("링크", "")
             naver_link = news.get("네이버링크", "")
             body = self.extract_article_body(link)
+            
             # 원문 실패 시 네이버 링크로 재시도
             if not body and naver_link and naver_link != link:
+                logger.info(f"원문 크롤링 실패, 네이버 링크 재시도: {title}...")
                 body = self.extract_article_body(naver_link)
                 if body:
                     news["링크"] = naver_link
+                    logger.info(f"네이버 링크로 크롤링 성공: {title}")
+            
+            if not body:
+                logger.warning(f"본문 추출 최종 실패: {title} ({link})")
+
             news["본문 전문"] = body[:40000] if body else "(본문 추출 실패)"
             return news
 
