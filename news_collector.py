@@ -251,9 +251,17 @@ class NewsCollector:
         # '경제', '경영', '산업', '반도체', '증시' 키워드로 주요 경제지 필터링 검색
         # 네이버 API 팁: "query (언론사명)" 형태로 검색하면 해당 언론사가 포함된 결과 위주로 나옴
         skipped_old = 0
+        # 1. 주요 경제지의 경제 메인 섹션 검색 (기존)
+        search_targets = []
         for press in target_press:
-            keyword = f"{press} 경제 메인" # 주요 언론사의 경제 메인 소식 타겟팅
-            items = self.search_naver_news(keyword)
+            search_targets.append(f"{press} 경제 메인")
+            
+        # 2. 글로벌 경제/증시 핵심 키워드 추가 (해외 주요뉴스 확보용)
+        search_targets.extend(["글로벌 경제", "뉴욕증시", "나스닥", "세계 경제", "미국 증시"])
+
+        skipped_old = 0
+        for target in search_targets:
+            items = self.search_naver_news(target)
             
             for item in items:
                 # 오늘 날짜 기사만 수집
