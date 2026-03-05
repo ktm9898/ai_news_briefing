@@ -106,9 +106,9 @@ class NewsCollector:
                 return True
         return False
 
-    def _is_within_24h(self, pub_date_str: str) -> bool:
+    def _is_today(self, pub_date_str: str) -> bool:
         """
-        pubDate(RFC 822 형식)를 파싱하여 현재 시각 기준 24시간 이내인지 확인.
+        pubDate(RFC 822 형식)를 파싱하여 오늘 날짜(KST 기준)인지 확인.
         예: 'Thu, 05 Mar 2026 10:30:00 +0900'
         파싱 실패 시 False 반환 (오래된 기사로 간주하여 제외).
         """
@@ -116,9 +116,8 @@ class NewsCollector:
             return False
         try:
             pub_dt = parsedate_to_datetime(pub_date_str)
-            now = datetime.now(KST)
-            age = now - pub_dt
-            return age <= timedelta(hours=24)
+            today = datetime.now(KST).date()
+            return pub_dt.astimezone(KST).date() == today
         except Exception:
             logger.warning(f"pubDate 파싱 실패: '{pub_date_str}'")
             return False
@@ -191,8 +190,8 @@ class NewsCollector:
         skipped_media = 0
         skipped_old = 0
         for item in items:
-            # 24시간 이내 기사만 수집
-            if not self._is_within_24h(item.get("pubDate", "")):
+            # 오늘 날짜 기사만 수집
+            if not self._is_today(item.get("pubDate", "")):
                 skipped_old += 1
                 continue
 
@@ -235,7 +234,7 @@ class NewsCollector:
 
         logger.info(
             f"[{topic}] '{keyword}' → {len(results)}건 수집 "
-            f"({len(items)}건 검색, {skipped_old}건 24시간 초과, "
+            f"({len(items)}건 검색, {skipped_old}건 오늘 외 날짜, "
             f"{skipped_media}건 비주요언론 제외, "
             f"{len(items) - len(results) - skipped_media - skipped_old}건 중복)"
         )
@@ -257,8 +256,8 @@ class NewsCollector:
             items = self.search_naver_news(keyword)
             
             for item in items:
-                # 24시간 이내 기사만 수집
-                if not self._is_within_24h(item.get("pubDate", "")):
+                # 오늘 날짜 기사만 수집
+                if not self._is_today(item.get("pubDate", "")):
                     skipped_old += 1
                     continue
 
@@ -289,7 +288,7 @@ class NewsCollector:
                 })
                 existing_links.add(link)
                 
-        logger.info(f"경제지 헤드라인 직접 수집 완료: {len(headline_news)}건 ({skipped_old}건 24시간 초과 제외)")
+        logger.info(f"경제지 헤드라인 직접 수집 완료: {len(headline_news)}건 ({skipped_old}건 오늘 외 날짜 제외)")
         return headline_news
 
     def crawl_selected_articles(self, news_list: list[dict], max_workers: int = 5) -> list[dict]:
