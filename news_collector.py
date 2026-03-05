@@ -224,6 +224,7 @@ class NewsCollector:
                 "제목": title,
                 "본문 전문": "",  # 1차에서는 크롤링하지 않음
                 "링크": link,
+                "original_link": link,  # AI 선정용 변하지 않는 고유 링크 (매핑용)
                 "네이버링크": item.get("link", ""),  # 크롤링 시 폴백용
                 "AI 요약": "",
                 "중요도": "",
@@ -289,6 +290,7 @@ class NewsCollector:
                     "제목": title,
                     "본문 전문": "",
                     "링크": link,
+                    "original_link": link,
                     "네이버링크": item.get("link", ""),
                     "AI 요약": "",
                     "중요도": "",

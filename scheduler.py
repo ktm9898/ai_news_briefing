@@ -152,27 +152,29 @@ def run_pipeline():
             today_str = datetime.now(KST).strftime("%Y-%m-%d")
             
             # ── 5.1단계: 크롤링/요약 결과 통합 룩업 테이블 생성 ──
-            # 링크가 리다이렉션되거나 네이버 링크로 변경된 경우에도 찾을 수 있도록 
-            # 가능한 모든 링크 필드를 키로 사용하여 룩업 테이블 구축
+            # 링크가 리다이렉션되거나 네이버 링크로 변경되는 상황을 완벽하게 대응하기 위해 
+            # 수집 초기 시점의 고유 링크인 'original_link'를 키로 사용
             crawled_lookup = {}
             for n in selected_for_crawl:
-                body = n.get("본문 전문", "")
-                summary_2nd = n.get("AI 요약", "")
+                # original_link가 있으면 최우선 키로 사용, 없으면 현재 링크 사용
+                key = n.get("original_link") or n.get("링크")
+                if key:
+                    crawled_lookup[key] = n
                 
-                # 원문 링크, 네이버 링크, 그리고 혹시 바뀐 링크 모두를 키로 등록
-                if n.get("링크"): crawled_lookup[n["링크"]] = n
-                if n.get("네이버링크"): crawled_lookup[n["네이버링크"]] = n
+                # 폴백용: 네이버링크도 키로 등록 (혹시 모를 경우대비)
+                if n.get("네이버링크"):
+                    crawled_lookup.setdefault(n["네이버링크"], n)
 
             # ── 5.2단계: top6_results에 크롤링된 데이터 병합 ──
             for item in top6_results:
-                link = item.get("링크", "")
-                # 룩업 테이블에서 기사 정보 찾기
+                # Top6 아이템의 고유 링크(original_link)로 검색
+                link = item.get("original_link") or item.get("링크", "")
                 article_info = crawled_lookup.get(link)
                 
-                # 만약 못 찾았다면, 전체 리스트에서 링크 매칭 시도 (최후의 수단)
+                # 만약 못 찾았다면, 전체 리스트에서 필드 매칭 시도 (최후의 수단)
                 if not article_info:
                     for n in selected_for_crawl:
-                        if n.get("링크") == link or n.get("네이버링크") == link:
+                        if n.get("original_link") == link or n.get("링크") == link or n.get("네이버링크") == link:
                             article_info = n
                             break
 
@@ -180,23 +182,21 @@ def run_pipeline():
                 
                 # 본문 및 2차 상세 요약 가져오기
                 final_body = article_info.get("본문 전문", "") if article_info else item.get("본문 전문", "")
-                # 1차 요약(summary)보다 2차 상세 요약(AI 요약)을 우선함
                 final_summary = (article_info.get("AI 요약") if article_info else "") or item.get("summary", "")
 
-                top6_entry = {
+                top6_news.append({
                     "날짜": today_str,
                     "주제": f"📌 주요뉴스({region_label})",
                     "언론사": item.get("언론사", ""),
                     "제목": item.get("제목", ""),
                     "네이버 요약": item.get("네이버 요약", ""),
                     "본문 전문": final_body,
-                    "링크": link,
+                    "링크": item.get("링크", ""), # 시트에는 접근 가능한 링크 저장
                     "AI 요약": final_summary,
                     "중요도": "상",
-                }
-                top6_news.append(top6_entry)
+                })
             
-            logger.info(f"Top6 본문 및 상세 요약 병합 완료: {len(top6_news)}건")
+            logger.info(f"Top6 본문 및 상세 요약 병합 완료 (original_link 기반): {len(top6_news)}건")
 
         # 저장할 데이터 준비: Top6 기사는 일반 목록에서 제외하고, 주요뉴스로만 저장
         if selected_for_crawl:
