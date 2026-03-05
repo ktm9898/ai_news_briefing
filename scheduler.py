@@ -111,26 +111,24 @@ def run_pipeline():
                 f"[{topic}] {len(group)}건 → Top5 제외 {excluded}건 → {len(selected)}건 선별"
             )
             
-        # Top6 주요뉴스도 크롤링 대상에 추가 (본문 확보용, 저장 시에는 별도 처리)
-        for idx in top6_indices:
-            if 0 <= idx < len(all_collected):
-                news_item = all_collected[idx]
-                if news_item not in selected_for_crawl:
-                    selected_for_crawl.append(news_item)
-                    logger.info(f"Top6 기사 크롤링 대상 추가: {news_item.get('제목', '')[:20]}...")
-
         result["screened"] = len(selected_for_crawl)
 
         elapsed_2 = (datetime.now(KST) - start_time).total_seconds()
         logger.info(f"STEP 2 완료: 총 {len(selected_for_crawl)}건 선별 ({elapsed_2:.1f}초)")
 
-        if not selected_for_crawl:
-            logger.info("선별된 기사가 없습니다.")
-            result["status"] = "완료 (기사 없음)"
+        # ── 3단계: 기사 본문 크롤링 (상/중 중요도 뉴스 우선) ──
+        logger.info("STEP 3/6: 주요 기사 본문 크롤링")
+        
+        # 선별된 Top6 기사와 '상'/'중' 중요도 기사들만 본문 크롤링 수행
+        selected_for_crawl = [n for n in all_collected if n.get("중요도") in ["상", "중"] or n.get("링크") in top6_links]
+        
+        if not selected_for_crawl and not top6_results:
+            logger.info("분석/저장할 중요한 기사가 없습니다.")
+            result["status"] = "완료 (중요기사 없음)"
             return result
-
-        # ── 3단계: 선별된 기사만 본문 크롤링 (병렬) ──
-        logger.info(f"STEP 3/6: 선별된 {len(selected_for_crawl)}건 본문 크롤링 (병렬)")
+        
+        # Top6 기사들 중 all_collected에 없는 정보(AI 요약 등)를 병합하기 위해 
+        # 크롤링 대상에 Top6를 포함시키고 나중에 처리
         selected_for_crawl = collector.crawl_selected_articles(selected_for_crawl)
         result["crawled"] = len(selected_for_crawl)
 
@@ -148,29 +146,28 @@ def run_pipeline():
         # ── 5단계: 시트 저장 ──
         logger.info("STEP 5/6: Google Sheets 저장")
 
-        # 크롤링 완료된 결과에서 Top6 주요뉴스 리스트 최종 생성 (본문 포함)
+        # 최종 저장용 주요뉴스 리스트 생성 (Top6)
         top6_news = []
         if top6_results:
             today_str = datetime.now(KST).strftime("%Y-%m-%d")
+            # 본문 내용을 크롤링 결과에서 가져옴
+            crawled_bodies = {n.get("링크"): n.get("본문 전문", "") for n in selected_for_crawl}
+            
             for item in top6_results:
-                idx = item.get("index", 1) - 1
-                if 0 <= idx < len(all_collected):
-                    source_news = all_collected[idx]
-                    region = item.get("region", "")
-                    region_label = "국내" if region == "국내" else "해외"
-                    topic_label = f"📌 주요뉴스({region_label})"
-                    top6_entry = {
-                        "날짜": today_str,
-                        "주제": topic_label,
-                        "언론사": source_news.get("언론사", ""),
-                        "제목": source_news.get("제목", ""),
-                        "네이버 요약": source_news.get("네이버 요약", ""),
-                        "본문 전문": source_news.get("본문 전문", ""),
-                        "링크": source_news.get("링크", ""),
-                        "AI 요약": item.get("summary", ""),
-                        "중요도": "상",
-                    }
-                    top6_news.append(top6_entry)
+                link = item.get("링크", "")
+                region_label = "국내" if item.get("region") == "국내" else "해외"
+                top6_entry = {
+                    "날짜": today_str,
+                    "주제": f"📌 주요뉴스({region_label})",
+                    "언론사": item.get("언론사", ""),
+                    "제목": item.get("제목", ""),
+                    "네이버 요약": item.get("네이버 요약", ""),
+                    "본문 전문": crawled_bodies.get(link, item.get("본문 전문", "")),
+                    "링크": link,
+                    "AI 요약": item.get("AI 요약") or item.get("summary", ""),
+                    "중요도": "상",
+                }
+                top6_news.append(top6_entry)
 
         # 저장할 데이터 준비: Top6 기사는 일반 목록에서 제외하고, 주요뉴스로만 저장
         if selected_for_crawl:
