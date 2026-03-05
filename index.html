@@ -362,7 +362,7 @@
                         </div>
                     </div>
 
-                    <div id="topicDetailSection" class="hidden animate-in fade-in duration-300">
+                    <div id="topicDetailSection" class="animate-in fade-in duration-300">
                         <div class="bg-blue-50 rounded-xl p-3 border border-blue-100 space-y-2">
                             <div class="flex items-center justify-between">
                                 <label class="text-[11px] font-bold text-blue-700 uppercase">2. AI 중요도 판단 기준</label>
@@ -755,13 +755,6 @@
                 });
 
                 populateSettingsTopicSelect();
-
-                // 첫 번째 주제 자동 선택하여 세부 섹션 펼침
-                const sel = document.getElementById('settingsTopicSelect');
-                if (sel.options.length > 1) {
-                    sel.value = sel.options[1].value;
-                    onSettingsTopicChange();
-                }
             } catch (err) {
                 console.error('Settings load error:', err);
                 document.getElementById('settingsList').innerHTML = '<p class="text-xs text-rose-500 text-center py-4">설정을 불러올 수 없습니다.</p>';
@@ -790,14 +783,13 @@
 
         function onSettingsTopicChange() {
             const topic = document.getElementById('settingsTopicSelect').value;
-            const detailSection = document.getElementById('topicDetailSection');
 
             if (!topic) {
-                detailSection.classList.add('hidden');
+                // 주제 미선택 시 필드만 초기화 (섹션은 계속 표시)
+                document.getElementById('topicCriteria').value = '';
+                document.getElementById('settingsList').innerHTML = '<p class="text-xs text-muted text-center py-4">주제를 선택하면 키워드가 나타납니다</p>';
                 return;
             }
-
-            detailSection.classList.remove('hidden');
 
             // 기준 로드
             document.getElementById('topicCriteria').value = topicCriteriaMap[topic] || '';
