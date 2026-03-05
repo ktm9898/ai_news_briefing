@@ -12,6 +12,7 @@ import re
 import html
 import logging
 from datetime import datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 
 # KST (UTC+9) 타임존 정의
 KST = timezone(timedelta(hours=9))
@@ -105,6 +106,34 @@ class NewsCollector:
                 return True
         return False
 
+    def _is_within_24h(self, pub_date_str: str) -> bool:
+        """
+        pubDate(RFC 822 형식)를 파싱하여 현재 시각 기준 24시간 이내인지 확인.
+        예: 'Thu, 05 Mar 2026 10:30:00 +0900'
+        파싱 실패 시 False 반환 (오래된 기사로 간주하여 제외).
+        """
+        if not pub_date_str:
+            return False
+        try:
+            pub_dt = parsedate_to_datetime(pub_date_str)
+            now = datetime.now(KST)
+            age = now - pub_dt
+            return age <= timedelta(hours=24)
+        except Exception:
+            logger.warning(f"pubDate 파싱 실패: '{pub_date_str}'")
+            return False
+
+    def _extract_date_from_pubdate(self, pub_date_str: str) -> str:
+        """
+        pubDate에서 YYYY-MM-DD 형식의 날짜 추출.
+        실패 시 오늘 날짜 반환.
+        """
+        try:
+            pub_dt = parsedate_to_datetime(pub_date_str)
+            return pub_dt.astimezone(KST).strftime("%Y-%m-%d")
+        except Exception:
+            return datetime.now(KST).strftime("%Y-%m-%d")
+
     def search_naver_news(self, keyword: str) -> list[dict]:
         """
         네이버 뉴스 검색 API 호출.
@@ -158,10 +187,15 @@ class NewsCollector:
         """
         items = self.search_naver_news(keyword)
         results = []
-        today = datetime.now(KST).strftime("%Y-%m-%d")
 
         skipped_media = 0
+        skipped_old = 0
         for item in items:
+            # 24시간 이내 기사만 수집
+            if not self._is_within_24h(item.get("pubDate", "")):
+                skipped_old += 1
+                continue
+
             link = item.get("originallink") or item.get("link", "")
 
             # 주요 언론사 필터
@@ -182,9 +216,10 @@ class NewsCollector:
                 item.get("originallink", ""),
                 item.get("link", ""),
             )
+            article_date = self._extract_date_from_pubdate(item.get("pubDate", ""))
 
             results.append({
-                "날짜": today,
+                "날짜": article_date,
                 "주제": topic,
                 "언론사": source,
                 "제목": title,
@@ -200,8 +235,9 @@ class NewsCollector:
 
         logger.info(
             f"[{topic}] '{keyword}' → {len(results)}건 수집 "
-            f"({len(items)}건 검색, {skipped_media}건 비주요언론 제외, "
-            f"{len(items) - len(results) - skipped_media}건 중복)"
+            f"({len(items)}건 검색, {skipped_old}건 24시간 초과, "
+            f"{skipped_media}건 비주요언론 제외, "
+            f"{len(items) - len(results) - skipped_media - skipped_old}건 중복)"
         )
         return results
 
@@ -212,15 +248,20 @@ class NewsCollector:
         """
         target_press = ["매일경제", "한국경제", "서울경제", "머니투데이", "연합뉴스"]
         headline_news = []
-        today = datetime.now(KST).strftime("%Y-%m-%d")
         
         # '경제', '경영', '산업', '반도체', '증시' 키워드로 주요 경제지 필터링 검색
         # 네이버 API 팁: "query (언론사명)" 형태로 검색하면 해당 언론사가 포함된 결과 위주로 나옴
+        skipped_old = 0
         for press in target_press:
             keyword = f"{press} 경제 메인" # 주요 언론사의 경제 메인 소식 타겟팅
             items = self.search_naver_news(keyword)
             
             for item in items:
+                # 24시간 이내 기사만 수집
+                if not self._is_within_24h(item.get("pubDate", "")):
+                    skipped_old += 1
+                    continue
+
                 link = item.get("originallink") or item.get("link", "")
                 if link in existing_links:
                     continue
@@ -228,13 +269,14 @@ class NewsCollector:
                 title = self._clean_html(item.get("title", ""))
                 description = self._clean_html(item.get("description", ""))
                 source = self._extract_source(item.get("originallink", ""), item.get("link", ""))
+                article_date = self._extract_date_from_pubdate(item.get("pubDate", ""))
                 
                 # 명시된 언론사 도메인 화이트리스트 재검색 (퀄리티 보장)
                 if not self._is_trusted_media(link):
                     continue
                 
                 headline_news.append({
-                    "날짜": today,
+                    "날짜": article_date,
                     "주제": "경제헤드라인", # 내부 처리용 주제명
                     "언론사": source,
                     "제목": title,
@@ -247,7 +289,7 @@ class NewsCollector:
                 })
                 existing_links.add(link)
                 
-        logger.info(f"경제지 헤드라인 직접 수집 완료: {len(headline_news)}건")
+        logger.info(f"경제지 헤드라인 직접 수집 완료: {len(headline_news)}건 ({skipped_old}건 24시간 초과 제외)")
         return headline_news
 
     def crawl_selected_articles(self, news_list: list[dict], max_workers: int = 5) -> list[dict]:

@@ -755,6 +755,13 @@
                 });
 
                 populateSettingsTopicSelect();
+
+                // 첫 번째 주제 자동 선택하여 세부 섹션 펼침
+                const sel = document.getElementById('settingsTopicSelect');
+                if (sel.options.length > 1) {
+                    sel.value = sel.options[1].value;
+                    onSettingsTopicChange();
+                }
             } catch (err) {
                 console.error('Settings load error:', err);
                 document.getElementById('settingsList').innerHTML = '<p class="text-xs text-rose-500 text-center py-4">설정을 불러올 수 없습니다.</p>';
