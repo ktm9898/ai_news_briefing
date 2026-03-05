@@ -57,10 +57,18 @@ def run_pipeline():
         elapsed_1 = (datetime.now(KST) - start_time).total_seconds()
         logger.info(f"STEP 1 완료: {len(all_collected)}건 ({elapsed_1:.1f}초)")
 
-        # ── 2단계: AI 1차 선별 (중요도 판별 + Top5 선정) ──
+        # ── 2단계: AI 1차 선별 (중요도 판별 + Top6 선정) ──
         logger.info("STEP 2/6: AI 1차 중요도 선별 + 주요뉴스 Top6 선정")
         topic_criteria = sheets.get_all_topic_criteria()
-        all_collected, top6_results = analyzer.screen_importance(all_collected, topic_criteria)
+        active_settings = sheets.get_active_settings()
+        exclusion_keywords = list(set(s.get("키워드", "") for s in active_settings if s.get("키워드")))
+        
+        all_collected, top6_results = analyzer.screen_importance(
+            all_collected, 
+            topic_criteria, 
+            exclusion_keywords=exclusion_keywords
+        )
+
 
         # Top6 주요뉴스 인덱스 및 링크 추출
         top6_indices = []

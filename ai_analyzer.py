@@ -33,80 +33,112 @@ class AIAnalyzer:
     def screen_importance(
         self,
         news_list: list[dict],
-        topic_criteria: dict[str, str] = None,
+        topic_criteria: dict[str, str] | None = None,
+        exclusion_keywords: list[str] | None = None
     ) -> tuple[list[dict], list[dict]]:
         """
-        1차 AI 호출: 중요도 판별 + 주요뉴스 Top6 선정 (국내 3 + 해외 3).
-
-        - 모든 기사의 제목과 설명을 AI에게 전달
-        - 각 기사의 중요도(상/중/하)를 판별
-        - 전체 기사 중 국내 주요뉴스 3건, 해외 주요뉴스 3건을 선정하고 요약
-
+        AI를 사용하여 각 뉴스의 중요도를 판별하고, 전체 중 주요뉴스 6개를 선정.
+        
         Args:
-            news_list: [{"제목": ..., "네이버 요약": ..., "주제": ..., ...}]
-            topic_criteria: {"주제명": "판단 기준..."}
-
+            news_list: 뉴스 목록
+            topic_criteria: 주제별 중요도 판단 기준 (Sheets에서 로드)
+            exclusion_keywords: 주요뉴스(Top6) 선정 시 배제할 키워드 목록
+            
         Returns:
-            (중요도가 채워진 news_list, top6 뉴스 리스트)
-            top6: [{"index": N, "region": "국내|해외", "summary": "..."}, ...]
+            (중요도가 채워진 전체 뉴스 목록, 선정된 Top6 뉴스 목록)
         """
-        top6_results = []
-
         if not news_list:
-            return news_list, top6_results
+            return [], []
 
         if not GEMINI_API_KEY:
             logger.error("GEMINI_API_KEY가 설정되지 않았습니다.")
             for news in news_list:
                 news["중요도"] = "중"
-            return news_list, top6_results
+            return news_list, []
 
+        # ── 1단계: 주요뉴스 후보군(헤드라인) 필터링 ──
+        # 사용자가 설정한 세부 주제 키워드가 포함된 경우 주요뉴스 후보에서 즉시 탈락시킴
+        headline_candidates = []
+        topic_news_pool = []
+        
+        exclusion_set = set(k.strip().lower() for k in (exclusion_keywords or []) if k.strip())
+        
+        for news in news_list:
+            is_headline = (news.get("주제") == "경제헤드라인")
+            
+            if is_headline:
+                title_desc = (news.get("제목", "") + " " + news.get("네이버 요약", "")).lower()
+                # 배제 키워드 포함여부 체크
+                found_exclusion = False
+                for kw in exclusion_set:
+                    if kw in title_desc:
+                        found_exclusion = True
+                        break
+                
+                if found_exclusion:
+                    # 헤드라인으로 수집되었으나 지엽적 키워드가 포함된 경우 일반 뉴스로 격하
+                    logger.info(f"주요뉴스 후보 배제 (키워드 매칭): {news.get('제목')}")
+                    news["주제"] = "기타(세부관심사)" 
+                    topic_news_pool.append(news)
+                else:
+                    headline_candidates.append(news)
+            else:
+                topic_news_pool.append(news)
+
+        # AI에게 전달할 전체 리스트 (인덱스 유지를 위해 다시 합침)
+        final_list_for_ai = headline_candidates + topic_news_pool
+        
         # 주제별 기준 텍스트 생성
         criteria_text = ""
         # '경제헤드라인' 주제는 특별 취급 (가장 높은 우선순위)
-        if "경제헤드라인" in [n.get("주제") for n in news_list]:
+        if headline_candidates: # 필터링 후에도 헤드라인이 남아있다면
             criteria_text += "\n[경제헤드라인]\n주요 경제지의 메인 뉴스입니다. 거시 경제 핵심 지표나 대형 산업 소식이 포함되어 있습니다. 매우 엄격한 기준으로 중요도를 판별하세요.\n"
             
-        all_topics = set(n.get("주제", "기타") for n in news_list if n.get("주제") != "경제헤드라인")
+        all_topics = set(n.get("주제", "기타") for n in final_list_for_ai if n.get("주제") != "경제헤드라인")
         for topic in sorted(all_topics):
             criteria = (topic_criteria or {}).get(topic, DEFAULT_CRITERIA)
             criteria_text += f"\n[{topic}]\n{criteria}\n"
 
-        # 전체 뉴스 목록 텍스트 생성
+        # 전체 뉴스 목록 텍스트 생성 (AI 프롬프트용)
         news_texts = []
-        for idx, news in enumerate(news_list):
+        headline_indices = []
+        for idx, news in enumerate(final_list_for_ai):
+            is_h = (news.get("주제") == "경제헤드라인")
+            if is_h:
+                headline_indices.append(idx + 1)
+            
             news_texts.append(
                 f"[{idx + 1}] 주제: {news.get('주제', '기타')} | "
                 f"제목: {news.get('제목', '')}\n"
                 f"    설명: {news.get('네이버 요약', '')}"
             )
 
-        logger.info(f"AI 1차 선별 시작: {len(news_list)}건, {len(all_topics)}개 주제")
-
         prompt = f"""당신은 베테랑 뉴스 에디터입니다.
-아래 뉴스 목록을 보고 2가지 작업을 수행해 주세요.
+아래 뉴스 목록({len(final_list_for_ai)}건)을 보고 2가지 작업을 수행해 주세요.
 
-[작업 1] 각 뉴스의 중요도를 '상', '중', '하' 중 하나로 판별
-
-[주제별 중요도 판단 기준]
+[작업 1] 모든 뉴스의 중요도를 '상', '중', '하' 중 하나로 판별
+- 아래 주제별 기준을 참고하되, 전체적인 경제적 영향력을 고려하세요.
 {criteria_text}
 
-[작업 2] 전체 뉴스 중에서 오늘의 경영·경제 주요뉴스를 **국내 3건 + 해외 3건 = 총 6건** 선정
-- **강력 권장**: 주요뉴스는 가급적 **'경제헤드라인'** 주제로 수집된 기사들 중에서 선정하십시오.
-- **국내 뉴스 3건**: 한국 경제 전반에 영향을 미치는 굵직한 뉴스. (예: 한은 금리, 코스피/환율, 대기업 중대 발표, 정부 거시 정책 등)
-- **해외 뉴스 3건**: 글로벌 경제 지형에 영향을 미치는 뉴스. (예: 미 연준 금리, 글로벌 대기업 동향, 국제 통상/관세, 반도체/AI 글로벌 트렌드 등)
-- **★ 절대 배제 (중요) ★**: 사용자가 설정한 개별 세부 주제(예: 지역 상권, 소상공인 지원, 개별 매장 오픈, 지엽적 행사, 미담 등)에 해당하는 기사는 **절대 주요뉴스(Top6)로 선정하지 마십시오**. 주요뉴스는 철저히 '거시/글로벌/산업 전반'의 관점을 유지해야 합니다.
-- 만약 위 조건에 부합하는 묵직한 헤드라인급 뉴스가 부족하다면, 억지로 채우지 말고 비워두십시오 (국내 0~3건, 해외 0~3건).
-- 각 주요뉴스에 대해 핵심 내용을 1~2문장으로 품격 있게 요약해 주세요.
-- 반드시 region 필드에 "국내" 또는 "해외"를 명시해 주세요.
+[작업 2] 오늘의 핵심 주요뉴스 **국내 3건 + 해외 3건 = 총 6건** 선정
+- **중요: 선정 대상 제한**: 반드시 '주제: 경제헤드라인'으로 표시된 기사들(번호: {headline_indices}) 중에서만 선정하십시오.
+- **국내 뉴스 (3건 필수)**: 대한민국 거시경제, 정부 정책, 코스피/환율, 대기업 중대 발표 등 국가 단위 파급력이 있는 뉴스.
+- **해외 뉴스 (3건 필수)**: 글로벌 금융(Fed 등), 해외 빅테크(Nvidia, Apple 등), 국제 정세, 미증시 등 세계 경제 지형 관련 뉴스. 
+- **절대 불가**: 제목이나 내용에 '소상공인', '자영업', '상권', '골목' 등 지엽적이거나 특정 계층 특화 소식이 포함된 기사는 주요뉴스(Top6)가 될 수 없습니다. 오직 매크로(Macro) 관점의 뉴스만 선정하세요.
+- **수량 엄수**: 해당 영역(국내/해외)에 가장 적합한 기사를 골라 **반드시 각각 3건씩** 채우십시오. (총 6건)
+- 각 주요뉴스에 대해 핵심 내용을 1~2문장으로 품격 있게 요약하십시오.
+- 'region' 필드에 "국내" 또는 "해외"를 정확히 명시하십시오.
 
 반드시 아래 JSON 형식으로만 응답:
 {{
   "importance": [{{"index": 1, "importance": "상"}}, ...],
-  "top6": [{{"index": 3, "region": "국내", "summary": "요약 내용..."}}, ...]
+  "top6": [
+    {{"index": ..., "region": "국내", "summary": "..."}},
+    ... (국내 3개, 해외 3개 총 6개)
+  ]
 }}
 
-[뉴스 목록 ({len(news_list)}건)]
+[뉴스 목록]
 {chr(10).join(news_texts)}
 """
 
@@ -133,15 +165,23 @@ class AIAnalyzer:
                 importance_list = result.get("importance", [])
                 for item in importance_list:
                     idx = item.get("index", 1) - 1
-                    if 0 <= idx < len(news_list):
-                        news_list[idx]["중요도"] = item.get("importance", "중")
+                    if 0 <= idx < len(final_list_for_ai):
+                        final_list_for_ai[idx]["중요도"] = item.get("importance", "하")
 
                 # Top6 결과 (국내 3 + 해외 3)
-                top6_results = result.get("top6", [])
+                top6_list = result.get("top6", [])
+                top6_results = []
+                for item in top6_list:
+                    idx = item.get("index", 1) - 1
+                    if 0 <= idx < len(final_list_for_ai):
+                        news_item = final_list_for_ai[idx].copy()
+                        news_item["summary"] = item.get("summary", "")
+                        news_item["region"] = item.get("region", "국내")
+                        top6_results.append(news_item)
 
                 # 중요도 통계 로깅
                 imp_counts = {"상": 0, "중": 0, "하": 0}
-                for n in news_list:
+                for n in final_list_for_ai:
                     imp = n.get("중요도", "중")
                     imp_counts[imp] = imp_counts.get(imp, 0) + 1
 
@@ -152,7 +192,7 @@ class AIAnalyzer:
                     f"중={imp_counts['중']}건, 하={imp_counts['하']}건, "
                     f"주요뉴스={len(top6_results)}건 (국내 {domestic} + 해외 {foreign})"
                 )
-                break
+                return final_list_for_ai, top6_results
 
             except Exception as e:
                 logger.error(f"AI 1차 선별 실패 (시도 {attempt + 1}/{max_retries}): {e}")
