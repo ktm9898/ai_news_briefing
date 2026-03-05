@@ -149,7 +149,8 @@ def run_pipeline():
                 if 0 <= idx < len(all_collected):
                     source_news = all_collected[idx]
                     region = item.get("region", "")
-                    topic_label = f"📌 주요뉴스({"국내" if region == "국내" else "해외"})"
+                    region_label = "국내" if region == "국내" else "해외"
+                    topic_label = f"📌 주요뉴스({region_label})"
                     top6_entry = {
                         "날짜": today_str,
                         "주제": topic_label,
