@@ -173,9 +173,29 @@ def run_pipeline():
         if selected_for_crawl:
             import copy
             
-            # selected_for_crawl에서 Top6 기사를 제거 (링크 기반)
-            regular_news = [n for n in selected_for_crawl 
-                           if n.get("링크", "") not in top6_links]
+            # 1. 선정된 Top6 기사 제외 및 내부 마커(경제헤드라인, 기타...) 기사 제외
+            # 2. 주제별로 최대 건수(MAX_PER_TOPIC) 재조정 (AI 선별 후 과다 발생 방지)
+            topic_counts = {}
+            regular_news = []
+            
+            for n in selected_for_crawl:
+                link = n.get("링크", "")
+                topic = n.get("주제", "기타")
+                
+                # 주요뉴스(Top6)에 포함된 건은 이미 별도로 처리함
+                if link in top6_links:
+                    continue
+                    
+                # 내부 분류용 마커 기사들은 주요뉴스 탈락 시 폐기함
+                if topic in ["경제헤드라인", "기타(세부관심사)", "기타"]:
+                    continue
+                
+                # 주제별 최대 건수 초과 시 제외
+                if topic_counts.get(topic, 0) >= MAX_PER_TOPIC:
+                    continue
+                
+                regular_news.append(n)
+                topic_counts[topic] = topic_counts.get(topic, 0) + 1
             
             # 네이버링크 필드 제거 (시트에 불필요)
             save_list = copy.deepcopy(regular_news)
