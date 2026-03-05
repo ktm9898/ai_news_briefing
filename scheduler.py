@@ -70,18 +70,14 @@ def run_pipeline():
         )
 
 
-        # Top6 주요뉴스 인덱스 및 링크 추출
-        top6_indices = []
+        # Top6 주요뉴스 링크 추출 (크롤링 대상 식별 및 중복 방지용)
         top6_links = set()
         if top6_results:
             for item in top6_results:
-                idx = item.get("index", 1) - 1
-                top6_indices.append(idx)
-                if 0 <= idx < len(all_collected):
-                    link = all_collected[idx].get("링크", "")
-                    if link:
-                        top6_links.add(link)
-            logger.info(f"Top6 주요뉴스 {len(top6_indices)}건 선정 (인덱스: {top6_indices})")
+                link = item.get("original_link") or item.get("링크", "")
+                if link:
+                    top6_links.add(link)
+            logger.info(f"Top6 주요뉴스 {len(top6_links)}건 선정 완료")
 
         # 주제별 그룹화 및 중요도 순 정렬
         topic_groups = {}
