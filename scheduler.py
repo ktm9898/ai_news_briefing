@@ -17,7 +17,7 @@ KST = timezone(timedelta(hours=9))
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from config import SCHEDULE_HOUR, SCHEDULE_MINUTE, DEFAULT_CRITERIA
+from config import SCHEDULE_HOUR, SCHEDULE_MINUTE, DEFAULT_CRITERIA, MAX_PER_TOPIC
 from sheets_manager import SheetsManager
 from news_collector import NewsCollector
 from ai_analyzer import AIAnalyzer
