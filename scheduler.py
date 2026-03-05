@@ -87,13 +87,13 @@ def run_pipeline():
         topic_groups = {}
         for news in all_collected:
             t = news.get("주제", "기타")
-            # '경제헤드라인'은 Top 5 선정을 위한 내부 풀이므로 일반 주제 목록에 포함하지 않음
+            # '경제헤드라인'은 Top 6 선정을 위한 내부 풀이므로 일반 주제 목록에 포함하지 않음
             if t == "경제헤드라인":
                 continue
             topic_groups.setdefault(t, []).append(news)
 
-        selected_for_crawl = []
         importance_map = {"상": 0, "중": 1, "하": 2, "": 3}
+        final_selection_for_save = [] # 최종적으로 시트에 저장될 기사들 (Top6 제외)
 
         for topic, group in topic_groups.items():
             # 중요도 순으로 정렬 (상 -> 중 -> 하)
@@ -103,40 +103,43 @@ def run_pipeline():
             filtered_group = [item for item in sorted_group 
                               if item.get("링크", "") not in top6_links]
 
-            selected = filtered_group[:5]  # 주제별 최대 5건
-            selected_for_crawl.extend(selected)
+            # 기사가 있다면 무조건 5건을 채움 (모자라면 있는 만큼만)
+            selected = filtered_group[:5]
+            final_selection_for_save.extend(selected)
             
-            excluded = len(sorted_group) - len(filtered_group)
-            logger.info(
-                f"[{topic}] {len(group)}건 → Top5 제외 {excluded}건 → {len(selected)}건 선별"
-            )
+            logger.info(f"[{topic}] 총 {len(group)}건 중 {len(selected)}건 최종 선별 완료 (5건 목표)")
             
-        result["screened"] = len(selected_for_crawl)
-
-        elapsed_2 = (datetime.now(KST) - start_time).total_seconds()
-        logger.info(f"STEP 2 완료: 총 {len(selected_for_crawl)}건 선별 ({elapsed_2:.1f}초)")
-
-        # ── 3단계: 기사 본문 크롤링 (상/중 중요도 뉴스 우선) ──
+        # ── 3단계: 기사 본문 크롤링 (Top6 + 선별된 5건씩) ──
         logger.info("STEP 3/6: 주요 기사 본문 크롤링")
         
-        # 선별된 Top6 기사와 '상'/'중' 중요도 기사들만 본문 크롤링 수행
-        selected_for_crawl = [n for n in all_collected if n.get("중요도") in ["상", "중"] or n.get("링크") in top6_links]
+        # 크롤링 대상: Top6에 속한 기사 원본들 + 각 주제별로 선별된 5건씩
+        top6_source_news = [n for n in all_collected if n.get("링크") in top6_links]
+        selected_for_crawl = top6_source_news + final_selection_for_save
         
-        if not selected_for_crawl and not top6_results:
-            logger.info("분석/저장할 중요한 기사가 없습니다.")
-            result["status"] = "완료 (중요기사 없음)"
+        # 중복 제거 (혹시 모를 경우대비 링크 기준)
+        seen_links = set()
+        unique_crawl_list = []
+        for n in selected_for_crawl:
+            link = n.get("링크")
+            if link not in seen_links:
+                unique_crawl_list.append(n)
+                seen_links.add(link)
+
+        if not unique_crawl_list:
+            logger.info("분석/저장할 기사가 없습니다.")
+            result["status"] = "완료 (기사 없음)"
             return result
         
-        # Top6 기사들 중 all_collected에 없는 정보(AI 요약 등)를 병합하기 위해 
-        # 크롤링 대상에 Top6를 포함시키고 나중에 처리
-        selected_for_crawl = collector.crawl_selected_articles(selected_for_crawl)
+        # 본문 크롤링 수행
+        selected_for_crawl = collector.crawl_selected_articles(unique_crawl_list)
         result["crawled"] = len(selected_for_crawl)
 
         elapsed_3 = (datetime.now(KST) - start_time).total_seconds()
-        logger.info(f"STEP 3 완료: 크롤링 완료 ({elapsed_3:.1f}초)")
+        logger.info(f"STEP 3 완료: {len(selected_for_crawl)}건 크롤링 완료 ({elapsed_3:.1f}초)")
 
         # ── 4단계: AI 2차 — 요약 + 브리핑 대본 동시 생성 ──
         logger.info("STEP 4/6: AI 2차 요약 + 브리핑 대본 생성")
+        # 크롤링된 모든 기사(Top6 포함)에 대해 요약 수행
         selected_for_crawl, briefing_script = analyzer.summarize_and_brief(selected_for_crawl)
         result["analyzed"] = len(selected_for_crawl)
 

@@ -36,7 +36,7 @@ NAVER_CLIENT_ID = _get_config("NAVER_CLIENT_ID")
 NAVER_CLIENT_SECRET = _get_config("NAVER_CLIENT_SECRET")
 NAVER_SEARCH_URL = "https://openapi.naver.com/v1/search/news.json"
 NAVER_NEWS_DISPLAY = 20  # 키워드별 API 검색 건수
-MAX_PER_TOPIC = 5       # 주제당 최대 최종 선별 건수
+MAX_PER_TOPIC = 10       # 주제당 수집 풀 크기 (최종 선별은 5건)
 SIMILARITY_THRESHOLD = 0.65  # 중복 기사 판별을 위한 제목 유사도 임계값 (0.65 = 65%)
 
 # ── Google Gemini API ─────────────────────────────────
