@@ -242,12 +242,13 @@
 
             <!-- 모바일 전용 뷰 (lg 미만) -->
             <div class="flex lg:hidden items-center gap-2">
-                <!-- 날짜: 라벨과 인풋 나란히 -->
+                <!-- 날짜: 인풋과 요일 -->
                 <div class="flex items-center gap-2 flex-1 bg-gray-50/50 border border-border rounded-lg px-3 py-2">
-                    <label class="text-[13px] font-bold text-muted whitespace-nowrap">날짜</label>
                     <input type="date" id="filterDateMobile"
                         onchange="syncInput('filterDateMobile', 'filterDateDesktop'); applyFilters()"
                         class="w-full text-[14px] bg-transparent outline-none">
+                    <span id="filterDayMobile"
+                        class="text-[13px] font-bold text-muted whitespace-nowrap pl-1 pr-1"></span>
                 </div>
                 <!-- 세부 필터 버튼 -->
                 <button onclick="openFilterModal()"
@@ -256,7 +257,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
                     </svg>
-                    <span>상세</span>
+                    <span>상세필터</span>
                 </button>
             </div>
 
@@ -266,9 +267,13 @@
                 <div>
                     <label
                         class="block text-[11px] font-bold text-muted uppercase tracking-wider mb-1.5 pl-1">날짜</label>
-                    <input type="date" id="filterDateDesktop"
-                        onchange="syncInput('filterDateDesktop', 'filterDateMobile'); applyFilters()"
-                        class="w-full text-sm border border-border rounded-lg px-3 py-2 focus:ring-2 focus:ring-accent focus:border-accent outline-none bg-gray-50/50 transition-shadow">
+                    <div class="relative">
+                        <input type="date" id="filterDateDesktop"
+                            onchange="syncInput('filterDateDesktop', 'filterDateMobile'); applyFilters()"
+                            class="w-full text-sm border border-border rounded-lg px-3 py-2 focus:ring-2 focus:ring-accent focus:border-accent outline-none bg-gray-50/50 transition-shadow">
+                        <span id="filterDayDesktop"
+                            class="absolute right-10 top-2.5 text-[13px] font-bold text-muted pointer-events-none bg-gray-50/50 pl-1"></span>
+                    </div>
                 </div>
                 <!-- 주제 -->
                 <div>
@@ -602,10 +607,25 @@
 
             if (document.getElementById('filterDateDesktop')) document.getElementById('filterDateDesktop').value = targetDate;
             if (document.getElementById('filterDateMobile')) document.getElementById('filterDateMobile').value = targetDate;
+            updateDayOfWeek();
 
             // 데이터 로드 시작
             loadData();
         });
+
+        // ── 요일 업데이트 ──
+        function updateDayOfWeek() {
+            const dateStr = getVisibleValue('filterDateDesktop', 'filterDateMobile');
+            if (!dateStr) return;
+            const days = ['일', '월', '화', '수', '목', '금', '토'];
+            const dayIdx = new Date(dateStr).getDay();
+            if (isNaN(dayIdx)) return;
+            const dayStr = `(${days[dayIdx]})`;
+            const dEl = document.getElementById('filterDayDesktop');
+            const mEl = document.getElementById('filterDayMobile');
+            if (dEl) dEl.textContent = dayStr;
+            if (mEl) mEl.textContent = dayStr;
+        }
 
         // ── 데이터 로드 ──
         async function loadData() {
@@ -715,6 +735,7 @@
 
         // ── 필터 적용 ──
         function applyFilters() {
+            updateDayOfWeek();
             const dateVal = getVisibleValue('filterDateDesktop', 'filterDateMobile');
             const catVal = getVisibleValue('filterCategoryDesktop', 'filterCategoryMobile');
             const searchVal = getVisibleValue('filterSearchDesktop', 'filterSearchMobile').toLowerCase().trim();
