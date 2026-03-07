@@ -924,9 +924,9 @@
 
         // 현재 필터/정렬된 데이터 가져오기 (매칭용 핵심 함수)
         function getCurrentFiltered() {
-            const dateVal = document.getElementById('filterDate').value;
-            const catVal = document.getElementById('filterCategory').value;
-            const searchVal = document.getElementById('filterSearch').value.toLowerCase().trim();
+            const dateVal = getVisibleValue('filterDateDesktop', 'filterDateMobile');
+            const catVal = getVisibleValue('filterCategoryDesktop', 'filterCategoryMobile') || '전체';
+            const searchVal = (getVisibleValue('filterSearchDesktop', 'filterSearchMobile') || '').toLowerCase().trim();
 
             const filtered = allNews.filter(n => {
                 if (!activeImportance.has(n.중요도)) return false;
