@@ -589,8 +589,8 @@
             if (swStatus) swStatus.textContent = '⚙️ 등록 시도 중...';
 
             try {
-                // GitHub Pages 호환을 위해 상대 경로 명시 및 범위를 명확히 함
-                const reg = await navigator.serviceWorker.register('./sw.js?v=12', { scope: './' });
+                // GitHub Pages의 하위 디렉토리 구조(/ai_news_briefing/)를 명확히 함
+                const reg = await navigator.serviceWorker.register('/ai_news_briefing/sw.js?v=13', { scope: '/ai_news_briefing/' });
                 console.log('SW Registered ✅:', reg.scope);
                 if (swStatus) {
                     swStatus.textContent = '✅ 작동 중';
