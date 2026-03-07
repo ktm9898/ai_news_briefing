@@ -1622,10 +1622,6 @@
         function openFilterModal() {
             document.getElementById('filterModal').classList.remove('hidden');
             document.body.style.overflow = 'hidden';
-            setTimeout(() => {
-                const sf = document.getElementById('filterSearchMobile');
-                if (sf) sf.focus();
-            }, 100);
         }
 
         function closeFilterModal() {
