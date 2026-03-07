@@ -551,6 +551,10 @@
                             💡 <b>꿀팁!</b> 버튼이 안 보인다면 브라우저 메뉴의 <b>[앱 설치]</b> 또는 <b>[홈 화면에 추가]</b>를 직접 눌러보세요!
                         </div>
                         <p class="text-[10px] text-muted mt-2 text-center">* 이 정보가 '실패' 혹은 '대기'라면 설치가 되지 않습니다.</p>
+                        <p class="text-[9px] text-rose-400 mt-2 bg-rose-50 p-2 rounded border border-rose-100 italic">
+                            💡 크롬 메뉴에서 '홈 화면에 추가'를 해도 앱처럼 안 뜬다면, 기존에 추가된 바로가기를 <b>삭제</b>하고 <b>[설정 > 사이트 설정 > 저장된 데이터
+                                삭제]</b> 후 다시 접속해 보세요!
+                        </p>
                     </div>
                 </div>
             </div>
@@ -592,11 +596,10 @@
             if (isSetupRunning) return;
             isSetupRunning = true;
 
-            // PWA 설치 프롬프트 처리
             window.addEventListener('beforeinstallprompt', (e) => {
                 e.preventDefault();
                 deferredPrompt = e;
-                console.log('beforeinstallprompt fired and captured.');
+                console.log('beforeinstallprompt fired ✅');
 
                 const is = document.getElementById('pwaInstallStatus');
                 if (is) {
@@ -604,21 +607,12 @@
                     is.classList.remove('text-gray-500');
                     is.classList.add('text-emerald-500', 'font-bold');
                 }
+            });
 
-                const setupBtn = document.getElementById('pwaSetupBtn');
-                if (setupBtn) {
-                    setupBtn.textContent = '앱 설치하기';
-                    setupBtn.classList.remove('bg-gray-400', 'cursor-not-allowed', 'opacity-50');
-                    setupBtn.classList.add('bg-accent', 'hover:bg-blue-700');
-                    setupBtn.disabled = false;
-                    setupBtn.addEventListener('click', async () => {
-                        if (!deferredPrompt) return;
-                        deferredPrompt.prompt();
-                        const { outcome } = await deferredPrompt.userChoice;
-                        console.log(`User response to the install prompt: ${outcome}`);
-                        deferredPrompt = null;
-                    });
-                }
+            window.addEventListener('appinstalled', (evt) => {
+                console.log('App was installed 🚀');
+                const is = document.getElementById('pwaInstallStatus');
+                if (is) is.textContent = '✅ 설치됨';
             });
 
             // 상태 체크 타이머
