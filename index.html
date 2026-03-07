@@ -9,6 +9,9 @@
     <meta name="theme-color" content="#ffffff">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="./icons/icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="뉴스 비서">
 
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -596,7 +599,11 @@
                 console.log('beforeinstallprompt fired and captured.');
 
                 const is = document.getElementById('pwaInstallStatus');
-                if (is) is.textContent = '✅ 지원함';
+                if (is) {
+                    is.textContent = '✅ 지원함';
+                    is.classList.remove('text-gray-500');
+                    is.classList.add('text-emerald-500', 'font-bold');
+                }
 
                 const setupBtn = document.getElementById('pwaSetupBtn');
                 if (setupBtn) {
