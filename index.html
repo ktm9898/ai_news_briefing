@@ -476,9 +476,21 @@
         // ── 초기화 ──
         let deferredPrompt;
         document.addEventListener('DOMContentLoaded', () => {
-            // Service Worker 등록
+            // Service Worker 등록 (즉시 실행 및 로그 강화)
             if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('./sw.js').catch(console.error);
+                const swPath = window.location.pathname.endsWith('index.html')
+                    ? window.location.pathname.replace('index.html', 'sw.js')
+                    : (window.location.pathname + '/sw.js').replace('//', '/');
+
+                navigator.serviceWorker.register(swPath)
+                    .then(reg => {
+                        console.log('SW Registered:', reg);
+                        document.getElementById('pwaSWStatus').textContent = '✅ 등록됨 (준비 중)';
+                    })
+                    .catch(err => {
+                        console.error('SW Registration Failed:', err);
+                        document.getElementById('pwaSWStatus').textContent = '❌ 등록 실패: ' + err.message;
+                    });
             }
 
             // PWA 설치 프로모션 처리
