@@ -589,8 +589,8 @@
             if (swStatus) swStatus.textContent = '⚙️ 등록 시도 중...';
 
             try {
-                // 캐시 버스팅을 추가하여 최신 sw.js를 강제 로드
-                const reg = await navigator.serviceWorker.register('./sw.js?v=11', { scope: './' });
+                // GitHub Pages 호환을 위해 상대 경로 명시 및 범위를 명확히 함
+                const reg = await navigator.serviceWorker.register('./sw.js?v=12', { scope: './' });
                 console.log('SW Registered ✅:', reg.scope);
                 if (swStatus) {
                     swStatus.textContent = '✅ 작동 중';
