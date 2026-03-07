@@ -567,9 +567,10 @@
                             💡 <b>꿀팁!</b> 버튼이 안 보인다면 브라우저 메뉴의 <b>[앱 설치]</b> 또는 <b>[홈 화면에 추가]</b>를 직접 눌러보세요!
                         </div>
                         <p class="text-[10px] text-muted mt-2 text-center">* 이 정보가 '실패' 혹은 '대기'라면 설치가 되지 않습니다.</p>
-                        <p class="text-[9px] text-rose-400 mt-2 bg-rose-50 p-2 rounded border border-rose-100 italic">
-                            💡 크롬 메뉴에서 '홈 화면에 추가'를 해도 앱처럼 안 뜬다면, 기존에 추가된 바로가기를 <b>삭제</b>하고 <b>[설정 > 사이트 설정 > 저장된 데이터
-                                삭제]</b> 후 다시 접속해 보세요!
+                        <p
+                            class="text-[9px] text-rose-500 mt-2 bg-rose-50 p-2 rounded border border-rose-100 font-bold leading-relaxed">
+                            ⚠️ 중요: 이미 '바로가기'가 홈 화면에 있다면 먼저 삭제해 주세요!<br>
+                            삭제 후 [설정 > 사이트 설정 > 저장된 데이터 삭제]를 하신 뒤 새로고침하면 파란색 설치 버튼이 나타납니다.
                         </p>
                     </div>
                 </div>
@@ -1718,6 +1719,19 @@
             document.getElementById('filterModal').classList.add('hidden');
             document.body.style.overflow = '';
             applyFilters();
+        }
+
+        async function installPWA() {
+            if (!deferredPrompt) {
+                alert('설치 준비가 아직 되지 않았습니다. 잠시만 기다려 주세요.');
+                return;
+            }
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log(`User response to the install prompt: ${outcome}`);
+            deferredPrompt = null;
+            const btn = document.getElementById('pwaInstallBtn');
+            if (btn) btn.classList.add('hidden');
         }
     </script>
 
