@@ -628,9 +628,15 @@
                 const is = document.getElementById('pwaInstallStatus');
 
                 if (sw) {
-                    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-                        sw.textContent = '✅ 작동 중';
-                    }
+                    navigator.serviceWorker.getRegistration().then(reg => {
+                        if (reg) {
+                            if (reg.active) sw.textContent = '✅ 작동 중';
+                            else if (reg.waiting) sw.textContent = '⏳ 업데이트 대기 중';
+                            else if (reg.installing) sw.textContent = '⚙️ 설치 중';
+                        } else {
+                            sw.textContent = '❌ 미등록';
+                        }
+                    });
                 }
                 if (mf) {
                     const link = document.querySelector('link[rel="manifest"]');
