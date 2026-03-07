@@ -713,6 +713,9 @@
                     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
                     if (isIOS) {
                         is.textContent = 'ℹ️ iOS (공유 버튼 사용)';
+                    } else {
+                        // 안드로이드/데스크톱인데 대기가 길어질 경우
+                        is.textContent = '⏳ 대기 중 (메뉴 사용 권장)';
                     }
                 } else if (is && is.textContent.includes('지원함')) {
                     document.getElementById('pwaManualGuide').classList.add('hidden');
