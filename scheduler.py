@@ -21,6 +21,7 @@ from config import SCHEDULE_HOUR, SCHEDULE_MINUTE, DEFAULT_CRITERIA, MAX_PER_TOP
 from sheets_manager import SheetsManager
 from news_collector import NewsCollector
 from ai_analyzer import AIAnalyzer
+from utils import get_weather_info
 
 logger = logging.getLogger(__name__)
 
@@ -135,8 +136,19 @@ def run_pipeline():
 
         # ── 4단계: AI 2차 — 요약 + 브리핑 대본 동시 생성 ──
         logger.info("STEP 4/6: AI 2차 요약 + 브리핑 대본 생성")
+        
+        # 날짜, 요일, 날씨 정보 준비
+        days = ["월요일", "화요일", "수요일", "목요일", "금요일", "토요일", "일요일"]
+        now = datetime.now(KST)
+        weekday_str = days[now.weekday()]
+        date_str = now.strftime("%Y년 %m월 %d일")
+        weather_str = get_weather_info()
+        
+        context_info = f"현재 일시: {date_str} {weekday_str}\n날씨 정보: {weather_str}"
+        logger.info(f"브리핑 컨텍스트 주입: {context_info}")
+
         # 크롤링된 모든 기사(Top6 포함)에 대해 요약 수행
-        selected_for_crawl, briefing_script = analyzer.summarize_and_brief(selected_for_crawl)
+        selected_for_crawl, briefing_script = analyzer.summarize_and_brief(selected_for_crawl, context_info=context_info)
         result["analyzed"] = len(selected_for_crawl)
 
         elapsed_4 = (datetime.now(KST) - start_time).total_seconds()

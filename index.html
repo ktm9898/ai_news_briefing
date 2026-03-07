@@ -6,6 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI 뉴스 비서 | 소상공인 뉴스 대시보드</title>
     <meta name="description" content="AI가 매일 수집·분석하는 소상공인 종합지원 뉴스 브리핑 대시보드">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="manifest" href="./manifest.json">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/10411/10411325.png">
 
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -107,7 +112,7 @@
     </style>
 </head>
 
-<body class="bg-gray-50 font-sans text-primary min-h-screen">
+<body class="bg-gray-50 font-sans text-primary min-h-screen pb-16 sm:pb-0">
 
     <!-- ═══════════ 헤더 ═══════════ -->
     <header class="bg-white border-b border-border sticky top-0 z-50">
@@ -121,7 +126,7 @@
                     <p class="text-xs text-muted">소상공인 종합지원 AI 뉴스</p>
                 </div>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="hidden sm:flex items-center gap-2">
                 <span id="lastUpdate" class="text-xs text-muted hidden sm:inline"></span>
                 <button onclick="openSettingsModal()"
                     class="inline-flex items-center gap-1 px-2.5 py-1.5 border border-border text-xs font-medium rounded-lg hover:bg-gray-50 transition-colors">
@@ -305,6 +310,45 @@
         </div>
     </main>
 
+    <!-- ═══════════ 모바일 하단 네비게이션 ═══════════ -->
+    <nav
+        class="fixed bottom-0 w-full bg-white/90 backdrop-blur-md border-t border-border flex justify-around items-center px-1 py-1 pb-safe z-50 sm:hidden shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <button onclick="window.scrollTo(0,0)"
+            class="flex flex-col items-center p-2 text-muted hover:text-accent transition-colors">
+            <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+            <span class="text-[10px] font-bold">홈</span>
+        </button>
+        <button onclick="toggleTTS()" id="bottomTtsBtn"
+            class="flex flex-col items-center p-2 text-muted hover:text-violet-600 transition-colors">
+            <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+            </svg>
+            <span class="text-[10px] font-bold">브리핑</span>
+        </button>
+        <button onclick="triggerCollection()" id="bottomCollectBtn"
+            class="flex flex-col items-center p-2 text-muted hover:text-emerald-600 transition-colors">
+            <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            <span class="text-[10px] font-bold">수집</span>
+        </button>
+        <button onclick="openSettingsModal()"
+            class="flex flex-col items-center p-2 text-muted hover:text-gray-900 transition-colors">
+            <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span class="text-[10px] font-bold">설정</span>
+        </button>
+    </nav>
+
     <!-- ═══════════ 상세 모달 ═══════════ -->
     <div id="detailModal"
         class="modal-overlay fixed inset-0 bg-black/50 z-[100] hidden flex items-end sm:items-center justify-center"
@@ -408,6 +452,11 @@
 
         // ── 초기화 ──
         document.addEventListener('DOMContentLoaded', () => {
+            // Service Worker 등록
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('./sw.js').catch(console.error);
+            }
+
             // 오늘 날짜로 초기값 설정
             const today = new Date();
             const yyyy = today.getFullYear();
@@ -987,6 +1036,12 @@
             btn.classList.add('bg-rose-600', 'hover:bg-rose-700');
             btn.innerHTML = `<svg class="w-3.5 h-3.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> 로딩...`;
 
+            const btnMobile = document.getElementById('bottomTtsBtn');
+            if (btnMobile) {
+                btnMobile.classList.add('text-rose-600', 'animate-pulse');
+                btnMobile.classList.remove('text-muted');
+            }
+
             showTTSProgress(true);
             document.getElementById('ttsStatus').textContent = '음성 파일 로딩 중...';
 
@@ -1075,6 +1130,12 @@
             btn.classList.remove('bg-rose-600', 'hover:bg-rose-700');
             btn.classList.add('bg-violet-600', 'hover:bg-violet-700');
             btn.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg> 브리핑`;
+
+            const btnMobile = document.getElementById('bottomTtsBtn');
+            if (btnMobile) {
+                btnMobile.classList.remove('text-rose-600', 'animate-pulse');
+                btnMobile.classList.add('text-muted');
+            }
 
             showTTSProgress(false);
         }
@@ -1248,6 +1309,12 @@
             btn.innerHTML = `<svg class="w-3.5 h-3.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> 수집 중...`;
             btn.classList.add('opacity-70');
 
+            const btnMobile = document.getElementById('bottomCollectBtn');
+            if (btnMobile) {
+                btnMobile.classList.add('text-emerald-500', 'animate-pulse');
+                btnMobile.classList.remove('text-muted');
+            }
+
             try {
                 // 수집 전 마지막 워크플로우 ID 가져오기
                 let lastRunId = null;
@@ -1284,6 +1351,10 @@
                                     btn.innerHTML = originalHTML;
                                     btn.disabled = false;
                                     btn.classList.remove('opacity-70');
+                                    if (btnMobile) {
+                                        btnMobile.classList.remove('text-emerald-500', 'animate-pulse');
+                                        btnMobile.classList.add('text-muted');
+                                    }
                                 }, 2000);
                                 return;
                             }
@@ -1297,6 +1368,10 @@
                         btn.innerHTML = originalHTML;
                         btn.disabled = false;
                         btn.classList.remove('opacity-70');
+                        if (btnMobile) {
+                            btnMobile.classList.remove('text-emerald-500', 'animate-pulse');
+                            btnMobile.classList.add('text-muted');
+                        }
                     }
                 }, 10000);
 
@@ -1305,6 +1380,10 @@
                 btn.innerHTML = originalHTML;
                 btn.disabled = false;
                 btn.classList.remove('opacity-70');
+                if (btnMobile) {
+                    btnMobile.classList.remove('text-emerald-500', 'animate-pulse');
+                    btnMobile.classList.add('text-muted');
+                }
             }
         }
     </script>
