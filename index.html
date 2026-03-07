@@ -542,10 +542,16 @@
                             <div class="flex justify-between"><span>Installable:</span> <span
                                     id="pwaInstallStatus">대기...</span></div>
                         </div>
-                        <button onclick="pwaHardReset()"
-                            class="w-full mt-3 py-1.5 border border-rose-200 text-rose-500 text-[10px] font-bold rounded-lg hover:bg-rose-50 transition-colors">
-                            PWA 초기화 (등록 해제 및 캐시 삭제)
-                        </button>
+                        <div class="flex gap-2 mt-3">
+                            <button onclick="registerSW()"
+                                class="flex-1 py-1.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded-lg hover:bg-gray-200 border border-gray-200">
+                                SW 수동 등록
+                            </button>
+                            <button onclick="pwaHardReset()"
+                                class="flex-1 py-1.5 border border-rose-200 text-rose-500 text-[10px] font-bold rounded-lg hover:bg-rose-50 transition-colors">
+                                PWA 초기화
+                            </button>
+                        </div>
                         <div id="pwaManualGuide"
                             class="mt-3 p-2 bg-blue-50 rounded-lg text-[10px] text-blue-600 hidden">
                             💡 <b>꿀팁!</b> 버튼이 안 보인다면 브라우저 메뉴의 <b>[앱 설치]</b> 또는 <b>[홈 화면에 추가]</b>를 직접 눌러보세요!
@@ -619,6 +625,9 @@
         document.addEventListener('DOMContentLoaded', () => {
             if (isSetupRunning) return;
             isSetupRunning = true;
+
+            // 즉시 서비스 워커 등록 시도
+            registerSW();
 
             window.addEventListener('beforeinstallprompt', (e) => {
                 e.preventDefault();
