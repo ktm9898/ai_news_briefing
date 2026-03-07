@@ -458,6 +458,10 @@
                             class="w-full mt-3 py-1.5 border border-rose-200 text-rose-500 text-[10px] font-bold rounded-lg hover:bg-rose-50 transition-colors">
                             PWA 초기화 (등록 해제 및 캐시 삭제)
                         </button>
+                        <div id="pwaManualGuide"
+                            class="mt-3 p-2 bg-blue-50 rounded-lg text-[10px] text-blue-600 hidden">
+                            💡 <b>꿀팁!</b> 버튼이 안 보인다면 브라우저 메뉴의 <b>[앱 설치]</b> 또는 <b>[홈 화면에 추가]</b>를 직접 눌러보세요!
+                        </div>
                         <p class="text-[10px] text-muted mt-2 text-center">* 이 정보가 '실패' 혹은 '대기'라면 설치가 되지 않습니다.</p>
                     </div>
                 </div>
@@ -545,10 +549,13 @@
                     mf.textContent = (link && link.href) ? '✅ 연결됨' : '❌ 없음';
                 }
                 if (is && is.textContent === '대기...') {
+                    document.getElementById('pwaManualGuide').classList.remove('hidden');
                     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
                     if (isIOS) {
                         is.textContent = 'ℹ️ iOS (공유 버튼 사용)';
                     }
+                } else if (is && is.textContent.includes('지원함')) {
+                    document.getElementById('pwaManualGuide').classList.add('hidden');
                 }
             }, 1000);
 
