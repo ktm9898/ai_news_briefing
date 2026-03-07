@@ -647,35 +647,24 @@
                 }
             }, 1000);
 
-            // ── 서비스 워커 등록 함수 ──
-            const registerSW = () => {
-                const swPath = './sw.js';
-                navigator.serviceWorker.register(swPath)
-                    .then(reg => {
-                        console.log('SW registered ✅:', reg.scope);
-                        reg.onupdatefound = () => {
-                            const installingWorker = reg.installing;
-                            if (installingWorker) {
-                                installingWorker.onstatechange = () => {
-                                    if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                        console.log('New content available; please refresh.');
-                                    }
-                                };
-                            }
-                        };
-                    })
-                    .catch(err => {
-                        console.error('SW registration failed ❌:', err);
-                    });
-            };
-
-            if ('serviceWorker' in navigator) {
-                if (document.readyState === 'complete') {
-                    registerSW();
-                } else {
-                    window.addEventListener('load', registerSW);
+            // ── 서비스 워커 등록 (안정성을 위해 별도 로직으로 분리) ──
+            const registerSW = async () => {
+                if (!('serviceWorker' in navigator)) return;
+                try {
+                    const reg = await navigator.serviceWorker.register('./sw.js');
+                    console.log('SW Registered ✅:', reg.scope);
+                    const swStatus = document.getElementById('pwaSWStatus');
+                    if (swStatus) swStatus.textContent = '✅ 작동 중';
+                } catch (err) {
+                    console.error('SW Registration Failed ❌:', err);
+                    const swStatus = document.getElementById('pwaSWStatus');
+                    if (swStatus) {
+                        swStatus.textContent = '❌ 등록 실패 (' + err.message.substring(0, 15) + '...)';
+                        swStatus.classList.add('text-rose-500');
+                    }
                 }
-            }
+            };
+            registerSW();
 
             // 오늘 날짜로 초기값 설정
             const today = new Date();
@@ -1653,16 +1642,25 @@
         }
 
         async function pwaHardReset() {
-            if (confirm('PWA 설정을 완전히 초기화할까요? (등록 해제 후 페이지가 새로고침됩니다.)')) {
-                if ('serviceWorker' in navigator) {
-                    const regs = await navigator.serviceWorker.getRegistrations();
-                    for (let reg of regs) await reg.unregister();
+            if (confirm('PWA 설정을 완전히 초기화할까요? (서비스 워커 해제 및 모든 캐시가 삭제됩니다.)')) {
+                try {
+                    // 1. 서비스 워커 해제
+                    if ('serviceWorker' in navigator) {
+                        const regs = await navigator.serviceWorker.getRegistrations();
+                        for (let reg of regs) await reg.unregister();
+                    }
+                    // 2. 캐시 삭제
+                    if ('caches' in window) {
+                        const keys = await caches.keys();
+                        for (let key of keys) await caches.delete(key);
+                    }
+                    // 3. 로컬 스토리지 정리
+                    localStorage.removeItem(CACHE_KEY);
+                    alert('초기화 완료! 페이지를 다시 로드합니다.');
+                    window.location.reload(true);
+                } catch (e) {
+                    alert('초기화 중 오류 발생: ' + e.message);
                 }
-                if ('caches' in window) {
-                    const keys = await caches.keys();
-                    for (let key of keys) await caches.delete(key);
-                }
-                window.location.reload(true);
             }
         }
 
