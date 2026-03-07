@@ -500,12 +500,21 @@
             });
 
             // 상태 체크 타이머
-            setInterval(() => {
+            setInterval(async () => {
                 const sw = document.getElementById('pwaSWStatus');
                 const mf = document.getElementById('pwaManifestStatus');
                 const is = document.getElementById('pwaInstallStatus');
 
-                if (sw) sw.textContent = (navigator.serviceWorker && navigator.serviceWorker.controller) ? '✅ 작동중' : '❌ 확인불가';
+                if (sw) {
+                    if (!navigator.serviceWorker) {
+                        sw.textContent = '❌ 브라우저 미지원';
+                    } else if (navigator.serviceWorker.controller) {
+                        sw.textContent = '✅ 작동 중';
+                    } else {
+                        const regs = await navigator.serviceWorker.getRegistrations();
+                        sw.textContent = regs.length > 0 ? '⏳ 등록됨 (새로고침 필요)' : '❌ 실행 안 됨';
+                    }
+                }
                 if (mf) {
                     const link = document.querySelector('link[rel="manifest"]');
                     mf.textContent = (link && link.href) ? '✅ 연결됨' : '❌ 없음';
