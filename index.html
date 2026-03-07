@@ -104,10 +104,21 @@
             /* 비활성화 상태 텍스트 색상 (text-gray-500) */
         }
 
+        .chip:hover {
+            background-color: #e5e7eb;
+            /* bg-gray-200 */
+        }
+
         .chip.active {
             background-color: #2563eb;
             color: white;
             border-color: #2563eb;
+        }
+
+        .chip.active:hover {
+            background-color: #1d4ed8;
+            /* hover:bg-blue-700 */
+            color: white;
         }
 
         /* 날짜 입력칸 전체 영역을 클릭해도 달력이 열리도록 하는 트릭 */
@@ -322,11 +333,11 @@
                         필터</label>
                     <div class="flex items-center gap-1.5 bg-gray-50/50 p-1 rounded-lg border border-border/50">
                         <button onclick="toggleImportance('상')" data-imp="상"
-                            class="chip flex-1 text-xs py-1.5 rounded-md font-bold active hover:bg-gray-200 transition-all shadow-sm">상</button>
+                            class="chip flex-1 text-xs py-1.5 rounded-md font-bold active transition-all shadow-sm">상</button>
                         <button onclick="toggleImportance('중')" data-imp="중"
-                            class="chip flex-1 text-xs py-1.5 rounded-md font-bold active hover:bg-gray-200 transition-all shadow-sm">중</button>
+                            class="chip flex-1 text-xs py-1.5 rounded-md font-bold active transition-all shadow-sm">중</button>
                         <button onclick="toggleImportance('하')" data-imp="하"
-                            class="chip flex-1 text-xs py-1.5 rounded-md font-bold active hover:bg-gray-200 transition-all shadow-sm">하</button>
+                            class="chip flex-1 text-xs py-1.5 rounded-md font-bold active transition-all shadow-sm">하</button>
                     </div>
                 </div>
                 <!-- 검색 -->
@@ -1685,11 +1696,11 @@
                         선택)</label>
                     <div class="flex items-center gap-2 bg-gray-50/80 p-1.5 rounded-xl border border-border/80">
                         <button onclick="toggleImportance('상')" data-imp="상"
-                            class="chip flex-1 py-3 rounded-lg font-bold border border-transparent active hover:bg-gray-200 transition-all shadow-sm">상</button>
+                            class="chip flex-1 py-3 rounded-lg font-bold border border-transparent active transition-all shadow-sm">상</button>
                         <button onclick="toggleImportance('중')" data-imp="중"
-                            class="chip flex-1 py-3 rounded-lg font-bold border border-transparent active hover:bg-gray-200 transition-all shadow-sm">중</button>
+                            class="chip flex-1 py-3 rounded-lg font-bold border border-transparent active transition-all shadow-sm">중</button>
                         <button onclick="toggleImportance('하')" data-imp="하"
-                            class="chip flex-1 py-3 rounded-lg font-bold border border-transparent active hover:bg-gray-200 transition-all shadow-sm">하</button>
+                            class="chip flex-1 py-3 rounded-lg font-bold border border-transparent active transition-all shadow-sm">하</button>
                     </div>
                     <p class="text-[11px] text-gray-400 mt-2.5 text-center px-4">* 파란색으로 선택된 중요도의 뉴스만 목록에 표시됩니다.</p>
                 </div>
