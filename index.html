@@ -313,13 +313,13 @@
     <!-- ═══════════ 모바일 하단 네비게이션 ═══════════ -->
     <nav
         class="fixed bottom-0 w-full bg-white/90 backdrop-blur-md border-t border-border flex justify-around items-center px-1 py-1 pb-safe z-50 sm:hidden shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-        <button onclick="window.scrollTo(0,0)"
-            class="flex flex-col items-center p-2 text-muted hover:text-accent transition-colors">
+        <button onclick="forceReload()"
+            class="flex flex-col items-center p-2 text-muted hover:text-blue-500 transition-colors">
             <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-            <span class="text-[10px] font-bold">홈</span>
+            <span class="text-[10px] font-bold">새로고침</span>
         </button>
         <button onclick="toggleTTS()" id="bottomTtsBtn"
             class="flex flex-col items-center p-2 text-muted hover:text-violet-600 transition-colors">
@@ -1384,6 +1384,20 @@
                     btnMobile.classList.remove('text-emerald-500', 'animate-pulse');
                     btnMobile.classList.add('text-muted');
                 }
+            }
+        }
+
+        // ── 강력 새로고침 (캐시 삭제 및 리로드) ──
+        function forceReload() {
+            if (confirm('최신 데이터를 강제로 다시 불러올까요?')) {
+                // 서비스 워커 캐시 삭제 시도
+                if ('caches' in window) {
+                    caches.keys().then(names => {
+                        for (let name of names) caches.delete(name);
+                    });
+                }
+                // 위치 리로드 (서버에서 다시 가져오기 강제)
+                window.location.reload(true);
             }
         }
     </script>
