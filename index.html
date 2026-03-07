@@ -321,6 +321,14 @@
             </svg>
             <span class="text-[10px] font-bold">새로고침</span>
         </button>
+        <button id="installAppBtn"
+            class="hidden flex flex-col items-center p-2 text-rose-600 hover:text-rose-700 transition-colors">
+            <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            <span class="text-[10px] font-bold">앱 설치</span>
+        </button>
         <button onclick="toggleTTS()" id="bottomTtsBtn"
             class="flex flex-col items-center p-2 text-muted hover:text-violet-600 transition-colors">
             <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -451,11 +459,29 @@
         const CACHE_KEY = 'ai_news_cache';
 
         // ── 초기화 ──
+        let deferredPrompt;
         document.addEventListener('DOMContentLoaded', () => {
             // Service Worker 등록
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('./sw.js').catch(console.error);
             }
+
+            // PWA 설치 프로모션 처리
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                const installBtn = document.getElementById('installAppBtn');
+                if (installBtn) {
+                    installBtn.classList.remove('hidden');
+                    installBtn.addEventListener('click', async () => {
+                        installBtn.classList.add('hidden');
+                        deferredPrompt.prompt();
+                        const { outcome } = await deferredPrompt.userChoice;
+                        console.log(`User response to the install prompt: ${outcome}`);
+                        deferredPrompt = null;
+                    });
+                }
+            });
 
             // 오늘 날짜로 초기값 설정
             const today = new Date();
