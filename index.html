@@ -593,6 +593,7 @@
         let allSettings = []; // [{Topic, Keyword, 활성화}]
         let topicCriteriaMap = {}; // {Topic: Criteria}
         let activeImportance = new Set(['상', '중', '하']);
+        let isCollecting = false; // 뉴스 수집 중 중복 클릭 방지 가드
 
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwtgUJ0QfKHPn6HLt2U41OLUog92RFVaKPyLLVwQodq03LMm50qm4dwQk798D3ovFcaHw/exec';
         const CACHE_KEY = 'ai_news_cache';
@@ -1600,16 +1601,22 @@
         // ── 🔄 수동 뉴스 수집 (Apps Script 경유) ──
         // ══════════════════════════════════════════
         async function triggerCollection() {
-            const url = SCRIPT_URL;
+            if (isCollecting) return; // 이미 수집 중이면 무시
+            isCollecting = true;
 
+            const url = SCRIPT_URL;
             const btn = document.getElementById('collectBtn');
+            const btnMobile = document.getElementById('bottomCollectBtn');
             const originalHTML = btn.innerHTML;
+
+            // 버튼 비활성화 (데스크톱)
             btn.disabled = true;
             btn.innerHTML = `<svg class="w-3.5 h-3.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> 수집 중...`;
-            btn.classList.add('opacity-70');
+            btn.classList.add('opacity-70', 'cursor-not-allowed');
 
-            const btnMobile = document.getElementById('bottomCollectBtn');
+            // 버튼 비활성화 (모바일)
             if (btnMobile) {
+                btnMobile.style.pointerEvents = 'none'; // 클릭 방지
                 btnMobile.classList.add('text-emerald-500', 'animate-pulse');
                 btnMobile.classList.remove('text-muted');
             }
@@ -1647,10 +1654,12 @@
                                 // 데이터 시트에 반영될 시간 약간(2초) 대기 후 리로드
                                 setTimeout(async () => {
                                     await loadData();
+                                    isCollecting = false;
                                     btn.innerHTML = originalHTML;
                                     btn.disabled = false;
-                                    btn.classList.remove('opacity-70');
+                                    btn.classList.remove('opacity-70', 'cursor-not-allowed');
                                     if (btnMobile) {
+                                        btnMobile.style.pointerEvents = 'auto';
                                         btnMobile.classList.remove('text-emerald-500', 'animate-pulse');
                                         btnMobile.classList.add('text-muted');
                                     }
@@ -1664,10 +1673,12 @@
                     if (pollCount >= 36) {
                         clearInterval(checkInterval);
                         await loadData();
+                        isCollecting = false;
                         btn.innerHTML = originalHTML;
                         btn.disabled = false;
-                        btn.classList.remove('opacity-70');
+                        btn.classList.remove('opacity-70', 'cursor-not-allowed');
                         if (btnMobile) {
+                            btnMobile.style.pointerEvents = 'auto';
                             btnMobile.classList.remove('text-emerald-500', 'animate-pulse');
                             btnMobile.classList.add('text-muted');
                         }
@@ -1676,14 +1687,20 @@
 
             } catch (err) {
                 alert('뉴스 수집 요청 실패: ' + err.message);
+                isCollecting = false;
                 btn.innerHTML = originalHTML;
                 btn.disabled = false;
-                btn.classList.remove('opacity-70');
+                btn.classList.remove('opacity-70', 'cursor-not-allowed');
                 if (btnMobile) {
-                    btnMobile.classList.remove('text-emerald-500', 'animate-pulse');
-                    btnMobile.classList.add('text-muted');
+                    btnMobile.style.pointerEvents = 'auto';
                 }
             }
+            btn.classList.remove('opacity-70');
+            if (btnMobile) {
+                btnMobile.classList.remove('text-emerald-500', 'animate-pulse');
+                btnMobile.classList.add('text-muted');
+            }
+        }
         }
 
         // ── 강력 새로고침 (캐시 삭제 및 리로드) ──
