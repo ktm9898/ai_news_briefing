@@ -531,6 +531,12 @@
                     const link = document.querySelector('link[rel="manifest"]');
                     mf.textContent = (link && link.href) ? '✅ 연결됨' : '❌ 없음';
                 }
+                if (is && is.textContent === '대기...') {
+                    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+                    if (isIOS) {
+                        is.textContent = 'ℹ️ iOS (공유 버튼 사용)';
+                    }
+                }
             }, 1000);
 
             // 오늘 날짜로 초기값 설정
