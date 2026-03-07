@@ -219,24 +219,19 @@
     <!-- ═══════════ 메인 ═══════════ -->
     <main class="max-w-7xl mx-auto px-4 py-4">
 
-        <!-- 통계 카드 -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-            <div class="bg-white rounded-xl border border-border p-3">
-                <p class="text-xs font-semibold text-muted uppercase tracking-wide">총 기사</p>
-                <p id="statTotal" class="text-2xl font-bold mt-0.5 text-center">-</p>
+        <!-- 상단 요약 바 -->
+        <div
+            class="bg-blue-50/70 rounded-xl border border-blue-100 p-2.5 mb-5 flex flex-wrap items-center justify-between shadow-sm">
+            <div class="flex items-center gap-3 text-[13px] sm:text-sm font-medium text-gray-700 pl-1">
+                <span>📰 뉴스 <strong id="statTotal" class="text-blue-700 font-bold ml-0.5">-</strong></span>
+                <span class="text-blue-200">|</span>
+                <span>🔥 중요 <strong id="statHigh" class="text-rose-600 font-bold ml-0.5">-</strong></span>
+                <span class="text-blue-200">|</span>
+                <span>📑 기사주제 <strong id="statCat" class="text-blue-700 font-bold ml-0.5">-</strong></span>
             </div>
-            <div class="bg-white rounded-xl border border-border p-3">
-                <p class="text-xs font-semibold text-muted uppercase tracking-wide">중요 (상)</p>
-                <p id="statHigh" class="text-2xl font-bold mt-0.5 text-rose-600 text-center">-</p>
-            </div>
-            <div class="bg-white rounded-xl border border-border p-3">
-                <p class="text-xs font-semibold text-muted uppercase tracking-wide">주제</p>
-                <p id="statCat" class="text-2xl font-bold mt-0.5 text-accent text-center">-</p>
-            </div>
-            <div class="bg-white rounded-xl border border-border p-3">
-                <p class="text-xs font-semibold text-muted uppercase tracking-wide">수집 일수</p>
-                <p id="statDays" class="text-2xl font-bold mt-0.5 text-emerald-600 text-center">-</p>
-            </div>
+            <span
+                class="text-[10px] text-blue-500 font-medium hidden sm:inline px-2.5 py-1 bg-white rounded-full border border-blue-100 shadow-sm">AI
+                Daily Briefing</span>
         </div>
 
         <!-- 필터 바 (개선된 UI) -->
@@ -709,10 +704,9 @@
 
         // ── 통계 업데이트 ──
         function updateStats(data) {
-            document.getElementById('statTotal').textContent = data.length;
-            document.getElementById('statHigh').textContent = data.filter(n => n.중요도 === '상').length;
-            document.getElementById('statCat').textContent = new Set(data.map(n => n.주제)).size;
-            document.getElementById('statDays').textContent = new Set(data.map(n => n.날짜)).size;
+            document.getElementById('statTotal').textContent = data.length + '건';
+            document.getElementById('statHigh').textContent = data.filter(n => n.중요도 === '상').length + '건';
+            document.getElementById('statCat').textContent = new Set(data.map(n => n.주제)).size + '개';
         }
 
         // ── 뉴스 렌더링 ──
