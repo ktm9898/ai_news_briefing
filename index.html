@@ -657,12 +657,23 @@
                 if (sw) {
                     navigator.serviceWorker.getRegistration().then(reg => {
                         if (reg) {
-                            if (reg.active) sw.textContent = '✅ 작동 중';
-                            else if (reg.waiting) sw.textContent = '⏳ 업데이트 대기 중';
-                            else if (reg.installing) sw.textContent = '⚙️ 설치 중';
+                            // 등록 정보가 있으면 상태 표시
+                            if (reg.active) {
+                                sw.textContent = '✅ 작동 중';
+                                sw.classList.remove('text-rose-500');
+                            } else if (reg.waiting) {
+                                sw.textContent = '⏳ 업데이트 대기 중';
+                            } else if (reg.installing) {
+                                sw.textContent = '⚙️ 설치 중';
+                            }
                         } else {
-                            sw.textContent = '❌ 미등록';
+                            // 등록 정보가 아예 없는 경우에만 '미등록' 표시 (등록 시도 중이 아닐 때)
+                            if (!sw.textContent.includes('등록 시도') && !sw.textContent.includes('작동 중')) {
+                                sw.textContent = '❌ 미등록';
+                            }
                         }
+                    }).catch(err => {
+                        console.error('Status check failed:', err);
                     });
                 }
                 if (mf) {
