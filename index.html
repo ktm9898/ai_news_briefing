@@ -565,6 +565,30 @@
 
     <!-- ═══════════ JavaScript ═══════════ -->
     <script>
+        // ── 서비스 워커 등록 (스크립트 최상단에서 즉시 실행) ──
+        const registerSW = async () => {
+            if (!('serviceWorker' in navigator)) return;
+            const swStatus = document.getElementById('pwaSWStatus');
+            if (swStatus) swStatus.textContent = '⚙️ 등록 시도 중...';
+
+            try {
+                // 캐시 버스팅을 추가하여 최신 sw.js를 강제 로드
+                const reg = await navigator.serviceWorker.register('./sw.js?v=11', { scope: './' });
+                console.log('SW Registered ✅:', reg.scope);
+                if (swStatus) {
+                    swStatus.textContent = '✅ 작동 중';
+                    swStatus.classList.remove('text-rose-500');
+                }
+            } catch (err) {
+                console.error('SW Registration Failed ❌:', err);
+                if (swStatus) {
+                    swStatus.textContent = '❌ 등록 실패 (' + err.message.substring(0, 20) + ')';
+                    swStatus.classList.add('text-rose-500');
+                }
+            }
+        };
+        registerSW();
+
         let allNews = [];
         let allSettings = []; // [{Topic, Keyword, 활성화}]
         let topicCriteriaMap = {}; // {Topic: Criteria}
@@ -647,24 +671,7 @@
                 }
             }, 1000);
 
-            // ── 서비스 워커 등록 (안정성을 위해 별도 로직으로 분리) ──
-            const registerSW = async () => {
-                if (!('serviceWorker' in navigator)) return;
-                try {
-                    const reg = await navigator.serviceWorker.register('./sw.js');
-                    console.log('SW Registered ✅:', reg.scope);
-                    const swStatus = document.getElementById('pwaSWStatus');
-                    if (swStatus) swStatus.textContent = '✅ 작동 중';
-                } catch (err) {
-                    console.error('SW Registration Failed ❌:', err);
-                    const swStatus = document.getElementById('pwaSWStatus');
-                    if (swStatus) {
-                        swStatus.textContent = '❌ 등록 실패 (' + err.message.substring(0, 15) + '...)';
-                        swStatus.classList.add('text-rose-500');
-                    }
-                }
-            };
-            registerSW();
+
 
             // 오늘 날짜로 초기값 설정
             const today = new Date();
