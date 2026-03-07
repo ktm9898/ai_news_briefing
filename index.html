@@ -582,30 +582,7 @@
 
     <!-- ═══════════ JavaScript ═══════════ -->
     <script>
-        // ── 서비스 워커 등록 (스크립트 최상단에서 즉시 실행) ──
-        const registerSW = async () => {
-            if (!('serviceWorker' in navigator)) return;
-            const swStatus = document.getElementById('pwaSWStatus');
-            if (swStatus) swStatus.textContent = '⚙️ 등록 시도 중...';
-
-            try {
-                // GitHub Pages의 하위 디렉토리 구조(/ai_news_briefing/)를 명확히 함
-                const reg = await navigator.serviceWorker.register('/ai_news_briefing/sw.js?v=13', { scope: '/ai_news_briefing/' });
-                console.log('SW Registered ✅:', reg.scope);
-                if (swStatus) {
-                    swStatus.textContent = '✅ 작동 중';
-                    swStatus.classList.remove('text-rose-500');
-                }
-            } catch (err) {
-                console.error('SW Registration Failed ❌:', err);
-                if (swStatus) {
-                    swStatus.textContent = '❌ 등록 실패 (' + err.message.substring(0, 20) + ')';
-                    swStatus.classList.add('text-rose-500');
-                }
-            }
-        };
-        registerSW();
-
+        let deferredPrompt; // PWA 설치 프롬프트를 저장할 전역 변수
         let allNews = [];
         let allSettings = []; // [{Topic, Keyword, 활성화}]
         let topicCriteriaMap = {}; // {Topic: Criteria}
@@ -637,7 +614,26 @@
             if (isSetupRunning) return;
             isSetupRunning = true;
 
-            // 즉시 서비스 워커 등록 시도
+            // ── 서비스 워커 등록 ──
+            const registerSW = async () => {
+                if (!('serviceWorker' in navigator)) return;
+                const swStatus = document.getElementById('pwaSWStatus');
+                if (swStatus) swStatus.textContent = '⚙️ 등록 시도 중...';
+                try {
+                    const reg = await navigator.serviceWorker.register('/ai_news_briefing/sw.js?v=15', { scope: '/ai_news_briefing/' });
+                    console.log('SW Registered ✅:', reg.scope);
+                    if (swStatus) {
+                        swStatus.textContent = '✅ 작동 중';
+                        swStatus.classList.remove('text-rose-500');
+                    }
+                } catch (err) {
+                    console.error('SW Registration Failed ❌:', err);
+                    if (swStatus) {
+                        swStatus.textContent = '❌ 등록 실패 (' + err.message.substring(0, 20) + ')';
+                        swStatus.classList.add('text-rose-500');
+                    }
+                }
+            };
             registerSW();
 
             window.addEventListener('beforeinstallprompt', (e) => {
