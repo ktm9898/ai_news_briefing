@@ -441,6 +441,21 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- PWA 디버그 정보 -->
+                    <div class="mt-6 pt-4 border-t border-gray-100">
+                        <label class="text-[10px] font-bold text-muted uppercase block mb-2">PWA 상태 체크</label>
+                        <div id="pwaStatusBoard"
+                            class="bg-gray-50 rounded-lg p-3 space-y-1.5 text-[11px] font-mono text-gray-500">
+                            <div class="flex justify-between"><span>Service Worker:</span> <span
+                                    id="pwaSWStatus">대기...</span></div>
+                            <div class="flex justify-between"><span>Manifest:</span> <span
+                                    id="pwaManifestStatus">대기...</span></div>
+                            <div class="flex justify-between"><span>Installable:</span> <span
+                                    id="pwaInstallStatus">대기...</span></div>
+                        </div>
+                        <p class="text-[10px] text-muted mt-2 text-center">* 이 정보가 '실패' 혹은 '대기'라면 설치가 되지 않습니다.</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -470,6 +485,7 @@
             window.addEventListener('beforeinstallprompt', (e) => {
                 e.preventDefault();
                 deferredPrompt = e;
+                document.getElementById('pwaInstallStatus').textContent = '✅ 지원함';
                 const installBtn = document.getElementById('installAppBtn');
                 if (installBtn) {
                     installBtn.classList.remove('hidden');
@@ -482,6 +498,19 @@
                     });
                 }
             });
+
+            // 상태 체크 타이머
+            setInterval(() => {
+                const sw = document.getElementById('pwaSWStatus');
+                const mf = document.getElementById('pwaManifestStatus');
+                const is = document.getElementById('pwaInstallStatus');
+
+                if (sw) sw.textContent = (navigator.serviceWorker && navigator.serviceWorker.controller) ? '✅ 작동중' : '❌ 확인불가';
+                if (mf) {
+                    const link = document.querySelector('link[rel="manifest"]');
+                    mf.textContent = (link && link.href) ? '✅ 연결됨' : '❌ 없음';
+                }
+            }, 1000);
 
             // 오늘 날짜로 초기값 설정
             const today = new Date();
