@@ -236,38 +236,77 @@
                 Daily Briefing</span>
         </div>
 
-        <!-- 필터 바 (간소화) -->
-        <div class="bg-white rounded-xl border border-border p-4 mb-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)]">
-            <div class="grid grid-cols-3 gap-3 sm:gap-4 items-end">
+        <!-- 필터 바 (반응형) -->
+        <div
+            class="bg-white rounded-xl border border-border p-3 lg:p-4 mb-4 lg:mb-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)]">
+
+            <!-- 모바일 전용 뷰 (lg 미만) -->
+            <div class="flex lg:hidden items-center gap-2">
+                <!-- 날짜: 라벨과 인풋 나란히 -->
+                <div class="flex items-center gap-2 flex-1 bg-gray-50/50 border border-border rounded-lg px-3 py-2">
+                    <label class="text-[13px] font-bold text-muted whitespace-nowrap">날짜</label>
+                    <input type="date" id="filterDateMobile"
+                        onchange="syncInput('filterDateMobile', 'filterDateDesktop'); applyFilters()"
+                        class="w-full text-[14px] bg-transparent outline-none">
+                </div>
+                <!-- 세부 필터 버튼 -->
+                <button onclick="openFilterModal()"
+                    class="shrink-0 h-[40px] px-3.5 flex items-center justify-center gap-1.5 bg-accent hover:bg-blue-700 rounded-lg text-[13px] font-bold text-white shadow-sm transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                    </svg>
+                    <span>상세</span>
+                </button>
+            </div>
+
+            <!-- 데스크톱 전용 뷰 (lg 이상) - 모든 필터를 가로 한 줄 또는 Grid로 배치 -->
+            <div class="hidden lg:grid grid-cols-4 gap-4 items-end">
                 <!-- 날짜 -->
-                <div class="col-span-1">
+                <div>
                     <label
                         class="block text-[11px] font-bold text-muted uppercase tracking-wider mb-1.5 pl-1">날짜</label>
-                    <input type="date" id="filterDate"
-                        class="w-full text-[13px] sm:text-sm border border-border rounded-lg px-2 sm:px-3 py-2 focus:ring-2 focus:ring-accent focus:border-accent outline-none bg-gray-50/50 transition-shadow">
+                    <input type="date" id="filterDateDesktop"
+                        onchange="syncInput('filterDateDesktop', 'filterDateMobile'); applyFilters()"
+                        class="w-full text-sm border border-border rounded-lg px-3 py-2 focus:ring-2 focus:ring-accent focus:border-accent outline-none bg-gray-50/50 transition-shadow">
                 </div>
                 <!-- 주제 -->
-                <div class="col-span-1">
+                <div>
                     <label
                         class="block text-[11px] font-bold text-muted uppercase tracking-wider mb-1.5 pl-1">주제</label>
-                    <select id="filterCategory"
-                        class="w-full text-[13px] sm:text-sm border border-border rounded-lg px-2 sm:px-3 py-2 flex-1 focus:ring-2 focus:ring-accent outline-none bg-gray-50/50 transition-shadow truncate">
+                    <select id="filterCategoryDesktop"
+                        onchange="syncInput('filterCategoryDesktop', 'filterCategoryMobile'); applyFilters()"
+                        class="w-full text-sm border border-border rounded-lg px-3 py-2 focus:ring-2 focus:ring-accent outline-none bg-gray-50/50 transition-shadow">
                         <option value="전체">모든 주제 보기</option>
                     </select>
                 </div>
-                <!-- 세부 필터 모달 버튼 -->
-                <div class="col-span-1">
-                    <label
-                        class="block text-[11px] font-bold text-transparent tracking-wider mb-1.5 select-none hover:cursor-default">필터</label>
-                    <button onclick="openFilterModal()"
-                        class="w-full h-[38px] flex items-center justify-center gap-1.5 bg-accent hover:bg-blue-700 rounded-lg text-sm font-bold text-white shadow-sm transition-colors">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <!-- 중요도 -->
+                <div>
+                    <label class="block text-[11px] font-bold text-muted uppercase tracking-wider mb-1.5 pl-1">중요도
+                        필터</label>
+                    <div class="flex items-center gap-1.5 bg-gray-50/50 p-1 rounded-lg border border-border/50">
+                        <button onclick="toggleImportance('상')" data-imp="상"
+                            class="chip flex-1 text-xs py-1.5 rounded-md font-bold active hover:bg-white transition-all shadow-sm">상</button>
+                        <button onclick="toggleImportance('중')" data-imp="중"
+                            class="chip flex-1 text-xs py-1.5 rounded-md font-bold active hover:bg-white transition-all shadow-sm">중</button>
+                        <button onclick="toggleImportance('하')" data-imp="하"
+                            class="chip flex-1 text-xs py-1.5 rounded-md font-bold active hover:bg-white transition-all shadow-sm">하</button>
+                    </div>
+                </div>
+                <!-- 검색 -->
+                <div>
+                    <label class="block text-[11px] font-bold text-muted uppercase tracking-wider mb-1.5 pl-1">뉴스
+                        검색</label>
+                    <div class="relative">
+                        <input type="text" id="filterSearchDesktop" placeholder="키워드 입력..."
+                            oninput="syncInput('filterSearchDesktop', 'filterSearchMobile'); applyFilters()"
+                            class="w-full text-sm border border-border rounded-lg pl-3 pr-9 py-2 focus:ring-2 focus:ring-accent outline-none bg-gray-50/50 transition-shadow">
+                        <svg class="w-4 h-4 text-gray-400 absolute right-3 top-2.5" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
-                        <span class="hidden sm:inline">세부 필터</span>
-                        <span class="sm:hidden">상세</span>
-                    </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -480,32 +519,46 @@
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwtgUJ0QfKHPn6HLt2U41OLUog92RFVaKPyLLVwQodq03LMm50qm4dwQk798D3ovFcaHw/exec';
         const CACHE_KEY = 'ai_news_cache';
 
-        // ── 초기화 ──
-        let deferredPrompt;
-        document.addEventListener('DOMContentLoaded', () => {
-            const swStatus = document.getElementById('pwaSWStatus');
-            // Service Worker 등록 (가장 기본적이고 호환성 높은 방식)
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('sw.js')
-                    .then(reg => {
-                        console.log('SW Registered');
-                        if (swStatus && reg.active) swStatus.textContent = '✅ 작동 중';
-                    })
-                    .catch(err => {
-                        if (swStatus) swStatus.textContent = '❌ 에러: ' + err.message;
-                    });
-            }
+        // ── 동기화 함수들 ──
+        function syncInput(sourceId, targetId) {
+            const source = document.getElementById(sourceId);
+            const target = document.getElementById(targetId);
+            if (source && target) target.value = source.value;
+        }
 
-            // PWA 설치 프로모션 처리
+        function getVisibleValue(id1, id2) {
+            const el1 = document.getElementById(id1);
+            const el2 = document.getElementById(id2);
+            if (el1 && el1.offsetParent !== null) return el1.value;
+            if (el2 && el2.offsetParent !== null) return el2.value;
+            return el1 ? el1.value : '';
+        }
+
+        // 초기 수집 여부 (최초 실행 시 1회만 되도록)
+        let isInitialLoad = true;
+        let isSetupRunning = false;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (isSetupRunning) return;
+            isSetupRunning = true;
+
+            // PWA 설치 프롬프트 처리
             window.addEventListener('beforeinstallprompt', (e) => {
                 e.preventDefault();
                 deferredPrompt = e;
-                document.getElementById('pwaInstallStatus').textContent = '✅ 지원함';
-                const installBtn = document.getElementById('installAppBtn');
-                if (installBtn) {
-                    installBtn.classList.remove('hidden');
-                    installBtn.addEventListener('click', async () => {
-                        installBtn.classList.add('hidden');
+                console.log('beforeinstallprompt fired and captured.');
+
+                const is = document.getElementById('pwaInstallStatus');
+                if (is) is.textContent = '✅ 지원함';
+
+                const setupBtn = document.getElementById('pwaSetupBtn');
+                if (setupBtn) {
+                    setupBtn.textContent = '앱 설치하기';
+                    setupBtn.classList.remove('bg-gray-400', 'cursor-not-allowed', 'opacity-50');
+                    setupBtn.classList.add('bg-accent', 'hover:bg-blue-700');
+                    setupBtn.disabled = false;
+                    setupBtn.addEventListener('click', async () => {
+                        if (!deferredPrompt) return;
                         deferredPrompt.prompt();
                         const { outcome } = await deferredPrompt.userChoice;
                         console.log(`User response to the install prompt: ${outcome}`);
@@ -524,7 +577,6 @@
                     if (navigator.serviceWorker && navigator.serviceWorker.controller) {
                         sw.textContent = '✅ 작동 중';
                     }
-                    // 여기서 '실행 안 됨'으로 덮어쓰지 않도록 수정 (등록 과정의 텍스트 유지)
                 }
                 if (mf) {
                     const link = document.querySelector('link[rel="manifest"]');
@@ -546,12 +598,10 @@
             const yyyy = today.getFullYear();
             const mm = String(today.getMonth() + 1).padStart(2, '0');
             const dd = String(today.getDate()).padStart(2, '0');
-            document.getElementById('filterDate').value = `${yyyy}-${mm}-${dd}`;
+            const targetDate = `${yyyy}-${mm}-${dd}`;
 
-            // 필터 이벤트
-            document.getElementById('filterDate').addEventListener('change', applyFilters); // 날짜 필터는 클라이언트에서 처리
-            document.getElementById('filterCategory').addEventListener('change', applyFilters);
-            document.getElementById('filterSearch').addEventListener('input', applyFilters);
+            if (document.getElementById('filterDateDesktop')) document.getElementById('filterDateDesktop').value = targetDate;
+            if (document.getElementById('filterDateMobile')) document.getElementById('filterDateMobile').value = targetDate;
 
             // 데이터 로드 시작
             loadData();
@@ -559,8 +609,8 @@
 
         // ── 데이터 로드 ──
         async function loadData() {
-            const dateVal = document.getElementById('filterDate').value;
-            const topicVal = document.getElementById('filterCategory').value;
+            const dateVal = getVisibleValue('filterDateDesktop', 'filterDateMobile');
+            const topicVal = getVisibleValue('filterCategoryDesktop', 'filterCategoryMobile');
 
             // 날짜 필터는 클라이언트에서 처리 (GAS 날짜 포맷 불일치 방지)
             let fetchUrl = SCRIPT_URL;
@@ -633,15 +683,19 @@
         // ── 필터 채우기 ──
         function populateFilters() {
             const topics = [...new Set(allNews.map(n => n.주제))].sort();
-            const sel = document.getElementById('filterCategory');
-            const current = sel.value;
-            sel.innerHTML = '<option value="전체">전체</option>';
-            topics.forEach(t => {
-                const opt = document.createElement('option');
-                opt.value = t; opt.textContent = t;
-                sel.appendChild(opt);
+
+            ['filterCategoryDesktop', 'filterCategoryMobile'].forEach(id => {
+                const sel = document.getElementById(id);
+                if (!sel) return;
+                const current = sel.value;
+                sel.innerHTML = '<option value="전체">모든 주제 보기</option>';
+                topics.forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t; opt.textContent = t;
+                    sel.appendChild(opt);
+                });
+                sel.value = current || '전체';
             });
-            sel.value = current || '전체';
         }
 
         // ── 중요도 토글 ──
@@ -661,9 +715,9 @@
 
         // ── 필터 적용 ──
         function applyFilters() {
-            const dateVal = document.getElementById('filterDate').value;
-            const catVal = document.getElementById('filterCategory').value;
-            const searchVal = document.getElementById('filterSearch').value.toLowerCase().trim();
+            const dateVal = getVisibleValue('filterDateDesktop', 'filterDateMobile');
+            const catVal = getVisibleValue('filterCategoryDesktop', 'filterCategoryMobile');
+            const searchVal = getVisibleValue('filterSearchDesktop', 'filterSearchMobile').toLowerCase().trim();
 
             const filtered = allNews.filter(n => {
                 if (!activeImportance.has(n.중요도)) return false;
@@ -1508,7 +1562,10 @@
         function openFilterModal() {
             document.getElementById('filterModal').classList.remove('hidden');
             document.body.style.overflow = 'hidden';
-            setTimeout(() => document.getElementById('filterSearch').focus(), 100);
+            setTimeout(() => {
+                const sf = document.getElementById('filterSearchMobile');
+                if (sf) sf.focus();
+            }, 100);
         }
 
         function closeFilterModal() {
@@ -1518,9 +1575,9 @@
         }
     </script>
 
-    <!-- ═══════════ 세부 필터 모달 ═══════════ -->
+    <!-- ═══════════ 세부 필터 모달 (모바일 전용) ═══════════ -->
     <div id="filterModal"
-        class="modal-overlay fixed inset-0 bg-black/50 z-[100] hidden flex items-end sm:items-center justify-center animate-in fade-in duration-200"
+        class="modal-overlay fixed inset-0 bg-black/50 z-[100] hidden lg:hidden flex items-end sm:items-center justify-center animate-in fade-in duration-200"
         onclick="if(event.target===this) closeFilterModal()">
         <div
             class="modal-content bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300">
@@ -1541,11 +1598,22 @@
                 </button>
             </div>
             <div class="px-5 py-6 space-y-7">
-                <!-- 키워드 검색 -->
+                <!-- 주제 선택 (모바일) -->
+                <div>
+                    <label class="block text-xs font-bold text-muted uppercase tracking-wider mb-2.5">주제 선택</label>
+                    <select id="filterCategoryMobile"
+                        onchange="syncInput('filterCategoryMobile', 'filterCategoryDesktop')"
+                        class="w-full text-base border border-border rounded-xl pl-4 pr-11 py-3.5 focus:ring-2 focus:ring-accent outline-none bg-gray-50 focus:bg-white shadow-inner transition-all">
+                        <option value="전체">모든 주제 보기</option>
+                    </select>
+                </div>
+
+                <!-- 키워드 검색 (모바일) -->
                 <div>
                     <label class="block text-xs font-bold text-muted uppercase tracking-wider mb-2.5">검색어 (키워드)</label>
                     <div class="relative">
-                        <input type="text" id="filterSearch" placeholder="뉴스 제목에서 검색..."
+                        <input type="text" id="filterSearchMobile" placeholder="뉴스 제목에서 검색..."
+                            oninput="syncInput('filterSearchMobile', 'filterSearchDesktop')"
                             class="w-full text-base border border-border rounded-xl pl-4 pr-11 py-3.5 focus:ring-2 focus:ring-accent outline-none bg-gray-50 focus:bg-white shadow-inner transition-all">
                         <svg class="w-5 h-5 text-gray-400 absolute right-4 top-4" fill="none" stroke="currentColor"
                             viewBox="0 0 24 24">
@@ -1555,7 +1623,7 @@
                     </div>
                 </div>
 
-                <!-- 중요도 필터 -->
+                <!-- 중요도 필터 (공용) -->
                 <div>
                     <label class="block text-xs font-bold text-muted uppercase tracking-wider mb-2.5">중요도 선택 (다중
                         선택)</label>
