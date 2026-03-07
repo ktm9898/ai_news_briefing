@@ -454,6 +454,10 @@
                             <div class="flex justify-between"><span>Installable:</span> <span
                                     id="pwaInstallStatus">대기...</span></div>
                         </div>
+                        <button onclick="pwaHardReset()"
+                            class="w-full mt-3 py-1.5 border border-rose-200 text-rose-500 text-[10px] font-bold rounded-lg hover:bg-rose-50 transition-colors">
+                            PWA 초기화 (등록 해제 및 캐시 삭제)
+                        </button>
                         <p class="text-[10px] text-muted mt-2 text-center">* 이 정보가 '실패' 혹은 '대기'라면 설치가 되지 않습니다.</p>
                     </div>
                 </div>
@@ -478,18 +482,19 @@
         document.addEventListener('DOMContentLoaded', () => {
             // Service Worker 등록 (즉시 실행 및 로그 강화)
             if ('serviceWorker' in navigator) {
-                const swPath = window.location.pathname.endsWith('index.html')
-                    ? window.location.pathname.replace('index.html', 'sw.js')
-                    : (window.location.pathname + '/sw.js').replace('//', '/');
-
-                navigator.serviceWorker.register(swPath)
+                // 경로를 더 단순하고 확실하게 지정
+                const swUrl = 'sw.js?v=4';
+                navigator.serviceWorker.register(swUrl)
                     .then(reg => {
                         console.log('SW Registered:', reg);
-                        document.getElementById('pwaSWStatus').textContent = '✅ 등록됨 (준비 중)';
+                        // 등록 성공 시 바로 제어권 요청 (일부 브라우저 대응)
+                        if (reg.active) {
+                            document.getElementById('pwaSWStatus').textContent = '✅ 등록됨';
+                        }
                     })
                     .catch(err => {
                         console.error('SW Registration Failed:', err);
-                        document.getElementById('pwaSWStatus').textContent = '❌ 등록 실패: ' + err.message;
+                        document.getElementById('pwaSWStatus').textContent = '❌ 에러: ' + err.message;
                     });
             }
 
@@ -1479,6 +1484,20 @@
                     });
                 }
                 // 위치 리로드 (서버에서 다시 가져오기 강제)
+                window.location.reload(true);
+            }
+        }
+
+        async function pwaHardReset() {
+            if (confirm('PWA 설정을 완전히 초기화할까요? (등록 해제 후 페이지가 새로고침됩니다.)')) {
+                if ('serviceWorker' in navigator) {
+                    const regs = await navigator.serviceWorker.getRegistrations();
+                    for (let reg of regs) await reg.unregister();
+                }
+                if ('caches' in window) {
+                    const keys = await caches.keys();
+                    for (let key of keys) await caches.delete(key);
+                }
                 window.location.reload(true);
             }
         }
