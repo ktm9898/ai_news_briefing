@@ -650,22 +650,24 @@
             // ── 서비스 워커 등록 ──
             if ('serviceWorker' in navigator) {
                 window.addEventListener('load', () => {
-                    navigator.serviceWorker.register('./sw.js')
+                    const swPath = './sw.js';
+                    navigator.serviceWorker.register(swPath)
                         .then(reg => {
-                            console.log('SW registered:', reg);
-                            // 업데이트 체크
+                            console.log('SW registered ✅:', reg.scope);
                             reg.onupdatefound = () => {
                                 const installingWorker = reg.installing;
                                 if (installingWorker) {
                                     installingWorker.onstatechange = () => {
                                         if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                            console.log('New SW content available.');
+                                            console.log('New content available; please refresh.');
                                         }
                                     };
                                 }
                             };
                         })
-                        .catch(err => console.error('SW registration failed:', err));
+                        .catch(err => {
+                            console.error('SW registration failed ❌:', err);
+                        });
                 });
             }
 
