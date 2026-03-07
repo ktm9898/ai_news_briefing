@@ -8,7 +8,7 @@
     <meta name="description" content="AI가 매일 수집·분석하는 소상공인 종합지원 뉴스 브리핑 대시보드">
     <meta name="theme-color" content="#ffffff">
     <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/10411/10411325.png">
+    <link rel="apple-touch-icon" href="./icons/icon-192.png">
 
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -639,6 +639,28 @@
                     document.getElementById('pwaManualGuide').classList.add('hidden');
                 }
             }, 1000);
+
+            // ── 서비스 워커 등록 ──
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('./sw.js')
+                        .then(reg => {
+                            console.log('SW registered:', reg);
+                            // 업데이트 체크
+                            reg.onupdatefound = () => {
+                                const installingWorker = reg.installing;
+                                if (installingWorker) {
+                                    installingWorker.onstatechange = () => {
+                                        if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                            console.log('New SW content available.');
+                                        }
+                                    };
+                                }
+                            };
+                        })
+                        .catch(err => console.error('SW registration failed:', err));
+                });
+            }
 
             // 오늘 날짜로 초기값 설정
             const today = new Date();
