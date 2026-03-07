@@ -539,8 +539,14 @@
                                     id="pwaSWStatus">대기...</span></div>
                             <div class="flex justify-between"><span>Manifest:</span> <span
                                     id="pwaManifestStatus">대기...</span></div>
-                            <div class="flex justify-between"><span>Installable:</span> <span
-                                    id="pwaInstallStatus">대기...</span></div>
+                            <div class="flex justify-between"><span>Installable:</span> <span id="pwaInstallStatus"
+                                    class="font-bold">대기...</span></div>
+                            <div id="pwaDiagInfo"
+                                class="mt-2 pt-2 border-t border-gray-200 text-[9px] text-gray-400 space-y-0.5 hidden">
+                                <div>• HTTPS: <span id="diagHttps">...</span></div>
+                                <div>• Icon 192: <span id="diagIcon192">...</span></div>
+                                <div>• Icon 512: <span id="diagIcon512">...</span></div>
+                            </div>
                         </div>
                         <div class="flex flex-col gap-2 mt-3">
                             <button id="pwaInstallBtn" onclick="installPWA()"
@@ -667,11 +673,11 @@
                 const sw = document.getElementById('pwaSWStatus');
                 const mf = document.getElementById('pwaManifestStatus');
                 const is = document.getElementById('pwaInstallStatus');
+                const diagBoard = document.getElementById('pwaDiagInfo');
 
                 if (sw) {
                     navigator.serviceWorker.getRegistration().then(reg => {
                         if (reg) {
-                            // 등록 정보가 있으면 상태 표시
                             if (reg.active) {
                                 sw.textContent = '✅ 작동 중';
                                 sw.classList.remove('text-rose-500');
@@ -681,19 +687,27 @@
                                 sw.textContent = '⚙️ 설치 중';
                             }
                         } else {
-                            // 등록 정보가 아예 없는 경우에만 '미등록' 표시 (등록 시도 중이 아닐 때)
                             if (!sw.textContent.includes('등록 시도') && !sw.textContent.includes('작동 중')) {
                                 sw.textContent = '❌ 미등록';
                             }
                         }
-                    }).catch(err => {
-                        console.error('Status check failed:', err);
-                    });
+                    }).catch(err => { console.error('Status check failed:', err); });
                 }
                 if (mf) {
                     const link = document.querySelector('link[rel="manifest"]');
                     mf.textContent = (link && link.href) ? '✅ 연결됨' : '❌ 없음';
                 }
+
+                // 정밀 진단 (아이콘 등)
+                if (diagBoard) {
+                    diagBoard.classList.remove('hidden');
+                    document.getElementById('diagHttps').textContent = location.protocol === 'https:' ? 'OK' : 'FAIL';
+
+                    const checkImg = (url) => fetch(url, { method: 'HEAD' }).then(r => r.ok).catch(() => false);
+                    checkImg('./icons/icon-192.png').then(ok => { document.getElementById('diagIcon192').textContent = ok ? 'OK' : 'MISSING'; });
+                    checkImg('./icons/icon-512.png').then(ok => { document.getElementById('diagIcon512').textContent = ok ? 'OK' : 'MISSING'; });
+                }
+
                 if (is && is.textContent === '대기...') {
                     document.getElementById('pwaManualGuide').classList.remove('hidden');
                     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
@@ -703,7 +717,7 @@
                 } else if (is && is.textContent.includes('지원함')) {
                     document.getElementById('pwaManualGuide').classList.add('hidden');
                 }
-            }, 1000);
+            }, 2000);
 
 
 
