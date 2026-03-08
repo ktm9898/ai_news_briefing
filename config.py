@@ -65,7 +65,7 @@ NEWS_DATA_TAB = "News_Data"
 
 # ── Google Workspace CLI (gws) ────────────────────────
 GWS_ENABLED = _get_config("GWS_ENABLED", "True").lower() == "true" # 기본 활성화
-GWS_DRIVE_FOLDER_ID = _get_config("GWS_DRIVE_FOLDER_ID", "") # (선택) 저장할 폴더 ID
+GWS_DRIVE_FOLDER_ID = _get_config("GWS_DRIVE_FOLDER_ID", "10943q-ULxI18680w_82UVpmiZ2WX5YjE") # (선택) 저장할 폴더 ID
 
 
 # Settings 탭 헤더
