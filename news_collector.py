@@ -35,7 +35,7 @@ from config import (
     NAVER_CLIENT_SECRET,
     NAVER_SEARCH_URL,
     NAVER_NEWS_DISPLAY,
-    MAX_PER_TOPIC,
+    MAX_PER_KEYWORD,
     SIMILARITY_THRESHOLD,
 )
 from sheets_manager import SheetsManager
@@ -207,6 +207,13 @@ class NewsCollector:
 
             title = self._clean_html(item.get("title", ""))
             description = self._clean_html(item.get("description", ""))
+            
+            # [추가] 리터럴 키워드 검증: 제목이나 요약에 키워드가 포함되어 있는지 확인
+            # 네이버 검색 API가 '관련성' 등으로 인해 키워드가 없는 기사를 주는 경우를 방지
+            if keyword.lower() not in title.lower() and keyword.lower() not in description.lower():
+                logger.info(f"[{topic}] 키워드 '{keyword}' 미포함 기사 제외: {title[:20]}...")
+                continue
+
             source = self._extract_source(
                 item.get("originallink", ""),
                 item.get("link", ""),
@@ -388,12 +395,14 @@ class NewsCollector:
         for setting in settings:
             topic = setting.get("주제", "기타")
             keyword = setting.get("키워드", "")
-            if not keyword or len(topic_news.get(topic, [])) >= MAX_PER_TOPIC:
+            if not keyword:
                 continue
 
             try:
+                # [개선] 모든 키워드를 공평하게 조회하기 위해 break를 제거하고 끝까지 순회함
+                # 키워드별 기여도는 MAX_PER_KEYWORD로 제한하여 공평성 유지
                 news = self.collect_by_keyword(keyword, topic, existing_links)
-                topic_news.setdefault(topic, []).extend(news)
+                topic_news.setdefault(topic, []).extend(news[:MAX_PER_KEYWORD])
             except Exception as e:
                 logger.error(f"주제 '{topic}' (키워드: '{keyword}') 수집 중 오류: {e}")
 
@@ -405,14 +414,15 @@ class NewsCollector:
         # ── 3단계: 전역 중복 제거 (유사도 기준 강화) ──
         dedup_list = self.deduplicate_by_similarity(all_collected_raw)
         
-        # ── 4단계: 주제별 건수 재조정 및 최종 리스트화 ──
-        # 헤드라인 뉴스는 그대로 유지하고, 주제별 뉴스는 다시 캡핑 적용
+        # ── 4단계: 주제별 최종 리스트화 (중복 제거 후 전체 포함) ──
+        # [개선] AI가 더 넓은 후보군에서 선정할 수 있도록 주제별 캡핑을 제거하고 
+        # 중복이 제거된 모든 기사를 AI에게 보냄 (최종 선택은 AI가 5건 수행)
         final_topic_news = {"경제헤드라인": []}
         for news in dedup_list:
             t = news.get("주제", "기타")
             if t == "경제헤드라인":
                 final_topic_news["경제헤드라인"].append(news)
-            elif len(final_topic_news.get(t, [])) < MAX_PER_TOPIC:
+            else:
                 final_topic_news.setdefault(t, []).append(news)
         
         all_news = []
@@ -422,5 +432,5 @@ class NewsCollector:
         if len(all_collected_raw) > len(dedup_list):
             logger.info(f"전역 중복 {len(all_collected_raw) - len(dedup_list)}건 제거 완료")
         
-        logger.info(f"최종 수집 완료: 총 {len(all_news)}건 (헤드라인 {len(final_topic_news['경제헤드라인'])}건 포함)")
+        logger.info(f"최종 수집 완료: 총 {len(all_news)}건 (헤드라인 {len(final_topic_news['경제헤드라인'])}건 포함, AI 분석용 풀)")
         return all_news

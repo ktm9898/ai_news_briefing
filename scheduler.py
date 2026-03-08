@@ -17,7 +17,7 @@ KST = timezone(timedelta(hours=9))
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from config import SCHEDULE_HOUR, SCHEDULE_MINUTE, DEFAULT_CRITERIA, MAX_PER_TOPIC
+from config import SCHEDULE_HOUR, SCHEDULE_MINUTE, DEFAULT_CRITERIA, MAX_DISPLAY_PER_TOPIC
 from sheets_manager import SheetsManager
 from news_collector import NewsCollector
 from ai_analyzer import AIAnalyzer
@@ -97,14 +97,15 @@ def run_pipeline():
             sorted_group = sorted(group, key=lambda x: importance_map.get(x.get("중요도", ""), 3))
             
             # Top6에 선정된 기사는 일반 주제 목록에서 제외 (링크 기반 중복 방지)
+            # Top6에 선정된 기사는 일반 주제 목록에서 제외 (링크 기반 중복 방지)
             filtered_group = [item for item in sorted_group 
                               if item.get("링크", "") not in top6_links]
 
-            # 기사가 있다면 무조건 5건을 채움 (모자라면 있는 만큼만)
-            selected = filtered_group[:5]
+            # [개선] AI 선별 전에는 캡핑하지 않고 AI 분석 결과에 따라 최종 5건을 채움
+            selected = filtered_group
             final_selection_for_save.extend(selected)
             
-            logger.info(f"[{topic}] 총 {len(group)}건 중 {len(selected)}건 최종 선별 완료 (5건 목표)")
+            logger.info(f"[{topic}] 총 {len(group)}건을 AI 분석 후보군으로 편성")
             
         # ── 3단계: 기사 본문 크롤링 (Top6 + 선별된 5건씩) ──
         logger.info("STEP 3/6: 주요 기사 본문 크롤링")
@@ -227,8 +228,8 @@ def run_pipeline():
                 if topic in ["경제헤드라인", "기타(세부관심사)", "기타"]:
                     continue
                 
-                # 주제별 최대 건수 초과 시 제외
-                if topic_counts.get(topic, 0) >= MAX_PER_TOPIC:
+                # 주제별 최대 건수(MAX_DISPLAY_PER_TOPIC) 초과 시 제외
+                if topic_counts.get(topic, 0) >= MAX_DISPLAY_PER_TOPIC:
                     continue
                 
                 regular_news.append(n)
