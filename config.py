@@ -63,6 +63,11 @@ SETTINGS_TAB = "Settings"
 TOPIC_SETTINGS_TAB = "Topic_Settings"
 NEWS_DATA_TAB = "News_Data"
 
+# ── Google Workspace CLI (gws) ────────────────────────
+GWS_ENABLED = _get_config("GWS_ENABLED", "True").lower() == "true" # 기본 활성화
+GWS_DRIVE_FOLDER_ID = _get_config("GWS_DRIVE_FOLDER_ID", "") # (선택) 저장할 폴더 ID
+
+
 # Settings 탭 헤더
 SETTINGS_HEADERS = ["주제", "키워드", "활성화"]
 TOPIC_SETTINGS_HEADERS = ["Topic", "Criteria"]

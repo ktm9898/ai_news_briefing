@@ -17,11 +17,13 @@ KST = timezone(timedelta(hours=9))
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from config import SCHEDULE_HOUR, SCHEDULE_MINUTE, DEFAULT_CRITERIA, MAX_DISPLAY_PER_TOPIC
+from config import SCHEDULE_HOUR, SCHEDULE_MINUTE, DEFAULT_CRITERIA, MAX_DISPLAY_PER_TOPIC, GWS_ENABLED
 from sheets_manager import SheetsManager
 from news_collector import NewsCollector
 from ai_analyzer import AIAnalyzer
 from utils import get_weather_info
+from gws_manager import GWSManager
+
 
 logger = logging.getLogger(__name__)
 
@@ -263,6 +265,39 @@ def run_pipeline():
                 logger.warning("음성 파일 생성 실패 (대본은 저장됨)")
         except Exception as e:
             logger.error(f"TTS 생성 중 오류 (무시): {e}")
+
+        # ── 7단계: Google Docs 브리핑 대본 내보내기 ──
+        logger.info("STEP 7/7: Google Docs 브리핑 대본 생성")
+        if GWS_ENABLED:
+            try:
+                gws = GWSManager()
+                doc_title = f"AI News Briefing - {date_str}"
+                
+                # 마크다운 포맷으로 가독성 높은 문서 구성
+                doc_content = f"# 🗞️ AI 아침 뉴스 브리핑 ({date_str} {weekday_str})\n\n"
+                doc_content += f"> **날씨**: {weather_str}\n\n"
+                doc_content += "---\n\n"
+                doc_content += f"## 🎙️ 브리핑 대본\n\n{briefing_script}\n\n"
+                doc_content += "---\n\n"
+                doc_content += "## 📌 오늘의 핵심 주요뉴스 요약\n\n"
+                
+                for idx, item in enumerate(top6_news, 1):
+                    region = item.get("주제", "").replace("📌 주요뉴스(", "").replace(")", "")
+                    doc_content += f"### {idx}. [{region}] {item.get('제목', '')}\n"
+                    doc_content += f"- **출처**: {item.get('언론사', '')}\n"
+                    doc_content += f"- **AI 요약**: {item.get('AI 요약', '')}\n"
+                    doc_content += f"- [기사 원문 보기]({item.get('링크', '')})\n\n"
+
+                success = gws.create_briefing_doc(doc_title, doc_content)
+                if success:
+                    logger.info("Google Docs 내보내기 성공")
+                else:
+                    logger.warning("Google Docs 내보내기 실패")
+            except Exception as e:
+                 logger.error(f"Google Docs 생성 중 오류 발생: {e}")
+        else:
+            logger.info("GWS_ENABLED 설정이 False이므로 문서 생성을 생략합니다.")
+
 
         result["status"] = "완료"
         elapsed = (datetime.now(KST) - start_time).total_seconds()
