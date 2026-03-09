@@ -101,8 +101,10 @@ class GWSManager:
                         "drive",
                         "files",
                         "update",
-                        doc_id, # --fileId 대신 위치 인자로 사용 (버전에 따라 다를 수 있으나 실패해도 치명적이지 않음)
-                        "--addParents", GWS_DRIVE_FOLDER_ID
+                        "--params", json.dumps({
+                            "fileId": doc_id,
+                            "addParents": GWS_DRIVE_FOLDER_ID
+                        })
                     ]
                     move_res = subprocess.run(
                         move_cmd,
