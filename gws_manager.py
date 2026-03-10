@@ -57,7 +57,9 @@ class GWSManager:
             )
             
             if create_res.returncode != 0:
-                logger.error(f"[ERROR] 빈 문서 생성 실패: {create_res.stderr.strip()}")
+                logger.error(f"[ERROR] 빈 문서 생성 실패 (종료 코드 {create_res.returncode})")
+                logger.error(f"  STDOUT: {create_res.stdout.strip()}")
+                logger.error(f"  STDERR: {create_res.stderr.strip()}")
                 return False
                 
             try:
@@ -65,10 +67,12 @@ class GWSManager:
                 doc_id = doc_info.get("documentId")
             except Exception as e:
                 logger.error(f"[ERROR] JSON 파싱 실패: {e}")
+                logger.error(f"  STDOUT: {create_res.stdout.strip()}")
                 return False
                 
             if not doc_id:
                 logger.error("[ERROR] 문서 ID를 응답에서 찾을 수 없습니다.")
+                logger.error(f"  STDOUT: {create_res.stdout.strip()}")
                 return False
                 
             logger.info(f"빈 문서 생성 완료 (ID: {doc_id}). 내용 추가 중...")
