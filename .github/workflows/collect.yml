@@ -50,6 +50,6 @@ jobs:
           git add audio/ -f
           git diff --cached --quiet || {
             git commit -m "🔊 브리핑 오디오 자동 업데이트 $(date +%Y-%m-%d)"
-            git pull --rebase origin master
-            git push origin master
+            git pull --rebase origin ${{ github.ref_name }}
+            git push origin ${{ github.ref_name }}
           }
