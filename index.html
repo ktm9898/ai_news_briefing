@@ -530,54 +530,31 @@
                         </div>
                     </div>
 
-                    <!-- PWA 디버그 정보 -->
+                    <!-- 시스템 관리 -->
                     <div class="mt-6 pt-4 border-t border-gray-100">
-                        <label class="text-[10px] font-bold text-muted uppercase block mb-2">PWA 상태 체크</label>
-                        <div id="pwaStatusBoard"
-                            class="bg-gray-50 rounded-lg p-3 space-y-1.5 text-[11px] font-mono text-gray-500">
-                            <div class="flex justify-between"><span>Service Worker:</span> <span
-                                    id="pwaSWStatus">대기...</span></div>
-                            <div class="flex justify-between"><span>Manifest:</span> <span
-                                    id="pwaManifestStatus">대기...</span></div>
-                            <div class="flex justify-between"><span>Installable:</span> <span id="pwaInstallStatus"
-                                    class="font-bold">대기...</span></div>
-                            <div id="pwaDiagInfo"
-                                class="mt-2 pt-2 border-t border-gray-200 text-[9px] text-gray-400 space-y-0.5 hidden">
-                                <div>• HTTPS: <span id="diagHttps">...</span></div>
-                                <div>• Icon 192: <span id="diagIcon192">...</span></div>
-                                <div>• Icon 512: <span id="diagIcon512">...</span></div>
-                            </div>
-                        </div>
-                        <div class="flex flex-col gap-2 mt-3">
+                        <label class="text-[10px] font-bold text-muted uppercase block mb-3">시스템 관리</label>
+                        <div class="flex flex-col gap-2">
                             <button id="pwaInstallBtn" onclick="installPWA()"
-                                class="hidden w-full py-3 bg-blue-600 text-white text-[13px] font-bold rounded-xl hover:bg-blue-700 shadow-md animate-bounce items-center justify-center gap-2">
+                                class="hidden w-full py-3.5 bg-blue-600 text-white text-[14px] font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-200 animate-bounce flex items-center justify-center gap-2 mb-2">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                                 </svg>
                                 이 앱을 설치하기
                             </button>
-                            <div class="flex gap-2">
-                                <button onclick="registerSW()"
-                                    class="flex-1 py-1.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded-lg hover:bg-gray-200 border border-gray-200">
-                                    SW 수동 등록
+                            <div class="grid grid-cols-2 gap-2">
+                                <button onclick="updateAppVersion()"
+                                    class="py-2.5 bg-emerald-50 text-emerald-600 text-[11px] font-bold rounded-xl hover:bg-emerald-100 border border-emerald-100 transition-colors flex items-center justify-center gap-1.5">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                    최신 버전 업데이트
                                 </button>
                                 <button onclick="pwaHardReset()"
-                                    class="flex-1 py-1.5 border border-rose-200 text-rose-500 text-[10px] font-bold rounded-lg hover:bg-rose-50 transition-colors">
-                                    PWA 초기화
+                                    class="py-2.5 bg-gray-50 text-gray-500 text-[11px] font-bold rounded-xl hover:bg-gray-100 border border-gray-200 transition-colors flex items-center justify-center gap-1.5">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                    시스템 초기화
                                 </button>
                             </div>
                         </div>
-                        <div id="pwaManualGuide"
-                            class="mt-3 p-2 bg-blue-50 rounded-lg text-[10px] text-blue-600 hidden">
-                            💡 <b>꿀팁!</b> 버튼이 안 보인다면 브라우저 메뉴의 <b>[앱 설치]</b> 또는 <b>[홈 화면에 추가]</b>를 직접 눌러보세요!
-                        </div>
-                        <p class="text-[10px] text-muted mt-2 text-center">* 이 정보가 '실패' 혹은 '대기'라면 설치가 되지 않습니다.</p>
-                        <p
-                            class="text-[9px] text-rose-500 mt-2 bg-rose-50 p-2 rounded border border-rose-100 font-bold leading-relaxed">
-                            ⚠️ 중요: 이미 '바로가기'가 홈 화면에 있다면 먼저 삭제해 주세요!<br>
-                            삭제 후 [설정 > 사이트 설정 > 저장된 데이터 삭제]를 하신 뒤 새로고침하면 파란색 설치 버튼이 나타납니다.
-                        </p>
                     </div>
                 </div>
             </div>
@@ -1715,25 +1692,50 @@
         }
 
         async function pwaHardReset() {
-            if (confirm('PWA 설정을 완전히 초기화할까요? (서비스 워커 해제 및 모든 캐시가 삭제됩니다.)')) {
+            if (confirm('시스템을 완전히 초기화할까요? (서비스 워커 해제 및 모든 앱 데이터가 삭제됩니다.)')) {
                 try {
-                    // 1. 서비스 워커 해제
                     if ('serviceWorker' in navigator) {
                         const regs = await navigator.serviceWorker.getRegistrations();
                         for (let reg of regs) await reg.unregister();
                     }
-                    // 2. 캐시 삭제
                     if ('caches' in window) {
                         const keys = await caches.keys();
                         for (let key of keys) await caches.delete(key);
                     }
-                    // 3. 로컬 스토리지 정리
-                    localStorage.removeItem(CACHE_KEY);
+                    localStorage.clear();
                     alert('초기화 완료! 페이지를 다시 로드합니다.');
                     window.location.reload(true);
                 } catch (e) {
                     alert('초기화 중 오류 발생: ' + e.message);
                 }
+            }
+        }
+
+        async function updateAppVersion() {
+            // 사용자 확인 없이 즉시 진행 (업데이트 버튼이므로)
+            const btn = event.currentTarget;
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = `<svg class="w-3.5 h-3.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> 업데이트 중...`;
+            btn.disabled = true;
+
+            try {
+                // 1. 서비스 워커 업데이트 체크 (업데이트가 있으면 제어권 획득)
+                if ('serviceWorker' in navigator) {
+                    const registration = await navigator.serviceWorker.getRegistration();
+                    if (registration) {
+                        await registration.update();
+                    }
+                }
+                // 2. 모든 캐시 삭제
+                if ('caches' in window) {
+                    const keys = await caches.keys();
+                    for (let key of keys) await caches.delete(key);
+                }
+                // 3. 브라우저 강제 리로드
+                window.location.reload(true);
+            } catch (e) {
+                console.error('Update failed:', e);
+                window.location.reload(true);
             }
         }
 
