@@ -1,0 +1,35 @@
+{
+  "name": "AI 뉴스 비서",
+  "short_name": "뉴스 비서",
+  "description": "소상공인 종합지원 AI 뉴스 브리핑",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "640x640",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "640x640",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "640x640",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "640x640",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
