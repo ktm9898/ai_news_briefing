@@ -39,6 +39,12 @@ jobs:
           echo "Starting news collection pipeline..."
           python -u run_pipeline.py
 
+      - name: 🧹 오래된 오디오 파일 정리 (30일 보존 정책)
+        run: |
+          echo "Cleaning up audio files older than 30 days..."
+          find audio/ -name "*.mp3" -type f -mtime +30 -not -name "briefing_latest.mp3" -delete
+          ls -R audio/
+
       - name: 📤 오디오 파일 저장
         run: |
           git config user.name "github-actions[bot]"
