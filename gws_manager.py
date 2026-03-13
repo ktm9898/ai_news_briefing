@@ -10,7 +10,10 @@ class GWSManager:
     def __init__(self):
         try:
             self.creds = _get_credentials()
-            logger.info("Google API 인증 객체 로드 성공 (gws_manager)")
+            if self.creds:
+                logger.info(f"Google API 인증 객체 로드 성공 (계정: {self.creds.service_account_email})")
+            else:
+                logger.error("Google API 인증 객체 로드 실패: credentials가 없습니다.")
         except Exception as e:
             logger.error(f"Google API 인증 실패 (gws_manager): {e}")
             self.creds = None
@@ -27,8 +30,9 @@ class GWSManager:
         logger.info(f"Google Docs 생성 시도: {title}")
         
         try:
-            docs_service = build('docs', 'v1', credentials=self.creds)
-            drive_service = build('drive', 'v3', credentials=self.creds)
+            # discovery_cache=False를 권장 (특히 서버리스/Actions 환경)
+            docs_service = build('docs', 'v1', credentials=self.creds, static_discovery=False)
+            drive_service = build('drive', 'v3', credentials=self.creds, static_discovery=False)
             
             # 1. 빈 문서 생성
             doc_body = {
