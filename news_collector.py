@@ -65,6 +65,62 @@ TRUSTED_MEDIA_DOMAINS = {
     'news.jtbc.co.kr', 'imnews.imbc.com',
 }
 
+# 언론사 도메인별 정식 명칭 매핑
+MEDIA_NAME_MAP = {
+    'chosun': '조선일보',
+    'joongang': '중앙일보',
+    'donga': '동아일보',
+    'yna': '연합뉴스',
+    'newsis': '뉴시스',
+    'news1': '뉴스1',
+    'sedaily': '서울경제',
+    'edaily': '이데일리',
+    'hankyung': '한국경제',
+    'mk.co.kr': '매일경제',
+    'mk': '매일경제',
+    'hani': '한겨레',
+    'khan': '경향신문',
+    'kmib': '국민일보',
+    'segye': '세계일보',
+    'seoul.co.kr': '서울신문',
+    'seoul': '서울신문',
+    'munhwa': '문화일보',
+    'moneytoday': '머니투데이',
+    'mt.co.kr': '머니투데이',
+    'mt': '머니투데이',
+    'asiae': '아시아경제',
+    'ajunews': '아주경제',
+    'fnnews': '파이낸셜뉴스',
+    'heraldcorp': '헤럴드경제',
+    'etnews': '전자신문',
+    'dt.co.kr': '디지털타임스',
+    'dt': '디지털타임스',
+    'digitaltimes': '디지털타임스',
+    'kbs': 'KBS',
+    'mbc': 'MBC',
+    'sbs': 'SBS',
+    'ytn': 'YTN',
+    'jtbc': 'JTBC',
+    'mbn': 'MBN',
+    'tvchosun': 'TV조선',
+    'ichannela': '채널A',
+    'yonhapnewstv': '연합뉴스TV',
+    'ebs': 'EBS',
+    'zdnet': 'ZDNet Korea',
+    'bloter': '블로터',
+    'newspim': '뉴스핌',
+    'kukinews': '쿠키뉴스',
+    'biz.chosun': '조선비즈',
+    'hankyungtv': '한국경제TV',
+    'wowtv': '한국경제TV',
+    'busan': '부산일보',
+    'imaeil': '매일신문',
+    'idomin': '경남도민일보',
+    'kwnews': '강원일보',
+    'kwnews.co.kr': '강원일보',
+    'kyeongin': '경인일보',
+}
+
 
 class NewsCollector:
     """네이버 뉴스 수집기"""
@@ -91,8 +147,20 @@ class NewsCollector:
             return ""
 
     def _extract_source(self, original_link: str, naver_link: str) -> str:
-        """언론사명 추출 시도"""
-        domain = self._extract_domain(original_link or naver_link)
+        """언론사명 추출 시도 (매핑 우선)"""
+        url = original_link or naver_link
+        domain = self._extract_domain(url)
+        
+        # 1. 매핑 딕셔너리에서 찾기 (부분 매칭 및 서브도메인 고려)
+        parts = domain.split('.')
+        for i in range(len(parts)):
+            # 2단, 3단 도메인 조합으로 체크 (예: mk.co.kr, chosun)
+            for j in range(i + 1, len(parts) + 1):
+                sub = '.'.join(parts[i:j])
+                if sub in MEDIA_NAME_MAP:
+                    return MEDIA_NAME_MAP[sub]
+        
+        # 2. 매핑 실패 시 기존처럼 도메인 기반 처리
         return domain.replace(".co.kr", "").replace(".com", "") or "알 수 없음"
 
     def _is_trusted_media(self, url: str) -> bool:
@@ -191,15 +259,16 @@ class NewsCollector:
                 skipped_old += 1
                 continue
 
-            link = item.get("originallink") or item.get("link", "")
+            original_link = item.get("originallink", "")
+            naver_link = item.get("link", "")
+            
+            # [수정] 네이버 인링크(link)를 우선적으로 사용
+            link = naver_link or original_link
 
-            # 주요 언론사 필터
-            if not self._is_trusted_media(link):
-                # 네이버 링크로 재확인
-                naver_link = item.get("link", "")
-                if not self._is_trusted_media(item.get("originallink", "")):
-                    skipped_media += 1
-                    continue
+            # 주요 언론사 필터 (오리지널 링크와 네이버 링크 모두 체크)
+            if not self._is_trusted_media(original_link) and not self._is_trusted_media(naver_link):
+                skipped_media += 1
+                continue
 
             # 중복 검사
             if link in existing_links:
@@ -273,17 +342,22 @@ class NewsCollector:
                     skipped_old += 1
                     continue
 
-                link = item.get("originallink") or item.get("link", "")
+                original_link = item.get("originallink", "")
+                naver_link = item.get("link", "")
+                
+                # [수정] 네이버 인링크(link)를 우선적으로 사용
+                link = naver_link or original_link
+                
                 if link in existing_links:
                     continue
                     
                 title = self._clean_html(item.get("title", ""))
                 description = self._clean_html(item.get("description", ""))
-                source = self._extract_source(item.get("originallink", ""), item.get("link", ""))
+                source = self._extract_source(original_link, naver_link)
                 article_date = self._extract_date_from_pubdate(item.get("pubDate", ""))
                 
-                # 명시된 언론사 도메인 화이트리스트 재검색 (퀄리티 보장)
-                if not self._is_trusted_media(link):
+                # 명시된 언론사 도메인 화이트리스트 재검색 (퀄리티 보장 - 오리지널/네이버 모두 체크)
+                if not self._is_trusted_media(original_link) and not self._is_trusted_media(naver_link):
                     continue
                 
                 headline_news.append({
@@ -324,13 +398,8 @@ class NewsCollector:
             naver_link = news.get("네이버링크", "")
             body = self.extract_article_body(link)
             
-            # 원문 실패 시 네이버 링크로 재시도
-            if not body and naver_link and naver_link != link:
-                logger.info(f"원문 크롤링 실패, 네이버 링크 재시도: {title}...")
-                body = self.extract_article_body(naver_link)
-                if body:
-                    news["링크"] = naver_link
-                    logger.info(f"네이버 링크로 크롤링 성공: {title}")
+            if not body:
+                logger.warning(f"본문 추출 실패: {title} ({link})")
             
             if not body:
                 logger.warning(f"본문 추출 최종 실패: {title} ({link})")
