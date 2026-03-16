@@ -1325,8 +1325,20 @@
             showTTSProgress(true);
             document.getElementById('ttsStatus').textContent = '음성 파일 로딩 중...';
 
-            // HTML5 Audio로 미리 생성된 MP3 파일 재생 시도
-            const audioUrl = `audio/briefing_latest.mp3?t=${Date.now()}`;
+            // 선택된 날짜 가져오기
+            const dateVal = getVisibleValue('filterDateDesktop', 'filterDateMobile');
+            const today = new Date().toISOString().split('T')[0];
+
+            let audioUrl;
+            if (dateVal === today) {
+                // 오늘 날짜면 최신 파일 시도
+                audioUrl = `audio/briefing_latest.mp3?t=${Date.now()}`;
+            } else {
+                // 특정 날짜면 해당 날짜 파일 시도 (YYYYMMDD 형식)
+                const yyyymmdd = dateVal.replace(/-/g, '');
+                audioUrl = `audio/briefing_${yyyymmdd}.mp3`;
+            }
+
             briefingAudio = new Audio(audioUrl);
 
             briefingAudio.addEventListener('canplaythrough', () => {
@@ -1357,11 +1369,19 @@
             });
 
             briefingAudio.addEventListener('error', () => {
-                // MP3 파일이 없으면 speechSynthesis 폴백
-                console.log('MP3 파일 없음, speechSynthesis 폴백 시도');
-                briefingAudio = null;
-                usingSpeechSynthesis = true;
-                startSpeechSynthesisFallback();
+                console.log('음성 파일 로드 실패:', audioUrl);
+                
+                // 안내 메시지 표시
+                document.getElementById('ttsStatus').textContent = '⚠️ 해당 날짜의 브리핑 파일이 존재하지 않습니다.';
+                document.getElementById('ttsStatus').classList.add('text-rose-500');
+                
+                // 3초 후 플레이어 닫기
+                setTimeout(() => {
+                    if (isSpeaking) {
+                        document.getElementById('ttsStatus').classList.remove('text-rose-500');
+                        stopTTS();
+                    }
+                }, 3000);
             });
         }
 
