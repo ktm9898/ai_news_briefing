@@ -47,11 +47,12 @@ class GWSManager:
             cutoff = datetime.now(timezone.utc) - timedelta(days=retention_days)
             cutoff_str = cutoff.strftime("%Y-%m-%dT%H:%M:%S")
             
-            # 서비스 계정 소유 브리핑 문서 검색 (이름 패턴 + 생성일 기준)
+            # 서비스 계정 자신이 100% 소유한(me) 브리핑 문서 검색 (이름 패턴 + 생성일 기준)
             query = (
                 f"name contains 'AI News Briefing' "
                 f"and mimeType='application/vnd.google-apps.document' "
                 f"and createdTime < '{cutoff_str}' "
+                f"and 'me' in owners "
                 f"and trashed=false"
             )
             
@@ -94,8 +95,12 @@ class GWSManager:
             deleted = 0
             page_token = None
             
+            # '내가 주인인(me)' 파일만 검색 (사용자가 직접 만든 파일이나 남이 공유한 폴더 자체는 건드리지 않음)
+            query = "'me' in owners and trashed=false"
+            
             while True:
                 results = drive.files().list(
+                    q=query,
                     pageSize=100,
                     fields="nextPageToken, files(id, name)",
                     pageToken=page_token
@@ -107,11 +112,12 @@ class GWSManager:
                 
                 for f in files:
                     try:
+                        # 휴지통을 거치지 않고 완전히 영구 삭제하여 즉시 용량 확보
                         drive.files().delete(fileId=f['id']).execute()
                         deleted += 1
-                        logger.info(f"삭제: {f['name']} ({f['id']})")
+                        logger.info(f"용량 확보 완료: {f['name']} 삭제됨 ({f['id']})")
                     except Exception as e:
-                        logger.warning(f"삭제 실패 ({f['name']}): {e}")
+                        logger.warning(f"삭제 건너뜀: {f['name']} (권한 없음): {e}")
                 
                 page_token = results.get('nextPageToken')
                 if not page_token:
