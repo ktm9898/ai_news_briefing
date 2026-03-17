@@ -2,7 +2,8 @@
 run_pipeline.py - GitHub Actions 엔트리포인트
 
 GitHub Actions 워크플로우에서 이 스크립트를 직접 실행합니다.
-  python run_pipeline.py
+  python run_pipeline.py            # 일반 파이프라인 실행
+  python run_pipeline.py --cleanup  # 서비스 계정 Drive 파일 전체 정리 (최초 1회)
 """
 
 import logging
@@ -16,6 +17,19 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+
+
+def run_cleanup():
+    """서비스 계정이 소유한 모든 Drive 파일을 일괄 삭제 (용량 복구용)"""
+    logger.info("🧹 서비스 계정 Drive 전체 정리 시작...")
+    try:
+        from gws_manager import GWSManager
+        gws = GWSManager()
+        deleted = gws.cleanup_all_files()
+        logger.info(f"✅ 정리 완료: {deleted}건 삭제")
+    except Exception as e:
+        logger.error(f"❌ 정리 실패: {e}")
+        sys.exit(1)
 
 
 def main():
@@ -53,4 +67,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    if "--cleanup" in sys.argv:
+        run_cleanup()
+    else:
+        main()
+

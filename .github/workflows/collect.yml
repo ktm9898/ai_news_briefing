@@ -26,6 +26,14 @@ jobs:
       - name: 📦 패키지 설치
         run: pip install -r requirements.txt
 
+      - name: 🧹 서비스 계정 Drive 정리 (오래된 브리핑 문서 삭제)
+        env:
+          GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+          GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
+        run: |
+          echo "$GOOGLE_CREDENTIALS_JSON" > service_account.json
+          python -u run_pipeline.py --cleanup
+
       - name: 🚀 뉴스 수집 및 브리핑 문서 생성 실행
         env:
           NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
@@ -35,7 +43,6 @@ jobs:
           GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
           GOOGLE_APPLICATION_CREDENTIALS: service_account.json
         run: |
-          echo "$GOOGLE_CREDENTIALS_JSON" > service_account.json
           echo "Starting news collection pipeline..."
           python -u run_pipeline.py
 

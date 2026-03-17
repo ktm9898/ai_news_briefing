@@ -4,6 +4,10 @@ from sheets_manager import _get_credentials
 
 logger = logging.getLogger(__name__)
 
+# 브리핑 문서 보관 기간 (일)
+DOCS_RETENTION_DAYS = 7
+
+
 class GWSManager:
     """Google Workspace API 연동을 위한 매니저 클래스 (Python Client 기반)"""
 
@@ -17,11 +21,114 @@ class GWSManager:
         except Exception as e:
             logger.error(f"Google API 인증 실패 (gws_manager): {e}")
             self.creds = None
+
+    def _get_drive_service(self):
+        return build('drive', 'v3', credentials=self.creds, static_discovery=False)
+
+    def _get_docs_service(self):
+        return build('docs', 'v1', credentials=self.creds, static_discovery=False)
+
+    def cleanup_old_briefing_docs(self, drive_service=None, retention_days: int = DOCS_RETENTION_DAYS) -> int:
+        """
+        서비스 계정이 소유한 오래된 브리핑 문서를 자동 삭제.
+        서비스 계정은 자체 Drive 용량(15GB)이 있으므로 주기적 정리가 필수.
         
+        Returns:
+            삭제된 파일 수
+        """
+        if not self.creds:
+            return 0
+
+        try:
+            from datetime import datetime, timedelta, timezone
+            drive = drive_service or self._get_drive_service()
+            
+            # 보관 기한 계산 (UTC 기준)
+            cutoff = datetime.now(timezone.utc) - timedelta(days=retention_days)
+            cutoff_str = cutoff.strftime("%Y-%m-%dT%H:%M:%S")
+            
+            # 서비스 계정 소유 브리핑 문서 검색 (이름 패턴 + 생성일 기준)
+            query = (
+                f"name contains 'AI News Briefing' "
+                f"and mimeType='application/vnd.google-apps.document' "
+                f"and createdTime < '{cutoff_str}' "
+                f"and trashed=false"
+            )
+            
+            results = drive.files().list(
+                q=query,
+                pageSize=50,
+                fields="files(id, name, createdTime)"
+            ).execute()
+            
+            files = results.get('files', [])
+            deleted = 0
+            
+            for f in files:
+                try:
+                    drive.files().delete(fileId=f['id']).execute()
+                    deleted += 1
+                    logger.info(f"오래된 브리핑 문서 삭제: {f['name']} ({f['createdTime']})")
+                except Exception as e:
+                    logger.warning(f"파일 삭제 실패 ({f['name']}): {e}")
+            
+            if deleted:
+                logger.info(f"서비스 계정 드라이브 정리 완료: {deleted}건 삭제 (기준: {retention_days}일)")
+            
+            return deleted
+            
+        except Exception as e:
+            logger.warning(f"드라이브 정리 중 오류 (무시): {e}")
+            return 0
+
+    def cleanup_all_files(self) -> int:
+        """
+        서비스 계정이 소유한 모든 파일을 일괄 삭제 (용량 복구용).
+        주의: 최초 1회 실행용. 파이프라인에서 자동 호출하지 않음.
+        """
+        if not self.creds:
+            return 0
+
+        try:
+            drive = self._get_drive_service()
+            deleted = 0
+            page_token = None
+            
+            while True:
+                results = drive.files().list(
+                    pageSize=100,
+                    fields="nextPageToken, files(id, name)",
+                    pageToken=page_token
+                ).execute()
+                
+                files = results.get('files', [])
+                if not files:
+                    break
+                
+                for f in files:
+                    try:
+                        drive.files().delete(fileId=f['id']).execute()
+                        deleted += 1
+                        logger.info(f"삭제: {f['name']} ({f['id']})")
+                    except Exception as e:
+                        logger.warning(f"삭제 실패 ({f['name']}): {e}")
+                
+                page_token = results.get('nextPageToken')
+                if not page_token:
+                    break
+            
+            logger.info(f"서비스 계정 전체 정리 완료: {deleted}건 삭제")
+            return deleted
+            
+        except Exception as e:
+            logger.error(f"전체 정리 실패: {e}")
+            return 0
+
     def create_briefing_doc(self, title: str, content: str) -> bool:
         """
         Drive API로 공유 폴더에 Google Docs 문서를 직접 생성한 뒤,
         Docs API로 본문 내용을 채워넣습니다.
+        생성 전 오래된 브리핑 문서를 자동 정리하여 용량 초과를 방지합니다.
         """
         if not self.creds:
             logger.error("[ERROR] 인증 객체가 없어 Google Docs를 생성할 수 없습니다.")
@@ -32,8 +139,11 @@ class GWSManager:
         try:
             from config import GWS_DRIVE_FOLDER_ID
             
-            drive_service = build('drive', 'v3', credentials=self.creds, static_discovery=False)
-            docs_service = build('docs', 'v1', credentials=self.creds, static_discovery=False)
+            drive_service = self._get_drive_service()
+            docs_service = self._get_docs_service()
+            
+            # 0. 오래된 브리핑 문서 자동 정리 (서비스 계정 용량 확보)
+            self.cleanup_old_briefing_docs(drive_service)
             
             # 1. Drive API로 공유 폴더에 빈 Google Docs 문서 직접 생성
             file_metadata = {
@@ -75,3 +185,4 @@ class GWSManager:
         except Exception as e:
             logger.error(f"[ERROR] Google Docs 생성 중 예외 발생: {e}")
             return False
+
