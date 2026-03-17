@@ -111,7 +111,6 @@ def run_pipeline():
             else:
                 # Top6 중복 제거 (AI가 중복으로 뽑았을 경우 대비)
                 selected = [item for item in selected if item.get("링크", "") not in top6_links]
-                logger.info(f"[{topic}] AI가 직접 {len(selected)}건 선정 완료")
 
             final_selection_for_save.extend(selected)
 

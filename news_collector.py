@@ -246,13 +246,16 @@ class NewsCollector:
     ) -> list[dict]:
         """
         단일 키워드에 대해 뉴스 검색 결과 수집 (본문 크롤링 없음).
-        제목 + 네이버 요약만 포함하여 빠르게 반환.
+        주요 언론사 우선 검색 후 부족 시 비주요 언론사 결과로 10개까지 보충.
         """
         items = self.search_naver_news(keyword)
         results = []
+        non_major_results = []
 
-        skipped_media = 0
         skipped_old = 0
+        skipped_media = 0
+        duplicate_count = 0
+        
         for item in items:
             # 최근 24시간 기사만 수집
             if not self._is_within_24h(item.get("pubDate", "")):
@@ -262,54 +265,60 @@ class NewsCollector:
             original_link = item.get("originallink", "")
             naver_link = item.get("link", "")
             
-            # [수정] 네이버 인링크(link)를 우선적으로 사용
             link = naver_link or original_link
-
-            # 주요 언론사 필터 (오리지널 링크와 네이버 링크 모두 체크)
-            if not self._is_trusted_media(original_link) and not self._is_trusted_media(naver_link):
-                skipped_media += 1
-                continue
 
             # 중복 검사
             if link in existing_links:
+                duplicate_count += 1
                 continue
 
             title = self._clean_html(item.get("title", ""))
             description = self._clean_html(item.get("description", ""))
             
-            # [추가] 리터럴 키워드 검증: 제목이나 요약에 키워드가 포함되어 있는지 확인
-            # 네이버 검색 API가 '관련성' 등으로 인해 키워드가 없는 기사를 주는 경우를 방지
+            # 리터럴 키워드 검증
             if keyword.lower() not in title.lower() and keyword.lower() not in description.lower():
                 logger.info(f"[{topic}] 키워드 '{keyword}' 미포함 기사 제외: {title[:20]}...")
                 continue
 
-            source = self._extract_source(
-                item.get("originallink", ""),
-                item.get("link", ""),
-            )
+            source = self._extract_source(original_link, naver_link)
             article_date = self._extract_date_from_pubdate(item.get("pubDate", ""))
 
-            results.append({
+            article_data = {
                 "날짜": article_date,
                 "주제": topic,
                 "언론사": source,
                 "제목": title,
-                "본문 전문": "",  # 1차에서는 크롤링하지 않음
+                "본문 전문": "",
                 "링크": link,
-                "original_link": link,  # AI 선정용 변하지 않는 고유 링크 (매핑용)
-                "네이버링크": item.get("link", ""),  # 크롤링 시 폴백용
+                "original_link": link,
+                "네이버링크": naver_link,
                 "AI 요약": "",
                 "중요도": "",
                 "네이버 요약": description,
-            })
+            }
 
-            existing_links.add(link)
+            # 주요 언론사 판별
+            if self._is_trusted_media(original_link) or self._is_trusted_media(naver_link):
+                results.append(article_data)
+                existing_links.add(link)
+            else:
+                non_major_results.append(article_data)
+                skipped_media += 1
+
+        # 주요 언론사만으로 10건(MAX_PER_KEYWORD)을 못 채웠을 경우, 비주요 언론사로 보충
+        needed = MAX_PER_KEYWORD - len(results)
+        added_non_major = 0
+        if needed > 0 and non_major_results:
+            to_add = non_major_results[:needed]
+            for article in to_add:
+                results.append(article)
+                existing_links.add(article["링크"])
+                added_non_major += 1
 
         logger.info(
-            f"[{topic}] '{keyword}' → {len(results)}건 수집 "
+            f"[{topic}] '{keyword}' → {len(results)}건 수집 (주요 {len(results)-added_non_major}건, 비주요 보충 {added_non_major}건) "
             f"({len(items)}건 검색, {skipped_old}건 24시간 경과, "
-            f"{skipped_media}건 비주요언론 제외, "
-            f"{len(items) - len(results) - skipped_media - skipped_old}건 중복)"
+            f"{skipped_media - added_non_major}건 비주요언론 제외, {duplicate_count}건 중복)"
         )
         return results
 
