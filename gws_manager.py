@@ -178,6 +178,23 @@ class GWSManager:
                 
             logger.info(f"빈 문서 생성 완료 (ID: {doc_id}, 폴더: {GWS_DRIVE_FOLDER_ID or '루트'}). 내용 추가 중...")
             
+            # [추가] 소유권 이전 로직: 서비스 계정의 드라이브 용량 초과 방지
+            try:
+                permission = {
+                    'type': 'user',
+                    'role': 'owner',
+                    'emailAddress': 'ktm9898@gmail.com'
+                }
+                drive_service.permissions().create(
+                    fileId=doc_id,
+                    body=permission,
+                    transferOwnership=True,
+                    fields='id'
+                ).execute()
+                logger.info("문서 소유권을 ktm9898@gmail.com으로 이전 완료 (서비스 계정 용량 해방)")
+            except Exception as e:
+                logger.warning(f"소유권 이전 실패 (일단 계속 진행): {e}")
+
             # 2. Docs API로 본문 내용 추가
             requests = [
                 {
