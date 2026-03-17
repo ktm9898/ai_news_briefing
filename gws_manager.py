@@ -84,7 +84,7 @@ class GWSManager:
 
     def cleanup_all_files(self) -> int:
         """
-        서비스 계정이 소유한 모든 파일을 일괄 삭제 (용량 복구용).
+        서비스 계정이 소유한 모든 파일을 일괄 삭제 및 휴지통 비우기 (용량 복구용).
         주의: 최초 1회 실행용. 파이프라인에서 자동 호출하지 않음.
         """
         if not self.creds:
@@ -95,8 +95,8 @@ class GWSManager:
             deleted = 0
             page_token = None
             
-            # '내가 주인인(me)' 파일만 검색 (사용자가 직접 만든 파일이나 남이 공유한 폴더 자체는 건드리지 않음)
-            query = "'me' in owners and trashed=false"
+            # '내가 주인인(me)' 파일만 검색 (휴지통에 있는 파일까지 싹 다 검색하기 위해 조건 해제)
+            query = "'me' in owners"
             
             while True:
                 results = drive.files().list(
@@ -123,7 +123,14 @@ class GWSManager:
                 if not page_token:
                     break
             
-            logger.info(f"서비스 계정 전체 정리 완료: {deleted}건 삭제")
+            # 마지막으로 휴지통 명시적 비우기 호출
+            try:
+                drive.files().emptyTrash().execute()
+                logger.info("서비스 계정 휴지통 완전 비우기 완료")
+            except Exception as e:
+                logger.warning(f"휴지통 비우기 실패: {e}")
+            
+            logger.info(f"서비스 계정 전체 정리 완료: 총 {deleted}건 완벽 삭제")
             return deleted
             
         except Exception as e:
