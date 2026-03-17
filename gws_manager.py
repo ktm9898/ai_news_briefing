@@ -5,7 +5,7 @@ from sheets_manager import _get_credentials
 logger = logging.getLogger(__name__)
 
 # 브리핑 문서 보관 기간 (일)
-DOCS_RETENTION_DAYS = 7
+DOCS_RETENTION_DAYS = 2
 
 
 class GWSManager:
