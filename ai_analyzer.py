@@ -238,9 +238,10 @@ class AIAnalyzer:
 [현재 상황 정보]
 {context_info}
 
-[작업 1] 각 뉴스의 핵심 내용을 2~3문장으로 한국어 요약 (모든 뉴스 대상)
+[작업 1] 각 뉴스의 핵심 내용을 2~3문장으로 한국어 요약
+- **[매우 중요]**: 힌트로 제공된 [대본 필수 포함] 여부나 중요도에 절대 관계없이, 아래 [뉴스 목록]에 있는 **모든 개별 기사(총 {len(news_list)}건)에 대해 단 하나도 빠짐없이** 요약을 생성해야 합니다.
+
 [작업 2] 아침 브리핑 대본 작성
-- **엄격 준수(Hallucination Zero)**: 아래 [뉴스 목록]에 없는 정보(특정 지역 날씨 언급, 음식 트렌드, 외식업체 소송 등 포함되지 않은 기사 내용)를 절대로 지어내거나 추가하지 마세요.
 - **출처 기반**: 오직 제공된 [뉴스 목록]의 내용만을 근거로 대본을 작성하세요.
 - **자연스러운 흐름(Thematic Grouping)**: 기사를 단순히 순서대로 나열하지 말고, 거시경제, 산업/기술, 민생/금융 등 관련 있는 뉴스끼리 묶어서 부드럽게 연결하세요. (예: "다음은 산업 소식입니다...", "한편, 민생 경제를 보면...")
 - [현재 상황 정보](날짜, 요일, 날씨 등)를 대본 도입부인 인사말에만 자연스럽게 반영하여 생동감을 주십시오. 인사말이 끝난 뒤에는 오직 [뉴스 목록]의 내용에만 집중하세요.
@@ -291,12 +292,19 @@ class AIAnalyzer:
                 for item in summaries:
                     idx = item.get("index", 1) - 1
                     if 0 <= idx < len(news_list):
-                        news_list[idx]["AI 요약"] = item.get("summary", "")
+                        # 빈 문자열 처리 강화: 요약이 없으면 폴백 메시지 삽입
+                        summary_text = item.get("summary", "").strip()
+                        news_list[idx]["AI 요약"] = summary_text if summary_text else "(AI 요약 생성 누락: 제공된 본문을 기반으로 요약을 추출하지 못했습니다.)"
 
                 briefing = result.get("briefing_script", "대본 생성 실패")
                 
                 # 마크다운 특수기호 제거 (TTS에서 '별표' 등을 소리내어 읽는 문제 방지)
                 briefing = briefing.replace("**", "").replace("*", "").replace("#", "")
+
+                # 누락 검증 (AI가 리스트의 일부만 응답했을 경우 대비)
+                for news in news_list:
+                    if not news.get("AI 요약"):
+                        news["AI 요약"] = "(AI 요약 생성 누락: AI가 해당 기사의 요약 응답을 누락했습니다.)"
 
                 logger.info(
                     f"AI 2차 완료: {len(summaries)}건 요약, "
