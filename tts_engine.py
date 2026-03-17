@@ -42,8 +42,40 @@ class TTSEngine:
 
     # ── 1순위: Google Cloud TTS ──
 
+    def _split_text_for_tts(self, text: str, max_bytes: int = 4500) -> list[str]:
+        """
+        텍스트를 문장 단위로 분할하여 각 청크가 max_bytes 이하가 되도록 합니다.
+        Google Cloud TTS의 5000바이트 제한을 안전하게 회피하기 위해 4500바이트 기준.
+        """
+        # 문장 구분자로 분리
+        import re
+        sentences = re.split(r'(?<=[.!?。])\s*', text)
+        
+        chunks = []
+        current_chunk = ""
+        
+        for sentence in sentences:
+            sentence = sentence.strip()
+            if not sentence:
+                continue
+            
+            candidate = (current_chunk + " " + sentence).strip() if current_chunk else sentence
+            
+            if len(candidate.encode('utf-8')) > max_bytes:
+                # 현재 청크를 저장하고 새 청크 시작
+                if current_chunk:
+                    chunks.append(current_chunk)
+                current_chunk = sentence
+            else:
+                current_chunk = candidate
+        
+        if current_chunk:
+            chunks.append(current_chunk)
+        
+        return chunks if chunks else [text]
+
     def _generate_google_tts(self, text: str, output_path: Path) -> bool:
-        """Google Cloud TTS로 고품질 음성 생성"""
+        """Google Cloud TTS로 고품질 음성 생성 (긴 텍스트는 자동 분할)"""
         try:
             from google.cloud import texttospeech
             from google.oauth2.service_account import Credentials
@@ -55,7 +87,6 @@ class TTSEngine:
             if creds_json:
                 # GitHub Actions 환경: 환경변수에서 인증
                 import json
-                import tempfile
                 import base64
 
                 if creds_json.startswith("{"):
@@ -73,9 +104,6 @@ class TTSEngine:
                 logger.warning("Google Cloud 인증 정보를 찾을 수 없습니다.")
                 return False
 
-            # TTS 요청 구성
-            synthesis_input = texttospeech.SynthesisInput(text=text)
-
             voice_params = texttospeech.VoiceSelectionParams(
                 language_code="ko-KR",
                 name=self.google_voice,
@@ -87,15 +115,39 @@ class TTSEngine:
                 pitch=0.0,
             )
 
-            response = client.synthesize_speech(
-                input=synthesis_input,
-                voice=voice_params,
-                audio_config=audio_config,
-            )
-
-            # 파일 저장
-            with open(output_path, "wb") as f:
-                f.write(response.audio_content)
+            # 텍스트 바이트 크기 확인 → 분할 여부 결정
+            text_bytes = len(text.encode('utf-8'))
+            
+            if text_bytes <= 4500:
+                # 제한 이내: 단일 호출
+                synthesis_input = texttospeech.SynthesisInput(text=text)
+                response = client.synthesize_speech(
+                    input=synthesis_input,
+                    voice=voice_params,
+                    audio_config=audio_config,
+                )
+                with open(output_path, "wb") as f:
+                    f.write(response.audio_content)
+            else:
+                # 제한 초과: 청크 분할 → 개별 합성 → MP3 바이트 연결
+                chunks = self._split_text_for_tts(text)
+                logger.info(f"TTS 텍스트 분할: {text_bytes}바이트 → {len(chunks)}개 청크")
+                
+                audio_parts = []
+                for i, chunk in enumerate(chunks):
+                    synthesis_input = texttospeech.SynthesisInput(text=chunk)
+                    response = client.synthesize_speech(
+                        input=synthesis_input,
+                        voice=voice_params,
+                        audio_config=audio_config,
+                    )
+                    audio_parts.append(response.audio_content)
+                    logger.info(f"  청크 {i+1}/{len(chunks)} 합성 완료 ({len(chunk.encode('utf-8'))}바이트)")
+                
+                # MP3 바이트 연결 (추가 패키지 불필요)
+                with open(output_path, "wb") as f:
+                    for part in audio_parts:
+                        f.write(part)
 
             size_kb = output_path.stat().st_size / 1024
             logger.info(f"Google Cloud TTS 생성 완료: {output_path} ({size_kb:.1f}KB)")

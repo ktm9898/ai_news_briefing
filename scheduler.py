@@ -103,8 +103,9 @@ def run_pipeline():
             filtered_group = [item for item in sorted_group 
                               if item.get("링크", "") not in top6_links]
 
-            # [개선] AI 선별 전에는 캡핑하지 않고 AI 분석 결과에 따라 최종 5건을 채움
-            selected = filtered_group
+            # [개선] 크롤링 전에 주제별 최대 건수(MAX_DISPLAY_PER_TOPIC)로 캐핑
+            # AI 중요도 순 상위 N건만 크롤링 대상으로 편성 (불필요한 크롤링/AI비용 절감)
+            selected = filtered_group[:MAX_DISPLAY_PER_TOPIC]
             final_selection_for_save.extend(selected)
             
             logger.info(f"[{topic}] 총 {len(group)}건을 AI 분석 후보군으로 편성")
