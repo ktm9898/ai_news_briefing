@@ -37,15 +37,7 @@ class AIAnalyzer:
         exclusion_keywords: list[str] | None = None
     ) -> tuple[list[dict], list[dict]]:
         """
-        AI를 사용하여 각 뉴스의 중요도를 판별하고, 전체 중 주요뉴스 6개를 선정.
-        
-        Args:
-            news_list: 뉴스 목록
-            topic_criteria: 주제별 중요도 판단 기준 (Sheets에서 로드)
-            exclusion_keywords: 주요뉴스(Top6) 선정 시 배제할 키워드 목록
-            
-        Returns:
-            (중요도가 채워진 전체 뉴스 목록, 선정된 Top6 뉴스 목록)
+        AI를 사용하여 각 뉴스의 중요도를 판별하고, 전체 중 주요뉴스 6개 및 각 주제별 5개를 선정.
         """
         if not news_list:
             return [], []
@@ -57,7 +49,6 @@ class AIAnalyzer:
             return news_list, []
 
         # ── 1단계: 주요뉴스 후보군(헤드라인) 필터링 ──
-        # 사용자가 설정한 세부 주제 키워드가 포함된 경우 주요뉴스 후보에서 즉시 탈락시킴
         headline_candidates = []
         topic_news_pool = []
         
@@ -68,7 +59,6 @@ class AIAnalyzer:
             
             if is_headline:
                 title_desc = (news.get("제목", "") + " " + news.get("네이버 요약", "")).lower()
-                # 배제 키워드 포함여부 체크
                 found_exclusion = False
                 for kw in exclusion_set:
                     if kw in title_desc:
@@ -76,7 +66,6 @@ class AIAnalyzer:
                         break
                 
                 if found_exclusion:
-                    # 헤드라인으로 수집되었으나 지엽적 키워드가 포함된 경우 일반 뉴스로 격하
                     logger.info(f"주요뉴스 후보 배제 (키워드 매칭): {news.get('제목')}")
                     news["주제"] = "기타(세부관심사)" 
                     topic_news_pool.append(news)
@@ -85,21 +74,17 @@ class AIAnalyzer:
             else:
                 topic_news_pool.append(news)
 
-        # AI에게 전달할 전체 리스트 (인덱스 유지를 위해 다시 합침)
         final_list_for_ai = headline_candidates + topic_news_pool
         
-        # 주제별 기준 텍스트 생성
         criteria_text = ""
-        # '경제헤드라인' 주제는 특별 취급 (가장 높은 우선순위)
-        if headline_candidates: # 필터링 후에도 헤드라인이 남아있다면
-            criteria_text += "\n[경제헤드라인]\n주요 경제지의 메인 뉴스입니다. 거시 경제 핵심 지표나 대형 산업 소식이 포함되어 있습니다. 매우 엄격한 기준으로 중요도를 판별하세요.\n"
+        if headline_candidates:
+            criteria_text += "\n[경제헤드라인]\n주요 경제지의 메인 뉴스입니다. 거시 경제 핵심 지표나 대형 산업 소식이 포함되어 있습니다.\n"
             
-        all_topics = set(n.get("주제", "기타") for n in final_list_for_ai if n.get("주제") != "경제헤드라인")
-        for topic in sorted(all_topics):
+        all_topics = sorted(list(set(n.get("주제", "기타") for n in final_list_for_ai if n.get("주제") != "경제헤드라인")))
+        for topic in all_topics:
             criteria = (topic_criteria or {}).get(topic, DEFAULT_CRITERIA)
             criteria_text += f"\n[{topic}]\n{criteria}\n"
 
-        # 전체 뉴스 목록 텍스트 생성 (AI 프롬프트용)
         news_texts = []
         headline_indices = []
         for idx, news in enumerate(final_list_for_ai):
@@ -114,34 +99,35 @@ class AIAnalyzer:
             )
 
         prompt = f"""당신은 베테랑 뉴스 에디터입니다.
-아래 뉴스 목록({len(final_list_for_ai)}건)을 보고 2가지 작업을 수행해 주세요.
+아래 뉴스 목록({len(final_list_for_ai)}건)을 보고 3가지 작업을 수행해 주세요.
 
 [작업 1] 모든 뉴스의 중요도를 '상', '중', '하' 중 하나로 판별
 - 중요: **주제 적합성(Relevance)**을 최우선으로 고려하십시오.
-- [{all_topics}]와 같이 구체적인 주제가 지정된 뉴스는 해당 주제의 목적(로컬 상권, 소상공인 정책 등)에 충실한 뉴스만 '상'으로 분류합니다.
-- 아무리 전 세계적인 대사건(트럼프, 전쟁 등)이라도 해당 주제 섹션에 포함되어 있다면, 그 주제 고유의 관점(예: 상권 영향 분석 등)이 중심이 아닌 '단순 국제 정세' 뉴스는 '중' 또는 '하'로 과감히 낮춰야 합니다.
-- '경제헤드라인' 주제는 거시 경제적 관점에서 중요도를 평가합니다.
-- **[핵심: 동일/유사 사건 중복 제거]**: 각 주제 내에서 동일한 사건이나 매우 유사한 이슈(예를 들어 똑같은 '두쫀쿠' 유행 기사가 3개이거나 같은 거시경제 기사가 여러 개일 때)가 중복으로 리스트업 되어 있다면, 그 중 가장 정보량이 많고 포괄적인 기사 딱 1개만 '상'으로 분류하고 나머지 유사 기사들은 과감히 '중'이나 '하'로 강등시키십시오. 브리핑에 비슷한 내용이 반복되지 않도록 철저히 다양성을 확보해야 합니다.
+- **[핵심: 동일/유사 사건 중역 제거]**: 각 주제 내에서 매우 유사한 기사가 여러 개 있다면, 가장 정보량이 많은 1개만 '상'으로 분류하고 나머지는 낮추십시오.
+
+[작업 2] 오늘의 핵심 주요뉴스 **국내 3건 + 해외 3건 = 총 6건** 선정
+- **반드시 '주제: 경제헤드라인'으로 표시된 기사들(번호: {headline_indices}) 중에서만 선정하십시오.**
+- 수량 엄수: 국내 3건, 해외 3건 총 6건을 선정하고 각각 1~2문장으로 요약하십시오.
+
+[작업 3] 각 일반 주제별로 가장 가치 있는 뉴스 **최대 5건씩** 직접 선정
+- 대상 주제: {all_topics}
+- 각 주제별로 해당 분야의 목적에 가장 부합하고 독자에게 유익한 기사를 **최대 5개** 골라내십시오.
+- 기사가 부족하다면 5개 미만으로 선정해도 됩니다.
 
 주제별 상세 기준:
 {criteria_text}
-
-[작업 2] 오늘의 핵심 주요뉴스 **국내 3건 + 해외 3건 = 총 6건** 선정
-- **중요: 선정 대상 제한**: 반드시 '주제: 경제헤드라인'으로 표시된 기사들(번호: {headline_indices}) 중에서만 선정하십시오.
-- **국내 뉴스 (3건 필수)**: 대한민국 거시경제, 정부 정책, 코스피/환율, 대기업 중대 발표 등 국내의 내용 중 파급력이 큰 뉴스.
-- **해외 뉴스 (3건 필수)**: 글로벌 금융(Fed 등), 해외 빅테크(Nvidia, Apple 등), 국제 정세, 미증시 등 세계 경제 지형 관련 뉴스. 
-- **절대 불가**: '상권활성화', '소상공인' 등 특정 세부 주제용으로 수집된 기사는 주요뉴스(Top6)가 될 수 없습니다. 오직 매크로(Macro) 관점의 '경제헤드라인' 기사만 선정하세요.
-- **[핵심: 중복 배제 및 다양성 확보]**: 선정된 6건의 뉴스는 특정한 한 이슈에 매몰되지 않고 서로 다른 사건/이슈를 다루어야 합니다. (예: 유가 상승 기사를 해외 주요뉴스로 골랐다면, 다른 해외 주요뉴스는 금리 인하나 기술주 이슈 등 완전 다른 주제를 선택하십시오.)
-- **수량 엄수**: 해당 영역(국내/해외)에 가장 적합한 기사를 골라 **반드시 각각 3건씩** 채우십시오. (총 6건)
-- 각 주요뉴스에 대해 핵심 내용을 1~2문장으로 품격 있게 요약하십시오.
 
 반드시 아래 JSON 형식으로만 응답:
 {{
   "importance": [{{"index": 1, "importance": "상"}}, ...],
   "top6": [
     {{"index": ..., "region": "국내", "summary": "..."}},
-    ... (국내 3개, 해외 3개 총 6개)
-  ]
+    ... (총 6개)
+  ],
+  "topic_tops": {{
+    "주제명1": [인덱스1, 인덱스2, ...],
+    "주제명2": [...]
+  }}
 }}
 
 [뉴스 목록]
@@ -158,23 +144,26 @@ class AIAnalyzer:
                     )
                 )
                 text = response.text.strip()
-
-                # JSON 파싱
-                start_idx = text.find('{')
-                end_idx = text.rfind('}')
-                if start_idx != -1 and end_idx != -1:
-                    text = text[start_idx:end_idx + 1]
-
                 result = json.loads(text)
 
-                # 중요도 채우기
+                # 1. 중요도 반영
                 importance_list = result.get("importance", [])
                 for item in importance_list:
                     idx = item.get("index", 1) - 1
                     if 0 <= idx < len(final_list_for_ai):
                         final_list_for_ai[idx]["중요도"] = item.get("importance", "하")
 
-                # Top6 결과 (국내 3 + 해외 3)
+                # 2. 주제별 선정 마킹 (핵심 추가)
+                topic_tops = result.get("topic_tops", {})
+                for topic, indices in topic_tops.items():
+                    logger.info(f"[{topic}] AI가 직접 {len(indices)}건 선정 완료")
+                    for idx_val in indices:
+                        idx = idx_val - 1
+                        if 0 <= idx < len(final_list_for_ai):
+                            # AI가 선정한 기사임을 표시하는 플래그
+                            final_list_for_ai[idx]["ai_selected"] = True
+
+                # 3. Top6 결과 구성
                 top6_list = result.get("top6", [])
                 top6_results = []
                 for item in top6_list:
@@ -185,30 +174,18 @@ class AIAnalyzer:
                         news_item["region"] = item.get("region", "국내")
                         top6_results.append(news_item)
 
-                # 중요도 통계 로깅
-                imp_counts = {"상": 0, "중": 0, "하": 0}
-                for n in final_list_for_ai:
-                    imp = n.get("중요도", "중")
-                    imp_counts[imp] = imp_counts.get(imp, 0) + 1
-
-                domestic = len([t for t in top6_results if t.get('region') == '국내'])
-                foreign = len([t for t in top6_results if t.get('region') == '해외'])
-                logger.info(
-                    f"AI 1차 완료: 상={imp_counts['상']}건, "
-                    f"중={imp_counts['중']}건, 하={imp_counts['하']}건, "
-                    f"주요뉴스={len(top6_results)}건 (국내 {domestic} + 해외 {foreign})"
-                )
                 return final_list_for_ai, top6_results
 
             except Exception as e:
                 logger.error(f"AI 1차 선별 실패 (시도 {attempt + 1}/{max_retries}): {e}")
                 if attempt == max_retries - 1:
                     for news in news_list:
-                        news["중요도"] = "중"  # 실패 시 기본값
+                        news["중요도"] = "중"
                 else:
                     time.sleep(2)
 
-        return news_list, top6_results
+        return news_list, []
+
 
     # ═══════════════════════════════════════════════════
     # Stage 2: 요약 + 브리핑 대본 동시 생성 (1회 AI 호출)

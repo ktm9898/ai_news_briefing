@@ -95,20 +95,26 @@ def run_pipeline():
         final_selection_for_save = [] # 최종적으로 시트에 저장될 기사들 (Top6 제외)
 
         for topic, group in topic_groups.items():
-            # 중요도 순으로 정렬 (상 -> 중 -> 하)
-            sorted_group = sorted(group, key=lambda x: importance_map.get(x.get("중요도", ""), 3))
+            # [수정] AI가 직접 선정한 기사(ai_selected)를 최우선으로 선택
+            # ai_analyzer.py에서 AI가 선정한 기사에 "ai_selected": True 플래그를 붙여줌
+            selected = [item for item in group if item.get("ai_selected") is True]
             
-            # Top6에 선정된 기사는 일반 주제 목록에서 제외 (링크 기반 중복 방지)
-            # Top6에 선정된 기사는 일반 주제 목록에서 제외 (링크 기반 중복 방지)
-            filtered_group = [item for item in sorted_group 
-                              if item.get("링크", "") not in top6_links]
+            # [폴백] 만약 AI가 해당 주제에서 아무것도 선정하지 않았다면 (또는 API 요류 등), 
+            # 기존처럼 중요도 순 상위 N건을 선택
+            if not selected:
+                sorted_group = sorted(group, key=lambda x: importance_map.get(x.get("중요도", ""), 3))
+                # Top6 중복 제거
+                filtered_group = [item for item in sorted_group 
+                                  if item.get("링크", "") not in top6_links]
+                selected = filtered_group[:MAX_DISPLAY_PER_TOPIC]
+                logger.info(f"[{topic}] AI 직접 선정 결과 없음 -> 중요도 순 {len(selected)}건 자동 선정")
+            else:
+                # Top6 중복 제거 (AI가 중복으로 뽑았을 경우 대비)
+                selected = [item for item in selected if item.get("링크", "") not in top6_links]
+                logger.info(f"[{topic}] AI가 직접 {len(selected)}건 선정 완료")
 
-            # [개선] 크롤링 전에 주제별 최대 건수(MAX_DISPLAY_PER_TOPIC)로 캐핑
-            # AI 중요도 순 상위 N건만 크롤링 대상으로 편성 (불필요한 크롤링/AI비용 절감)
-            selected = filtered_group[:MAX_DISPLAY_PER_TOPIC]
             final_selection_for_save.extend(selected)
-            
-            logger.info(f"[{topic}] 총 {len(group)}건을 AI 분석 후보군으로 편성")
+
             
         # ── 3단계: 기사 본문 크롤링 (Top6 + 선별된 5건씩) ──
         logger.info("STEP 3/6: 주요 기사 본문 크롤링")
