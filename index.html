@@ -1327,7 +1327,8 @@
 
             // 선택된 날짜 가져오기
             const dateVal = getVisibleValue('filterDateDesktop', 'filterDateMobile');
-            const today = new Date().toISOString().split('T')[0];
+            const now = new Date();
+            const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
 
             let audioUrl;
             if (dateVal === today) {

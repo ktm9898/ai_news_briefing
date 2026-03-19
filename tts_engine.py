@@ -10,7 +10,7 @@ tts_engine.py - 음성 합성 엔진
 import asyncio
 import logging
 import shutil
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from config import (
@@ -27,13 +27,15 @@ logger = logging.getLogger(__name__)
 class TTSEngine:
     """텍스트 → 음성 변환 엔진"""
 
+    KST = timezone(timedelta(hours=9))
+
     def __init__(self, voice: str = TTS_VOICE, google_voice: str = GOOGLE_TTS_VOICE):
         self.voice = voice
         self.google_voice = google_voice
 
     def _get_audio_path(self, prefix: str = "briefing") -> Path:
-        """날짜 기반 오디오 파일 경로 생성"""
-        today = datetime.now().strftime("%Y%m%d")
+        """날짜 기반 오디오 파일 경로 생성 (KST 기준)"""
+        today = datetime.now(self.KST).strftime("%Y%m%d")
         return AUDIO_DIR / f"{prefix}_{today}.mp3"
 
     def _get_latest_path(self) -> Path:
