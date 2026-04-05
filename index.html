@@ -748,9 +748,10 @@
             const dateVal = getVisibleValue('filterDateDesktop', 'filterDateMobile');
             const topicVal = getVisibleValue('filterCategoryDesktop', 'filterCategoryMobile');
 
-            // 날짜 필터는 클라이언트에서 처리 (GAS 날짜 포맷 불일치 방지)
+            // 날짜 필터를 GAS에 파라미터로 전달 (과거 날짜 조회 가능)
             let fetchUrl = SCRIPT_URL;
             const params = [];
+            if (dateVal) params.push(`date=${encodeURIComponent(dateVal)}`);
             if (topicVal && topicVal !== '전체') params.push(`topic=${encodeURIComponent(topicVal)}`);
             if (params.length > 0) fetchUrl += '?' + params.join('&');
 
