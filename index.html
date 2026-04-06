@@ -283,7 +283,7 @@
                         </path>
                     </svg>
                     <input type="date" id="filterDateMobile"
-                        onchange="syncInput('filterDateMobile', 'filterDateDesktop'); applyFilters()"
+                        onchange="syncInput('filterDateMobile', 'filterDateDesktop'); loadData();"
                         class="absolute inset-0 w-full h-full opacity-0 cursor-pointer text-transparent bg-transparent">
                 </div>
                 <!-- 세부 필터 버튼 -->
@@ -316,7 +316,7 @@
                             </path>
                         </svg>
                         <input type="date" id="filterDateDesktop"
-                            onchange="syncInput('filterDateDesktop', 'filterDateMobile'); applyFilters()"
+                            onchange="syncInput('filterDateDesktop', 'filterDateMobile'); loadData();"
                             class="absolute inset-0 w-full h-full opacity-0 cursor-pointer text-transparent bg-transparent">
                     </div>
                 </div>
@@ -752,7 +752,6 @@
             let fetchUrl = SCRIPT_URL;
             const params = [];
             if (dateVal) params.push(`date=${encodeURIComponent(dateVal)}`);
-            if (topicVal && topicVal !== '전체') params.push(`topic=${encodeURIComponent(topicVal)}`);
             if (params.length > 0) fetchUrl += '?' + params.join('&');
 
             showLoading(true);

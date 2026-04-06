@@ -62,7 +62,7 @@ function doGet(e) {
     let obj = {};
     headers.forEach((h, i) => {
       let val = row[i];
-      if (val instanceof Date) {
+      if (val instanceof Date || (val && Object.prototype.toString.call(val) === '[object Date]')) {
         val = Utilities.formatDate(val, "GMT+9", "yyyy-MM-dd");
       }
       obj[h] = val;
@@ -76,14 +76,19 @@ function doGet(e) {
       result = result.filter(item => {
         // 날짜 값을 문자열로 정규화하여 비교
         let itemDate = item['날짜'];
-        if (itemDate instanceof Date) {
+        if (itemDate instanceof Date || (itemDate && Object.prototype.toString.call(itemDate) === '[object Date]')) {
           itemDate = Utilities.formatDate(itemDate, "GMT+9", "yyyy-MM-dd");
         } else if (itemDate) {
           itemDate = String(itemDate).trim();
-          // "2026. 3. 4." 같은 형식도 처리
-          const match = String(itemDate).match(/(\d{4})[\.\-\/\s]+(\d{1,2})[\.\-\/\s]+(\d{1,2})/);
-          if (match) {
-            itemDate = match[1] + '-' + ('0' + match[2]).slice(-2) + '-' + ('0' + match[3]).slice(-2);
+          // "2026. 3. 4." 또는 JS Date toString 형태 모두 매칭을 시도
+          const dObj = new Date(itemDate);
+          if (!isNaN(dObj.getTime())) {
+             itemDate = Utilities.formatDate(dObj, "GMT+9", "yyyy-MM-dd");
+          } else {
+            const match = String(itemDate).match(/(\d{4})[\.\-\/\s]+(\d{1,2})[\.\-\/\s]+(\d{1,2})/);
+            if (match) {
+              itemDate = match[1] + '-' + ('0' + match[2]).slice(-2) + '-' + ('0' + match[3]).slice(-2);
+            }
           }
         }
         return itemDate === dateStr;
