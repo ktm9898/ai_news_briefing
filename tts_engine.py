@@ -192,6 +192,20 @@ class TTSEngine:
             logger.error(f"gTTS 폴백도 실패: {e}")
             return False
 
+    # ── 유틸리티 ──
+
+    def _preprocess_text(self, text: str) -> str:
+        """TTS 합성을 위한 텍스트 전처리 (소수점 등)"""
+        import re
+        if not text:
+            return ""
+        
+        # 1. 소수점 처리: 숫자 사이의 마침표(.)를 '쩜'으로 변환
+        # 예: 3.5% -> 3쩜5% (TTS가 마침표로 읽어 끊기는 현상 방지)
+        text = re.sub(r'(\d)\.(\d)', r'\1쩜\2', text)
+        
+        return text
+
     # ── 메인 생성 메서드 ──
 
     def generate(self, text: str, prefix: str = "briefing") -> Path | None:
@@ -210,6 +224,9 @@ class TTSEngine:
         if not text or not text.strip():
             logger.warning("TTS 입력 텍스트가 비어있습니다.")
             return None
+
+        # 텍스트 전처리 (소수점 -> '쩜' 등)
+        text = self._preprocess_text(text)
 
         output_path = self._get_audio_path(prefix)
 
