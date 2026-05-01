@@ -143,8 +143,8 @@ def run_pipeline():
         elapsed_3 = (datetime.now(KST) - start_time).total_seconds()
         logger.info(f"STEP 3 완료: {len(selected_for_crawl)}건 크롤링 완료 ({elapsed_3:.1f}초)")
 
-        # ── 4단계: AI 2차 — 요약 + 브리핑 대본 동시 생성 ──
-        logger.info("STEP 4/6: AI 2차 요약 + 브리핑 대본 생성")
+        # ── 4단계: AI 통합 분석 (요약 + 대본 + 인사이트 리포트) ──
+        logger.info("STEP 4/6: AI 통합 분석 수행 (요약+대본+인사이트)")
         
         # 날짜, 요일, 날씨 정보 준비
         days = ["월요일", "화요일", "수요일", "목요일", "금요일", "토요일", "일요일"]
@@ -156,12 +156,18 @@ def run_pipeline():
         context_info = f"현재 일시: {date_str} {weekday_str}\n날씨 정보: {weather_str}"
         logger.info(f"브리핑 컨텍스트 주입: {context_info}")
 
-        # 크롤링된 모든 기사(Top6 포함)에 대해 요약 수행
-        selected_for_crawl, briefing_script = analyzer.summarize_and_brief(selected_for_crawl, context_info=context_info)
+        # 모든 분석 작업을 단 한 번의 호출로 수행
+        analysis_result = analyzer.analyze_all_in_one(selected_for_crawl, context_info=context_info)
+        
+        # 결과 배분
+        briefing_script = analysis_result.get("briefing_script", "")
+        insight_data = analysis_result.get("insight_report")
+        
+        # 요약 데이터는 selected_for_crawl에 이미 반영되어 있음 (ai_analyzer 내부에서 처리)
         result["analyzed"] = len(selected_for_crawl)
 
         elapsed_4 = (datetime.now(KST) - start_time).total_seconds()
-        logger.info(f"STEP 4 완료: 요약 + 대본 생성 ({elapsed_4:.1f}초)")
+        logger.info(f"STEP 4 완료: 통합 AI 분석 완료 ({elapsed_4:.1f}초)")
 
         # 최종 저장용 주요뉴스 리스트 생성 (Top6)
         top6_news = []
@@ -272,29 +278,25 @@ def run_pipeline():
         except Exception as e:
             logger.error(f"TTS 생성 중 오류 (무시): {e}")
 
-        # ── 7단계: AI 인사이트 리포트 생성 및 시트 저장 ──
-        logger.info("STEP 7/7: AI 인사이트 리포트 생성 및 저장")
+        # ── 7단계: AI 인사이트 리포트 구성 및 시트 저장 ──
+        logger.info("STEP 7/7: AI 인사이트 리포트 구성 및 저장")
         try:
             doc_title = f"AI News Insight Report - {date_str}"
             
-            # 서울신용보증재단 전용 인사이트 리포트 생성
-            # Top6 뉴스와 일반 기사 중 일부를 합쳐서 분석 전달
-            analysis_pool = top6_news + save_list[:10] 
-            insight_content = analyzer.generate_insight_report(analysis_pool, date_str)
-            
-            # 최종 리포트 구성 (total_solution 스타일: 좌측 정렬)
-            doc_content = f"서울신용보증재단 인사이트 리포트\n"
-            doc_content += f"일자: {date_str} ({weekday_str})\n"
-            doc_content += "--------------------------------------------------\n\n"
-            doc_content += insight_content
-            doc_content += "\n\n--------------------------------------------------\n"
-            doc_content += "본 리포트는 서울신용보증재단의 정책 결정 및 업무 지원을 위해 AI를 통해 분석된 결과입니다."
-
-            # Sheets에 저장
-            sheets.save_briefing_doc(doc_title, doc_content)
-            logger.info("인사이트 리포트 시트 저장 성공")
+            # STEP 4에서 미리 생성해둔 insight_data 사용 (추가 AI 호출 없음)
+            if insight_data:
+                # 렌더링은 index.html에서 JSON을 파싱하므로, 여기서는 JSON 형태 그대로 저장하거나 
+                # 또는 예비용으로 마크다운 텍스트를 만들어 저장 (현재는 JSON 문자열로 저장)
+                import json
+                doc_content = json.dumps(insight_data, ensure_ascii=False)
+                
+                # Sheets에 저장
+                sheets.save_briefing_doc(doc_title, doc_content)
+                logger.info("인사이트 리포트 시트 저장 성공 (통합 데이터 사용)")
+            else:
+                logger.warning("인사이트 데이터가 없어 리포트를 생성하지 못했습니다.")
         except Exception as e:
-            logger.error(f"리포트 생성 및 저장 중 오류 발생: {e}")
+            logger.error(f"리포트 구성 및 저장 중 오류 발생: {e}")
 
 
         result["status"] = "완료"

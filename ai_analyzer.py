@@ -190,41 +190,26 @@ class AIAnalyzer:
 
 
     # ═══════════════════════════════════════════════════
-    # Stage 2: 요약 + 브리핑 대본 동시 생성 (1회 AI 호출)
+    # Stage 2: 요약 + 브리핑 대본 + 인사이트 리포트 동시 생성
     # ═══════════════════════════════════════════════════
 
-    def summarize_and_brief(self, news_list: list[dict], context_info: str = "") -> tuple[list[dict], str]:
+    def analyze_all_in_one(
+        self,
+        news_list: list[dict],
+        context_info: str = ""
+    ) -> dict:
         """
-        크롤링 완료된 중요 기사에 대해:
-        - 각 기사별 AI 요약 (2~3문장)
-        - 오늘의 브리핑 대본 (라디오 스타일)
-        을 한 번의 AI 호출로 생성.
-
-        Args:
-            news_list: 본문 크롤링이 완료된 중요 기사 목록
-            context_info: 현재 날짜, 요일, 날씨 등 상황 정보
-
-        Returns:
-            (요약이 채워진 news_list, 브리핑 대본 문자열)
+        [Stage 2] 통합 분석: 요약, 브리핑 대본, 재단 인사이트 리포트를 한 번에 생성
         """
         if not news_list:
-            return news_list, "오늘은 주요 뉴스가 없습니다."
+            return {"summaries": [], "briefing_script": "", "insight_report": None}
 
-        if not GEMINI_API_KEY:
-            logger.error("GEMINI_API_KEY가 설정되지 않았습니다.")
-            for news in news_list:
-                news["AI 요약"] = "(GEMINI_API_KEY 미설정)"
-            return news_list, "API 키 미설정으로 대본 생성 불가"
-
-        # 뉴스 텍스트 구성
         news_texts = []
         for idx, news in enumerate(news_list):
-            is_high = news.get("중요도") == "상"
-            body_preview = news.get("본문 전문", "")[:1500]
-            naver_desc = news.get("네이버 요약", "")
-            
-            # 대본 생성을 위해 중요 뉴스만 골라서 힌트 제공
-            relevance = "[대본 필수 포함]" if is_high else "[대본 제외/참고용]"
+            naver_desc = news.get("네이버 요약", "") or news.get("description", "")
+            body_preview = (news.get("본문 전문", "") or "")[:1500]
+            is_essential = news.get("is_essential", False)
+            relevance = "[대본 필수 포함]" if is_essential else "[대본 제외/참고용]"
             
             news_texts.append(
                 f"[뉴스 {idx + 1}] {relevance}\n"
@@ -234,36 +219,41 @@ class AIAnalyzer:
                 f"본문(일부): {body_preview}\n"
             )
 
-        prompt = f"""당신은 베테랑 뉴스 에디터이자 인기 아침 라디오 진행자입니다.
-아래 제공된 [현재 상황 정보]와 [뉴스 목록]을 참고하여 작업을 수행해 주세요.
+        prompt = f"""당신은 베테랑 뉴스 에디터, 인기 아침 라디오 진행자, 그리고 공공기관(서울신용보증재단) 전문 정책 분석가입니다.
+제공된 [현재 상황 정보]와 [뉴스 목록]을 참고하여 다음 3가지 작업을 완벽하게 수행해 주세요.
 
 [현재 상황 정보]
 {context_info}
 
-[작업 1] 각 뉴스의 핵심 내용을 2~3문장으로 한국어 요약
-- **[매우 중요]**: 힌트로 제공된 [대본 필수 포함] 여부나 중요도에 절대 관계없이, 아래 [뉴스 목록]에 있는 **모든 개별 기사(총 {len(news_list)}건)에 대해 단 하나도 빠짐없이** 요약을 생성해야 합니다.
+[작업 1: 뉴스 요약 (에디터)]
+- **모든 개별 기사(총 {len(news_list)}건)**에 대해 각각 2~3문장의 한국어 요약을 작성하십시오. (JSON의 'summaries' 필드)
 
-[작업 2] 아침 브리핑 대본 작성
-- **출처 기반**: 오직 제공된 [뉴스 목록]의 내용만을 근거로 대본을 작성하세요.
-- **자연스러운 흐름(Thematic Grouping)**: 기사를 단순히 순서대로 나열하지 말고, 거시경제, 산업/기술, 민생/금융 등 관련 있는 뉴스끼리 묶어서 부드럽게 연결하세요. (예: "다음은 산업 소식입니다...", "한편, 민생 경제를 보면...")
-- [현재 상황 정보](날짜, 요일, 날씨 등)를 대본 도입부인 인사말에만 자연스럽게 반영하여 생동감을 주십시오. 인사말이 끝난 뒤에는 오직 [뉴스 목록]의 내용에만 집중하세요.
-- 매번 똑같은 인사 대신 오늘의 요일이나 날씨에 어울리는 적절한 인사를 사용하세요.
-- 반드시 '[대본 필수 포함]' 표시가 된 핵심 뉴스들로만 대본을 구성해 주세요. '[대본 제외/참고용]' 표기가 된 뉴스들은 대본에서 과감히 제외해 주세요.
-- 아나운서가 읽을 전문을 작성하되, 방송처럼 신뢰감 있고 친절한 분위기를 유지하세요.
+[작업 2: 라디오 브리핑 대본 (진행자)]
+- '[대본 필수 포함]' 표시가 된 뉴스들을 중심으로 친절하고 전문적인 아침 라디오 브리핑 대본을 작성하십시오. (JSON의 'briefing_script' 필드)
+- 인트로에 날씨, 요일 등 상황 정보를 자연스럽게 반영하고, 음성 합성(TTS)을 위해 특수 기호 없이 작성하십시오.
 
-대본 작성 규칙:
-- 진행자 본인을 특정 이름으로 지칭하지 마십시오.
-- 중요 기사들은 배경과 맥락을 포함해 깊이 있게 설명하고 뉴스 간의 전환을 자연스럽게 처리하세요.
-- 마지막은 활기찬 인사로 마무리하세요.
-- 음성 합성(TTS)을 위해 별표(**, *), 샵(#) 등 마크다운 기호는 절대 사용하지 말고 오직 자연스러운 순수 텍스트(평문)로만 작성하세요.
+[작업 3: 재단 업무 인사이트 리포트 (정책 분석가)]
+- **오늘의 주요 경제 흐름**: 전체 뉴스에서 도출되는 핵심 거시 경제 상황을 **500자 이내**로 요약하십시오.
+- **재단 업무 인사이트**: 가장 중요한 뉴스 3~5개를 선정하여 제목(1. 제목 형식), 요약, 업무 시사점을 추출하십시오.
+- 공공기관 보고서 수준의 정중한 문체를 사용하고 이모지는 금지합니다.
 
-반드시 아래 JSON 형식으로만 응답:
+반드시 아래 JSON 형식을 엄수하여 응답하십시오:
 {{
   "summaries": [
-    {{"index": 1, "summary": "요약..."}},
+    {{"index": 1, "summary": "요약 내용..."}},
     ...
   ],
-  "briefing_script": "대본 전문..."
+  "briefing_script": "라디오 대본 전문...",
+  "insight_report": {{
+    "economic_trend": "거시 경제 흐름 요약 내용 (500자 이내)",
+    "news_insights": [
+      {{
+        "title": "1. 뉴스 제목",
+        "summary": "핵심 요약",
+        "implication": "재단 업무 시사점 및 대응 방안"
+      }}
+    ]
+  }}
 }}
 
 [뉴스 목록]
@@ -279,51 +269,25 @@ class AIAnalyzer:
                         response_mime_type="application/json",
                     )
                 )
-                text = response.text.strip()
-
-                # JSON 파싱 (중괄호 추출)
-                start_idx = text.find('{')
-                end_idx = text.rfind('}')
-                if start_idx != -1 and end_idx != -1:
-                    text = text[start_idx:end_idx + 1]
-
-                result = json.loads(text)
-
-                # 요약 채우기
-                summaries = result.get("summaries", [])
-                for item in summaries:
-                    idx = item.get("index", 1) - 1
-                    if 0 <= idx < len(news_list):
-                        # 빈 문자열 처리 강화: 요약이 없으면 폴백 메시지 삽입
-                        summary_text = item.get("summary", "").strip()
-                        news_list[idx]["AI 요약"] = summary_text if summary_text else "(AI 요약 생성 누락: 제공된 본문을 기반으로 요약을 추출하지 못했습니다.)"
-
-                briefing = result.get("briefing_script", "대본 생성 실패")
+                import json
+                result = json.loads(response.text.strip())
                 
-                # 마크다운 특수기호 제거 (TTS에서 '별표' 등을 소리내어 읽는 문제 방지)
-                briefing = briefing.replace("**", "").replace("*", "").replace("#", "")
-
-                # 누락 검증 (AI가 리스트의 일부만 응답했을 경우 대비)
-                for news in news_list:
-                    if not news.get("AI 요약"):
-                        news["AI 요약"] = "(AI 요약 생성 누락: AI가 해당 기사의 요약 응답을 누락했습니다.)"
-
-                logger.info(
-                    f"AI 2차 완료: {len(summaries)}건 요약, "
-                    f"대본 {len(briefing)}자"
-                )
-                return news_list, briefing
-
+                # 요약 매칭 및 누락 방지
+                summary_map = {item.get('index'): item.get('summary') for item in result.get('summaries', [])}
+                for i, news in enumerate(news_list):
+                    news['AI 요약'] = summary_map.get(i + 1, "(요약 누락)")
+                
+                return result
             except Exception as e:
-                logger.error(f"AI 2차 처리 실패 (시도 {attempt + 1}/{max_retries}): {e}")
-                if attempt < max_retries - 1:
-                    time.sleep(2)
+                logger.error(f"통합 분석 시도 {attempt+1} 실패: {e}")
+                if attempt == max_retries - 1:
+                    return {"summaries": [], "briefing_script": "오류 발생", "insight_report": None}
+                time.sleep(2)
 
-        # 모든 재시도 실패
-        for news in news_list:
-            if not news.get("AI 요약"):
-                news["AI 요약"] = "(AI 요약 생성 실패)"
-        return news_list, "브리핑 대본 생성에 실패했습니다."
+    def summarize_and_brief(self, news_list: list[dict], context_info: str = "") -> tuple[list[dict], str]:
+        """기존 코드와 호환성을 유지하기 위한 래퍼 메서드"""
+        result = self.analyze_all_in_one(news_list, context_info)
+        return news_list, result.get("briefing_script", "")
 
     # ═══════════════════════════════════════════════════
     # (레거시 호환) 기존 메서드 유지
@@ -338,57 +302,3 @@ class AIAnalyzer:
         """레거시 호환 — 사용되지 않음"""
         _, briefing = self.summarize_and_brief(news_list)
         return briefing
-    # ═══════════════════════════════════════════════════
-    # Stage 3: 서울신용보증재단 인사이트 리포트 생성
-    # ═══════════════════════════════════════════════════
-
-    def generate_insight_report(self, news_list: list[dict], date_str: str = "") -> str:
-        """
-        서울신용보증재단 업무와 연계된 인사이트 리포트를 생성합니다. (JSON 구조화 방식)
-        """
-        if not news_list:
-            return ""
-
-        news_texts = []
-        for idx, news in enumerate(news_list):
-            news_texts.append(
-                f"[{idx + 1}] 주제: {news.get('주제')}, 제목: {news.get('제목')}\n"
-                f"요약: {news.get('AI 요약')}\n"
-                f"본문일부: {news.get('본문 전문', '')[:500]}\n"
-            )
-
-        prompt = f"""당신은 공공기관(서울신용보증재단)의 전문 정책 분석가입니다.
-오늘의 주요 뉴스들을 분석하여 재단 업무(소상공인 지원, 보증, 컨설팅 등)에 도움이 될 핵심 데이터를 추출해 주세요.
-
-[분석 대상 뉴스 목록]
-{chr(10).join(news_texts)}
-
-[작업 지침]
-1. 뉴스 전체를 관통하는 핵심적인 거시 경제 상황을 'economic_trend'에 500자 이내로 요약하십시오.
-2. 재단 업무와 연계성이 높은 가장 중요한 뉴스 3~5개를 선정하여 'news_insights' 리스트에 담으십시오.
-3. 각 인사이트 항목은 'title'(뉴스 제목), 'summary'(주요내용 요약), 'implication'(재단 업무 시사점)으로 구성하십시오.
-4. 모든 내용은 정중하고 전문적인 문체로 작성하며, 이모지는 절대 사용하지 마십시오.
-
-반드시 아래 JSON 형식을 엄수하여 응답하십시오:
-{{
-  "economic_trend": "내용",
-  "news_insights": [
-    {{
-      "title": "뉴스 제목",
-      "summary": "핵심 요약 내용",
-      "implication": "재단 업무 시사점 및 대응 방안"
-    }}
-  ]
-}}
-"""
-
-        try:
-            # JSON 모드 활성화
-            response = self.model.generate_content(
-                prompt,
-                generation_config={"response_mime_type": "application/json"}
-            )
-            return response.text.strip()
-        except Exception as e:
-            logger.error(f"인사이트 리포트 JSON 생성 실패: {e}")
-            return ""
