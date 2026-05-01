@@ -955,6 +955,13 @@
                 if (isAPrio && !isBPrio) return -1;
                 if (!isAPrio && isBPrio) return 1;
 
+                if (isAPrio && isBPrio) {
+                    const isAOverseas = a.주제.includes('해외');
+                    const isBOverseas = b.주제.includes('해외');
+                    if (isAOverseas && !isBOverseas) return -1;
+                    if (!isAOverseas && isBOverseas) return 1;
+                }
+
                 const impA = importanceMap[a.중요도] ?? 9;
                 const impB = importanceMap[b.중요도] ?? 9;
                 if (impA !== impB) return impA - impB;
@@ -1092,6 +1099,13 @@
                 const isBPrio = b.주제.includes('주요뉴스');
                 if (isAPrio && !isBPrio) return -1;
                 if (!isAPrio && isBPrio) return 1;
+
+                if (isAPrio && isBPrio) {
+                    const isAOverseas = a.주제.includes('해외');
+                    const isBOverseas = b.주제.includes('해외');
+                    if (isAOverseas && !isBOverseas) return -1;
+                    if (!isAOverseas && isBOverseas) return 1;
+                }
 
                 const impA = importanceMap[a.중요도] ?? 9;
                 const impB = importanceMap[b.중요도] ?? 9;
