@@ -24,8 +24,8 @@ class AIAnalyzer:
     """Gemini 기반 뉴스 분석기 (2단계 파이프라인)"""
 
     def __init__(self):
-        # 사용자 요청에 따라 최신 Flash 모델 사용 (2.0 Flash)
-        self.model = genai.GenerativeModel('gemini-2.0-flash')
+        # 사용자 요청에 따라 2.5 Flash 모델 사용
+        self.model = genai.GenerativeModel('gemini-2.5-flash')
 
     # ... (기존 메서드들 생략) ...
 
