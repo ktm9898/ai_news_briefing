@@ -1963,9 +1963,10 @@
                 } else if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
                     // [섹션 제목] -> 배지 스타일
                     html += `<div class="badge-title">${trimmed}</div>`;
-                } else if (trimmed.startsWith('* ')) {
-                    // 뉴스 제목
-                    html += `<div class="news-title">${trimmed.substring(2)}</div>`;
+                } else if (trimmed.startsWith('* ') || /^\d+\./.test(trimmed)) {
+                    // 뉴스 제목 (숫자 번호 포함)
+                    const cleanTitle = trimmed.replace(/^\*\s*/, '');
+                    html += `<div class="news-title">${cleanTitle}</div>`;
                 } else if (trimmed.includes('--------------------------------------------------')) {
                     html += `<hr>`;
                 } else if (trimmed.includes('본 리포트는')) {
