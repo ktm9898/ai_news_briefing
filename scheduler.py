@@ -282,14 +282,13 @@ def run_pipeline():
             analysis_pool = top6_news + save_list[:10] 
             insight_content = analyzer.generate_insight_report(analysis_pool, date_str)
             
-            # 최종 리포트 구성 (헤더 추가)
-            doc_content = f"서울신용보증재단 일일 뉴스 인사이트 리포트\n"
+            # 최종 리포트 구성 (헤더 간소화)
+            doc_content = f"서울신용보증재단 인사이트 리포트\n"
             doc_content += f"일자: {date_str} ({weekday_str})\n"
-            doc_content += f"날씨: {weather_str}\n"
             doc_content += "--------------------------------------------------\n\n"
             doc_content += insight_content
             doc_content += "\n\n--------------------------------------------------\n"
-            doc_content += "본 리포트는 AI를 통해 주요 뉴스를 재단 업무 관점에서 분석한 결과입니다."
+            doc_content += "본 리포트는 서울신용보증재단의 정책 결정 및 업무 지원을 위해 AI를 통해 분석된 결과입니다."
 
             # Sheets에 저장
             sheets.save_briefing_doc(doc_title, doc_content)

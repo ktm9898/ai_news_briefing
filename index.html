@@ -166,18 +166,18 @@
             }
             @page { size: A4; margin: 20mm; }
             #printArea {
-                font-family: 'Batang', 'Gungsuh', serif;
-                color: #000;
-                line-height: 1.8;
+                font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+                color: #1a1a1a;
+                line-height: 1.7;
                 word-break: keep-all;
             }
-            #printArea h1 { font-size: 26pt; text-align: center; margin-bottom: 40px; border-bottom: 3px double #000; padding-bottom: 15px; font-weight: bold; }
-            #printArea h2 { font-size: 18pt; margin-top: 30px; border-left: 5px solid #000; padding-left: 15px; margin-bottom: 15px; color: #000; font-weight: bold; }
-            #printArea h3 { font-size: 14pt; margin-top: 20px; color: #000; font-weight: bold; text-decoration: underline; }
-            #printArea p, #printArea li { font-size: 11pt; color: #000; margin-bottom: 10px; }
-            #printArea blockquote { border: 1px solid #ddd; padding: 15px; margin: 20px 0; color: #333; background: #f9f9f9; font-style: italic; }
-            #printArea a { color: #000; text-decoration: none; }
-            #printArea hr { border-top: 1px solid #000; border-bottom: none; margin: 30px 0; }
+            #printArea h1 { font-size: 28pt; text-align: center; margin-bottom: 40px; color: #000; font-weight: 800; border-bottom: 2px solid #000; padding-bottom: 15px; }
+            #printArea h2 { font-size: 16pt; margin-top: 30px; margin-bottom: 15px; color: #000; font-weight: 700; display: inline-block; border-bottom: 2px solid #000; }
+            #printArea .badge-title { display: inline-block; background: #f3f4f6; color: #374151; padding: 4px 12px; border-radius: 6px; font-size: 11pt; font-weight: 700; margin-top: 15px; margin-bottom: 8px; border: 1px solid #e5e7eb; }
+            #printArea .news-title { font-size: 14pt; font-weight: 700; color: #111; margin-top: 25px; margin-bottom: 10px; padding-left: 10px; border-left: 4px solid #3b82f6; }
+            #printArea p, #printArea li { font-size: 11pt; color: #333; margin-bottom: 8px; }
+            #printArea hr { border-top: 1px solid #e5e7eb; border-bottom: none; margin: 30px 0; }
+            #printArea .footer-note { font-size: 9pt; color: #6b7280; text-align: center; margin-top: 50px; }
         }
     </style>
 </head>
@@ -1941,24 +1941,41 @@
 
             let md = report['내용'] || '';
             
-            // 1. 이모지 및 이모티콘 제거 (정규식)
+            // 1. 이모지 및 이모티콘 제거
             md = md.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]/g, '');
             
-            // 2. 마크다운 파싱
-            md = md.replace(/^### (.*$)/gim, '<h3>$1</h3>');
-            md = md.replace(/^## (.*$)/gim, '<h2>$1</h2>');
-            md = md.replace(/^# (.*$)/gim, '<h1>$1</h1>');
-            md = md.replace(/^\> (.*$)/gim, '<blockquote>$1</blockquote>');
-            md = md.replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>');
-            md = md.replace(/\*(.*?)\*/gim, '<em>$1</em>');
-            md = md.replace(/\[(.*?)\]\((.*?)\)/gim, '<a href="$2" target="_blank" rel="noopener">$1</a>');
-            md = md.replace(/^\- (.*$)/gim, '<ul><li>$1</li></ul>');
-            md = md.replace(/<\/ul>\n<ul>/gim, '\n');
-            md = md.replace(/\n/gim, '<br>');
-            md = md.replace(/<br>\-\-\-<br>/gim, '<hr>');
-            md = md.replace(/--------------------------------------------------/g, '<hr>');
+            // 2. 마크다운 기호 확실히 제거 (# 등)
+            md = md.replace(/#+/g, '');
+            
+            // 3. 커스텀 렌더링 (total_solution 스타일)
+            // 첫 줄은 대문자 제목으로
+            const lines = md.split('\n');
+            let html = '';
+            
+            lines.forEach((line, i) => {
+                const trimmed = line.trim();
+                if (!trimmed) return;
 
-            document.getElementById('printArea').innerHTML = md;
+                if (i === 0) {
+                    html += `<h1>${trimmed}</h1>`;
+                } else if (trimmed.startsWith('일자:')) {
+                    html += `<p style="text-align:right; color:#666;">${trimmed}</p>`;
+                } else if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+                    // [섹션 제목] -> 배지 스타일
+                    html += `<div class="badge-title">${trimmed}</div>`;
+                } else if (trimmed.startsWith('* ')) {
+                    // 뉴스 제목
+                    html += `<div class="news-title">${trimmed.substring(2)}</div>`;
+                } else if (trimmed.includes('--------------------------------------------------')) {
+                    html += `<hr>`;
+                } else if (trimmed.includes('본 리포트는')) {
+                    html += `<div class="footer-note">${trimmed}</div>`;
+                } else {
+                    html += `<p>${trimmed}</p>`;
+                }
+            });
+
+            document.getElementById('printArea').innerHTML = html;
         }
 
         function printReport() {
