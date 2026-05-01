@@ -138,6 +138,21 @@
         }
 
         /* ── 인쇄용 (total_solution 형식 리포트 출력) ── */
+        /* ── 리포트 공통 스타일 (화면 및 인쇄) ── */
+        .report-content {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+            color: #1a1a1a;
+            line-height: 1.6;
+            word-break: keep-all;
+        }
+        .report-content h1 { font-size: 20pt; text-align: left; margin-bottom: 10px; color: #000; font-weight: 700; }
+        .report-content .section-header { font-size: 14pt; font-weight: 800 !important; color: #000 !important; margin-top: 30px; margin-bottom: 12px; border-bottom: none; }
+        .report-content .news-title { font-size: 12pt; font-weight: 800 !important; color: #000 !important; margin-top: 25px; margin-bottom: 10px; padding-left: 0; }
+        .report-content p, .report-content li { font-size: 10.5pt; color: #333; margin-bottom: 10px; line-height: 1.6; }
+        .report-content b, .report-content strong { font-weight: 700; color: #000; }
+        .report-content hr { border-top: 1px solid #000; border-bottom: none; margin: 20px 0; }
+        .report-content .footer-note { font-size: 9pt; color: #6b7280; text-align: left; margin-top: 40px; border-top: 1px solid #e5e7eb; padding-top: 10px; }
+
         @media print {
             body > *:not(#reportsModal) {
                 display: none !important;
@@ -165,20 +180,7 @@
                 overflow: visible !important;
             }
             @page { size: A4; margin: 20mm; }
-            #printArea {
-                font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
-                color: #1a1a1a;
-                line-height: 1.6;
-                word-break: keep-all;
-            }
-            #printArea h1 { font-size: 20pt; text-align: left; margin-bottom: 10px; color: #000; font-weight: 700; }
-            #printArea h2 { font-size: 14pt; margin-top: 30px; margin-bottom: 15px; color: #000; font-weight: 700; border-bottom: 1px solid #000; padding-bottom: 5px; }
-            #printArea .section-header { font-size: 13pt; font-weight: 700; color: #000; margin-top: 25px; margin-bottom: 10px; }
-            #printArea .news-title { font-size: 12pt; font-weight: 700; color: #111; margin-top: 20px; margin-bottom: 8px; padding-left: 10px; border-left: 4px solid #3b82f6; }
-            #printArea p, #printArea li { font-size: 10.5pt; color: #333; margin-bottom: 6px; line-height: 1.6; }
-            #printArea b, #printArea strong { font-weight: 700; color: #000; }
-            #printArea hr { border-top: 1px solid #000; border-bottom: none; margin: 20px 0; }
-            #printArea .footer-note { font-size: 9pt; color: #6b7280; text-align: left; margin-top: 40px; border-top: 1px solid #e5e7eb; padding-top: 10px; }
+            #printArea { padding: 0 !important; }
         }
     </style>
 </head>
@@ -538,7 +540,7 @@
             <!-- 리포트 상세 (인쇄 영역) -->
             <div id="reportDetailContainer" class="hidden flex-1 overflow-y-auto bg-white p-5 sm:p-8">
                 <!-- 프린트될 때 보일 내용 -->
-                <div id="printArea" class="prose prose-sm max-w-none text-gray-800"></div>
+                <div id="printArea" class="report-content"></div>
             </div>
         </div>
     </div>
@@ -1970,14 +1972,14 @@
 
                     // 2. 주요 경제 흐름
                     html += `<div class="section-header">1. 주요 경제 흐름</div>`;
-                    html += `<p style="margin-bottom: 30px;">${data.economic_trend || ''}</p>`;
+                    html += `<p>${data.economic_trend || ''}</p>`;
 
                     // 3. 업무 인사이트
                     html += `<div class="section-header">2. 업무 인사이트</div>`;
                     if (data.news_insights && Array.isArray(data.news_insights)) {
                         data.news_insights.forEach((item, idx) => {
-                            html += `<div class="news-title">${item.title}</div>`;
-                            html += `<p style="margin-bottom: 10px;"><b>주요내용:</b> ${item.summary}</p>`;
+                            html += `<div class="news-title"><b>${item.title}</b></div>`;
+                            html += `<p><b>주요내용:</b> ${item.summary}</p>`;
                             html += `<p style="margin-bottom: 25px;"><b>시사점:</b> ${item.implication}</p>`;
                         });
                     }
@@ -1994,7 +1996,7 @@
                         else if (trimmed.match(/^\d+\./)) html += `<div class="section-header">${trimmed}</div>`;
                         else if (trimmed.startsWith('* ') || /^\d+\.\s/.test(trimmed)) {
                             const cleanTitle = trimmed.replace(/^\*\s*/, '');
-                            html += `<div class="news-title">${cleanTitle}</div>`;
+                            html += `<div class="news-title"><b>${cleanTitle}</b></div>`;
                         } else if (trimmed.includes('--------------------------------------------------')) html += `<hr style="margin: 15px 0; border-top: 1px solid #000;">`;
                         else if (trimmed.includes('본 리포트는')) html += `<div class="footer-note">${trimmed}</div>`;
                         else {
