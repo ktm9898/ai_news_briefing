@@ -120,6 +120,9 @@ def run_pipeline():
         
         # 크롤링 대상: Top6에 속한 기사 원본들 + 각 주제별로 선별된 5건씩
         top6_source_news = [n for n in all_collected if n.get("링크") in top6_links]
+        for n in top6_source_news:
+            n["is_essential"] = True
+            
         selected_for_crawl = top6_source_news + final_selection_for_save
         
         # 중복 제거 (혹시 모를 경우대비 링크 기준)
