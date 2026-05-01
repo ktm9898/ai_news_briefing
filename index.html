@@ -166,17 +166,18 @@
             }
             @page { size: A4; margin: 20mm; }
             #printArea {
-                font-family: 'Pretendard', sans-serif;
+                font-family: 'Batang', 'Gungsuh', serif;
                 color: #000;
-                line-height: 1.6;
+                line-height: 1.8;
+                word-break: keep-all;
             }
-            #printArea h1 { font-size: 24pt; text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; }
-            #printArea h2 { font-size: 18pt; margin-top: 20px; border-bottom: 1px solid #ccc; padding-bottom: 5px; color: #000; }
-            #printArea h3 { font-size: 14pt; margin-top: 15px; color: #111; }
-            #printArea p, #printArea li { font-size: 11pt; color: #222; }
-            #printArea blockquote { border-left: 4px solid #aaa; padding-left: 10px; margin-left: 0; color: #444; font-weight: bold; }
+            #printArea h1 { font-size: 26pt; text-align: center; margin-bottom: 40px; border-bottom: 3px double #000; padding-bottom: 15px; font-weight: bold; }
+            #printArea h2 { font-size: 18pt; margin-top: 30px; border-left: 5px solid #000; padding-left: 15px; margin-bottom: 15px; color: #000; font-weight: bold; }
+            #printArea h3 { font-size: 14pt; margin-top: 20px; color: #000; font-weight: bold; text-decoration: underline; }
+            #printArea p, #printArea li { font-size: 11pt; color: #000; margin-bottom: 10px; }
+            #printArea blockquote { border: 1px solid #ddd; padding: 15px; margin: 20px 0; color: #333; background: #f9f9f9; font-style: italic; }
             #printArea a { color: #000; text-decoration: none; }
-            #printArea hr { border-top: 1px solid #ddd; border-bottom: none; margin: 20px 0; }
+            #printArea hr { border-top: 1px solid #000; border-bottom: none; margin: 30px 0; }
         }
     </style>
 </head>
@@ -1939,6 +1940,11 @@
             document.getElementById('reportsModalTitle').textContent = report['날짜'] + ' 리포트';
 
             let md = report['내용'] || '';
+            
+            // 1. 이모지 및 이모티콘 제거 (정규식)
+            md = md.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]/g, '');
+            
+            // 2. 마크다운 파싱
             md = md.replace(/^### (.*$)/gim, '<h3>$1</h3>');
             md = md.replace(/^## (.*$)/gim, '<h2>$1</h2>');
             md = md.replace(/^# (.*$)/gim, '<h1>$1</h1>');
@@ -1950,6 +1956,7 @@
             md = md.replace(/<\/ul>\n<ul>/gim, '\n');
             md = md.replace(/\n/gim, '<br>');
             md = md.replace(/<br>\-\-\-<br>/gim, '<hr>');
+            md = md.replace(/--------------------------------------------------/g, '<hr>');
 
             document.getElementById('printArea').innerHTML = md;
         }

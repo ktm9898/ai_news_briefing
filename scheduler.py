@@ -272,31 +272,30 @@ def run_pipeline():
         except Exception as e:
             logger.error(f"TTS 생성 중 오류 (무시): {e}")
 
-        # ── 7단계: 브리핑 대본 마크다운 시트 저장 (리포트용) ──
-        logger.info("STEP 7/7: 브리핑 리포트 시트 저장")
+        # ── 7단계: AI 인사이트 리포트 생성 및 시트 저장 ──
+        logger.info("STEP 7/7: AI 인사이트 리포트 생성 및 저장")
         try:
-            doc_title = f"AI News Briefing - {date_str}"
+            doc_title = f"AI News Insight Report - {date_str}"
             
-            # 마크다운 포맷으로 가독성 높은 문서 구성
-            doc_content = f"# 🗞️ AI 아침 뉴스 브리핑 ({date_str} {weekday_str})\n\n"
-            doc_content += f"> **날씨**: {weather_str}\n\n"
-            doc_content += "---\n\n"
-            doc_content += f"## 🎙️ 브리핑 대본\n\n{briefing_script}\n\n"
-            doc_content += "---\n\n"
-            doc_content += "## 📌 오늘의 핵심 주요뉴스 요약\n\n"
+            # 서울신용보증재단 전용 인사이트 리포트 생성
+            # Top6 뉴스와 일반 기사 중 일부를 합쳐서 분석 전달
+            analysis_pool = top6_news + save_list[:10] 
+            insight_content = analyzer.generate_insight_report(analysis_pool, date_str)
             
-            for idx, item in enumerate(top6_news, 1):
-                region = item.get("주제", "").replace("📌 주요뉴스(", "").replace(")", "")
-                doc_content += f"### {idx}. [{region}] {item.get('제목', '')}\n"
-                doc_content += f"- **출처**: {item.get('언론사', '')}\n"
-                doc_content += f"- **AI 요약**: {item.get('AI 요약', '')}\n"
-                doc_content += f"- [기사 원문 보기]({item.get('링크', '')})\n\n"
+            # 최종 리포트 구성 (헤더 추가)
+            doc_content = f"서울신용보증재단 일일 뉴스 인사이트 리포트\n"
+            doc_content += f"일자: {date_str} ({weekday_str})\n"
+            doc_content += f"날씨: {weather_str}\n"
+            doc_content += "--------------------------------------------------\n\n"
+            doc_content += insight_content
+            doc_content += "\n\n--------------------------------------------------\n"
+            doc_content += "본 리포트는 AI를 통해 주요 뉴스를 재단 업무 관점에서 분석한 결과입니다."
 
-            # 기존 Google Docs API 연동은 잦은 실패로 인해 제거하고 Sheets에 저장
+            # Sheets에 저장
             sheets.save_briefing_doc(doc_title, doc_content)
-            logger.info("리포트 시트 저장 성공")
+            logger.info("인사이트 리포트 시트 저장 성공")
         except Exception as e:
-            logger.error(f"리포트 시트 저장 중 오류 발생: {e}")
+            logger.error(f"리포트 생성 및 저장 중 오류 발생: {e}")
 
 
         result["status"] = "완료"
