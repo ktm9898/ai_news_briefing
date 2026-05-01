@@ -219,7 +219,10 @@ def run_pipeline():
                     "중요도": "상",
                 })
             
-            logger.info(f"Top6 본문 및 상세 요약 병합 완료 (original_link 기반): {len(top6_news)}건")
+            # 사용자 요청: 주요뉴스 표시 순서를 '해외' -> '국내' 순으로 정렬
+            top6_news.sort(key=lambda x: 0 if "해외" in x.get("주제", "") else 1)
+            
+            logger.info(f"Top6 본문 및 상세 요약 병합 완료 (original_link 기반, 해외 우선 정렬): {len(top6_news)}건")
 
         # 저장할 데이터 준비: Top6 기사는 일반 목록에서 제외하고, 주요뉴스로만 저장
         if selected_for_crawl:
