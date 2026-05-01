@@ -136,6 +136,48 @@
             opacity: 0;
             cursor: pointer;
         }
+
+        /* ── 인쇄용 (total_solution 형식 리포트 출력) ── */
+        @media print {
+            body > *:not(#reportsModal) {
+                display: none !important;
+            }
+            body {
+                background: white !important;
+            }
+            #reportsModal {
+                display: block !important;
+                position: static !important;
+                background: white !important;
+            }
+            #reportsModal .modal-content {
+                box-shadow: none !important;
+                max-height: none !important;
+                border-radius: 0 !important;
+                padding: 0 !important;
+            }
+            #reportsModal .sticky, .print-hide {
+                display: none !important;
+            }
+            #reportDetailContainer {
+                display: block !important;
+                padding: 0 !important;
+                overflow: visible !important;
+            }
+            @page { size: A4; margin: 20mm; }
+            #printArea {
+                font-family: 'Pretendard', sans-serif;
+                color: #000;
+                line-height: 1.6;
+            }
+            #printArea h1 { font-size: 24pt; text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+            #printArea h2 { font-size: 18pt; margin-top: 20px; border-bottom: 1px solid #ccc; padding-bottom: 5px; color: #000; }
+            #printArea h3 { font-size: 14pt; margin-top: 15px; color: #111; }
+            #printArea p, #printArea li { font-size: 11pt; color: #222; }
+            #printArea blockquote { border-left: 4px solid #aaa; padding-left: 10px; margin-left: 0; color: #444; font-weight: bold; }
+            #printArea a { color: #000; text-decoration: none; }
+            #printArea hr { border-top: 1px solid #ddd; border-bottom: none; margin: 20px 0; }
+        }
     </style>
 </head>
 
@@ -153,43 +195,54 @@
                     <p class="text-xs text-muted">소상공인 종합지원 AI 뉴스</p>
                 </div>
             </div>
-            <div class="hidden sm:flex items-center gap-2">
+            <div class="flex items-center gap-2">
                 <span id="lastUpdate" class="text-xs text-muted hidden sm:inline"></span>
+                <div class="hidden sm:flex items-center gap-2">
+                    <button onclick="triggerCollection()" id="collectBtn"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded-lg hover:bg-emerald-700 transition-colors"
+                        title="GitHub Actions를 통해 최신 뉴스를 수집합니다">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        수집
+                    </button>
+                    <button onclick="loadData()" id="refreshBtn"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        새로고침
+                    </button>
+                    <button onclick="toggleTTS()" id="ttsBtn"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 text-white text-xs font-semibold rounded-lg hover:bg-violet-700 transition-colors"
+                        title="AI 요약을 음성으로 읽어줍니다">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                        </svg>
+                        브리핑
+                    </button>
+                    <button onclick="openReportsModal()" id="reportBtn"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 text-white text-xs font-semibold rounded-lg hover:bg-gray-900 transition-colors">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        리포트
+                    </button>
+                </div>
+                <!-- 공통 설정 아이콘 -->
                 <button onclick="openSettingsModal()"
-                    class="inline-flex items-center gap-1 px-2.5 py-1.5 border border-border text-xs font-medium rounded-lg hover:bg-gray-50 transition-colors">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    class="w-8 h-8 ml-1 sm:ml-2 flex items-center justify-center text-gray-400 hover:text-gray-900 bg-gray-50 hover:bg-gray-200 rounded-full transition-colors"
+                    title="설정">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
-                    설정
-                </button>
-                <button onclick="triggerCollection()" id="collectBtn"
-                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded-lg hover:bg-emerald-700 transition-colors"
-                    title="GitHub Actions를 통해 최신 뉴스를 수집합니다">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    수집
-                </button>
-                <button onclick="toggleTTS()" id="ttsBtn"
-                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 text-white text-xs font-semibold rounded-lg hover:bg-violet-700 transition-colors"
-                    title="AI 요약을 음성으로 읽어줍니다">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                    </svg>
-                    브리핑
-                </button>
-                <button onclick="loadData()" id="refreshBtn"
-                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    새로고침
                 </button>
             </div>
         </div>
@@ -399,6 +452,14 @@
     <!-- ═══════════ 모바일 하단 네비게이션 ═══════════ -->
     <nav
         class="fixed bottom-0 w-full bg-white/90 backdrop-blur-md border-t border-border flex justify-around items-center px-1 py-1 pb-safe z-50 sm:hidden shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <button onclick="triggerCollection()" id="bottomCollectBtn"
+            class="flex flex-col items-center p-2 text-muted hover:text-emerald-600 transition-colors">
+            <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            <span class="text-[10px] font-bold">수집</span>
+        </button>
         <button onclick="forceReload()"
             class="flex flex-col items-center p-2 text-muted hover:text-blue-500 transition-colors">
             <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -406,14 +467,6 @@
                     d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
             <span class="text-[10px] font-bold">새로고침</span>
-        </button>
-        <button id="installAppBtn"
-            class="hidden flex flex-col items-center p-2 text-rose-600 hover:text-rose-700 transition-colors">
-            <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            <span class="text-[10px] font-bold">앱 설치</span>
         </button>
         <button onclick="toggleTTS()" id="bottomTtsBtn"
             class="flex flex-col items-center p-2 text-muted hover:text-violet-600 transition-colors">
@@ -423,23 +476,13 @@
             </svg>
             <span class="text-[10px] font-bold">브리핑</span>
         </button>
-        <button onclick="triggerCollection()" id="bottomCollectBtn"
-            class="flex flex-col items-center p-2 text-muted hover:text-emerald-600 transition-colors">
-            <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            <span class="text-[10px] font-bold">수집</span>
-        </button>
-        <button onclick="openSettingsModal()"
+        <button onclick="openReportsModal()" id="bottomReportBtn"
             class="flex flex-col items-center p-2 text-muted hover:text-gray-900 transition-colors">
             <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            <span class="text-[10px] font-bold">설정</span>
+            <span class="text-[10px] font-bold">리포트</span>
         </button>
     </nav>
 
@@ -462,6 +505,39 @@
             </div>
             <!-- 모달 내용 -->
             <div id="modalBody" class="px-5 py-4 space-y-4"></div>
+        </div>
+    </div>
+
+    <!-- ═══════════ 리포트 문서함 모달 ═══════════ -->
+    <div id="reportsModal"
+        class="modal-overlay fixed inset-0 bg-black/50 z-[100] hidden flex items-end sm:items-center justify-center print-hide"
+        onclick="if(event.target===this) closeReportsModal()">
+        <div class="modal-content bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-2xl max-h-[85vh] flex flex-col h-[85vh] sm:h-auto">
+            <div class="sticky top-0 bg-white border-b border-border px-5 py-3 flex items-center justify-between shrink-0">
+                <h2 class="text-sm font-bold" id="reportsModalTitle">📑 지난 리포트</h2>
+                <div class="flex items-center gap-2">
+                    <button id="printReportBtn" onclick="printReport()" class="hidden px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded hover:bg-blue-700 transition-colors">인쇄하기</button>
+                    <button id="backToListBtn" onclick="showReportList()" class="hidden px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-bold rounded hover:bg-gray-200 transition-colors">목록으로</button>
+                    <button onclick="closeReportsModal()"
+                        class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-100">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <!-- 리포트 목록 -->
+            <div id="reportListContainer" class="p-5 overflow-y-auto flex-1">
+                <div id="reportListLoading" class="text-center py-10 hidden">
+                    <p class="text-xs text-muted font-bold">리포트를 불러오는 중...</p>
+                </div>
+                <div id="reportListContent" class="space-y-2"></div>
+            </div>
+            <!-- 리포트 상세 (인쇄 영역) -->
+            <div id="reportDetailContainer" class="hidden flex-1 overflow-y-auto bg-white p-5 sm:p-8">
+                <!-- 프린트될 때 보일 내용 -->
+                <div id="printArea" class="prose prose-sm max-w-none text-gray-800"></div>
+            </div>
         </div>
     </div>
 
@@ -758,8 +834,13 @@
             hideError();
 
             try {
-                const resp = await fetch(fetchUrl);
-                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                let resp = await fetch(fetchUrl);
+                if (!resp.ok) {
+                    // 첫 실패 시 1.5초 대기 후 재시도 (Apps Script Cold Start 방지)
+                    await new Promise(r => setTimeout(r, 1500));
+                    resp = await fetch(fetchUrl);
+                    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                }
                 const data = await resp.json();
 
                 allNews = data.map(row => ({
@@ -972,7 +1053,7 @@
             ${(n.본문 && n.본문.trim()) ? `
             <div class="pt-2">
                 <p class="text-xs font-bold text-muted uppercase mb-2 tracking-wider">기사 전문</p>
-                <div class="text-sm text-gray-600 leading-relaxed max-h-[40vh] overflow-y-auto bg-gray-50 rounded-xl p-4 border border-border shadow-inner whitespace-pre-wrap">${n.본문.substring(0, 5000)}${n.본문.length > 5000 ? '...' : ''}</div>
+                <div class="text-sm text-gray-600 leading-relaxed bg-gray-50 rounded-xl p-4 border border-border shadow-inner whitespace-pre-wrap">${n.본문.substring(0, 5000)}${n.본문.length > 5000 ? '...' : ''}</div>
             </div>` : ''}
         `;
 
@@ -1783,6 +1864,98 @@
             deferredPrompt = null;
             const btn = document.getElementById('pwaInstallBtn');
             if (btn) btn.classList.add('hidden');
+        }
+
+        // ── 리포트 문서함 제어 ──
+        let allReports = [];
+        
+        function openReportsModal() {
+            document.getElementById('reportsModal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            showReportList();
+            loadReports();
+        }
+
+        function closeReportsModal() {
+            document.getElementById('reportsModal').classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        function showReportList() {
+            document.getElementById('reportListContainer').classList.remove('hidden');
+            document.getElementById('reportDetailContainer').classList.add('hidden');
+            document.getElementById('printReportBtn').classList.add('hidden');
+            document.getElementById('backToListBtn').classList.add('hidden');
+            document.getElementById('reportsModalTitle').textContent = '📑 지난 리포트';
+        }
+
+        async function loadReports() {
+            const container = document.getElementById('reportListContent');
+            const loading = document.getElementById('reportListLoading');
+            container.innerHTML = '';
+            loading.classList.remove('hidden');
+
+            try {
+                const url = SCRIPT_URL + '?tab=Briefing_Docs';
+                const resp = await fetch(url);
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                let data = await resp.json();
+                
+                if (Array.isArray(data)) {
+                    data.sort((a, b) => new Date(b['날짜'] || 0) - new Date(a['날짜'] || 0));
+                    allReports = data;
+                } else {
+                    allReports = [];
+                }
+
+                if (allReports.length === 0) {
+                    container.innerHTML = '<p class="text-sm text-center text-muted py-8">저장된 리포트가 없습니다.</p>';
+                } else {
+                    container.innerHTML = allReports.map((r, i) => `
+                        <div class="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 border border-border rounded-xl cursor-pointer transition-colors" onclick="viewReport(${i})">
+                            <div>
+                                <h3 class="text-sm font-bold text-gray-900">${r['제목']}</h3>
+                                <p class="text-xs text-muted mt-1">${r['날짜']}</p>
+                            </div>
+                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        </div>
+                    `).join('');
+                }
+            } catch (err) {
+                container.innerHTML = '<p class="text-sm text-center text-rose-500 py-8">리포트를 불러올 수 없습니다.</p>';
+            } finally {
+                loading.classList.add('hidden');
+            }
+        }
+
+        function viewReport(index) {
+            const report = allReports[index];
+            if (!report) return;
+
+            document.getElementById('reportListContainer').classList.add('hidden');
+            document.getElementById('reportDetailContainer').classList.remove('hidden');
+            document.getElementById('printReportBtn').classList.remove('hidden');
+            document.getElementById('backToListBtn').classList.remove('hidden');
+            document.getElementById('reportsModalTitle').textContent = report['날짜'] + ' 리포트';
+
+            let md = report['내용'] || '';
+            md = md.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+            md = md.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+            md = md.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+            md = md.replace(/^\> (.*$)/gim, '<blockquote>$1</blockquote>');
+            md = md.replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>');
+            md = md.replace(/\*(.*?)\*/gim, '<em>$1</em>');
+            md = md.replace(/\[(.*?)\]\((.*?)\)/gim, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+            md = md.replace(/^\- (.*$)/gim, '<ul><li>$1</li></ul>');
+            md = md.replace(/<\/ul>\n<ul>/gim, '\n');
+            md = md.replace(/\n/gim, '<br>');
+            md = md.replace(/<br>\-\-\-<br>/gim, '<hr>');
+
+            document.getElementById('printArea').innerHTML = md;
+        }
+
+        function printReport() {
+            window.print();
         }
     </script>
 

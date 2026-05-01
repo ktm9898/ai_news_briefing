@@ -280,3 +280,34 @@ class SheetsManager:
         if not updated:
             ws.append_row([today, script])
 
+    def save_briefing_doc(self, title: str, content: str):
+        """
+        AI 브리핑 리포트(문서용)를 Briefing_Docs 탭에 저장.
+        """
+        tab_name = "Briefing_Docs"
+        existing = [ws.title for ws in self.spreadsheet.worksheets()]
+
+        if tab_name not in existing:
+            ws = self.spreadsheet.add_worksheet(title=tab_name, rows=50, cols=3)
+            ws.append_row(["날짜", "제목", "내용"])
+        else:
+            ws = self.spreadsheet.worksheet(tab_name)
+
+        from datetime import datetime, timedelta, timezone
+        KST = timezone(timedelta(hours=9))
+        today = datetime.now(KST).strftime("%Y-%m-%d")
+
+        # 기존 데이터 확인 → 오늘 날짜 행이 있으면 업데이트, 없으면 추가
+        data = ws.get_all_values()
+        updated = False
+        for idx, row in enumerate(data):
+            if idx == 0:
+                continue
+            if row[0] == today:
+                ws.update_cell(idx + 1, 2, title)
+                ws.update_cell(idx + 1, 3, content)
+                updated = True
+                break
+
+        if not updated:
+            ws.append_row([today, title, content])
