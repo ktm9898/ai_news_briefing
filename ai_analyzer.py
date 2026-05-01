@@ -344,12 +344,10 @@ class AIAnalyzer:
 
     def generate_insight_report(self, news_list: list[dict], date_str: str = "") -> str:
         """
-        서울신용보증재단 업무와 연계된 인사이트 리포트를 생성합니다.
-        - 주요 뉴스 중 3~5개를 선별하여 인사이트 도출
-        - 이모지 배제, 전문적인 어조 사용
+        서울신용보증재단 업무와 연계된 인사이트 리포트를 생성합니다. (JSON 구조화 방식)
         """
         if not news_list:
-            return "분석할 뉴스가 없습니다."
+            return ""
 
         news_texts = []
         for idx, news in enumerate(news_list):
@@ -360,31 +358,37 @@ class AIAnalyzer:
             )
 
         prompt = f"""당신은 공공기관(서울신용보증재단)의 전문 정책 분석가입니다.
-오늘의 주요 뉴스들을 분석하여 재단 업무(소상공인 지원, 보증, 컨설팅 등)에 도움이 될 간결하고 전문적인 리포트를 작성해 주세요.
+오늘의 주요 뉴스들을 분석하여 재단 업무(소상공인 지원, 보증, 컨설팅 등)에 도움이 될 핵심 데이터를 추출해 주세요.
 
 [분석 대상 뉴스 목록]
 {chr(10).join(news_texts)}
 
-[작성 가이드라인]
-1. **전문성 및 절제된 표현**: 공공기관 내부 보고서 수준의 정중한 문체를 사용하되, 불필요한 수식어나 이모지는 절대 사용하지 마십시오.
-2. **구조**:
-   - 1. 주요 경제 흐름 분석: 전체 뉴스에서 도출되는 핵심적인 거시 경제 상황을 **500자 이내**로 요약하여 기술하십시오.
-   - 2. 업무 인사이트 분석: 가장 중요한 뉴스 3~5개를 선정하여 아래 형식으로 기술하십시오.
-     * 번호. 뉴스 제목
-     * 주요내용 요약: 해당 뉴스의 핵심 사실 관계 요약. (지나치게 길지 않게)
-     * 업무 시사점: 재단 업무(보증 심사, 컨설팅, 정책 제언 등)와의 구체적 연계 방안.
+[작업 지침]
+1. 뉴스 전체를 관통하는 핵심적인 거시 경제 상황을 'economic_trend'에 500자 이내로 요약하십시오.
+2. 재단 업무와 연계성이 높은 가장 중요한 뉴스 3~5개를 선정하여 'news_insights' 리스트에 담으십시오.
+3. 각 인사이트 항목은 'title'(뉴스 제목), 'summary'(주요내용 요약), 'implication'(재단 업무 시사점)으로 구성하십시오.
+4. 모든 내용은 정중하고 전문적인 문체로 작성하며, 이모지는 절대 사용하지 마십시오.
 
-3. **주의사항**:
-   - 마크다운 기호(#, ##, ### 등)를 절대 사용하지 마십시오. 
-   - 텍스트 전체에 과도한 강조(**)를 사용하지 말고, 항목 구분용도로만 최소한으로 사용하십시오.
-   - [향후 대응 방향] 섹션은 작성하지 마십시오.
-
-응답은 반드시 한국어로 작성하십시오.
+반드시 아래 JSON 형식을 엄수하여 응답하십시오:
+{{
+  "economic_trend": "내용",
+  "news_insights": [
+    {{
+      "title": "뉴스 제목",
+      "summary": "핵심 요약 내용",
+      "implication": "재단 업무 시사점 및 대응 방안"
+    }}
+  ]
+}}
 """
 
         try:
-            response = self.model.generate_content(prompt)
+            # JSON 모드 활성화
+            response = self.model.generate_content(
+                prompt,
+                generation_config={"response_mime_type": "application/json"}
+            )
             return response.text.strip()
         except Exception as e:
-            logger.error(f"인사이트 리포트 생성 실패: {e}")
-            return "인사이트 리포트 생성 중 오류가 발생했습니다."
+            logger.error(f"인사이트 리포트 JSON 생성 실패: {e}")
+            return ""

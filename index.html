@@ -1940,43 +1940,58 @@
             document.getElementById('backToListBtn').classList.remove('hidden');
             document.getElementById('reportsModalTitle').textContent = report['날짜'] + ' 리포트';
 
-            let md = report['내용'] || '';
-            
-            // 1. 이모지 및 이모티콘 제거
-            md = md.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]/g, '');
-            
-            // 2. 마크다운 기호 확실히 제거 (# 등)
-            md = md.replace(/#+/g, '');
-            
-            // 3. 커스텀 렌더링 (total_solution 스타일)
-            const lines = md.split('\n');
+            const rawContent = report['내용'] || '';
             let html = '';
-            
-            lines.forEach((line, i) => {
-                const trimmed = line.trim();
-                if (!trimmed) return;
 
-                if (i === 0) {
-                    html += `<h1>${trimmed}</h1>`;
-                } else if (trimmed.startsWith('일자:')) {
-                    html += `<p style="text-align:left; color:#666; font-size: 10pt; margin-bottom: 20px;">${trimmed}</p>`;
-                } else if (trimmed.match(/^\d+\./)) {
-                    // 1. 2. 등의 섹션 제목
-                    html += `<div class="section-header">${trimmed}</div>`;
-                } else if (trimmed.startsWith('* ') || /^\d+\.\s/.test(trimmed)) {
-                    // 뉴스 제목
-                    const cleanTitle = trimmed.replace(/^\*\s*/, '');
-                    html += `<div class="news-title">${cleanTitle}</div>`;
-                } else if (trimmed.includes('--------------------------------------------------')) {
-                    html += `<hr style="margin: 15px 0;">`;
-                } else if (trimmed.includes('본 리포트는')) {
-                    html += `<div class="footer-note">${trimmed}</div>`;
+            try {
+                // JSON 형식인지 확인
+                if (rawContent.trim().startsWith('{')) {
+                    const data = JSON.parse(rawContent);
+                    
+                    // 1. 헤더 (좌측 정렬)
+                    html += `<h1>서울신용보증재단 인사이트 리포트</h1>`;
+                    html += `<p style="color:#666; font-size: 10pt; margin-bottom: 20px;">일자: ${report['날짜']}</p>`;
+                    html += `<hr style="margin: 20px 0; border: 0; border-top: 1px solid #000;">`;
+
+                    // 2. 주요 경제 흐름 분석
+                    html += `<div class="section-header">1. 주요 경제 흐름 분석</div>`;
+                    html += `<p style="margin-bottom: 30px;">${data.economic_trend || ''}</p>`;
+
+                    // 3. 업무 인사이트 분석
+                    html += `<div class="section-header">2. 업무 인사이트 분석</div>`;
+                    if (data.news_insights && Array.isArray(data.news_insights)) {
+                        data.news_insights.forEach((item, idx) => {
+                            html += `<div class="news-title">${idx + 1}. ${item.title}</div>`;
+                            html += `<p style="margin-bottom: 10px;"><b>주요내용 요약:</b> ${item.summary}</p>`;
+                            html += `<p style="margin-bottom: 25px;"><b>업무 시사점:</b> ${item.implication}</p>`;
+                        });
+                    }
+
+                    html += `<div class="footer-note">본 리포트는 서울신용보증재단의 정책 결정 및 업무 지원을 위해 AI를 통해 분석된 결과입니다.</div>`;
                 } else {
-                    // **강조**를 HTML <b>로 변환
-                    let content = trimmed.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
-                    html += `<p>${content}</p>`;
+                    // 기존 텍스트 방식 (하위 호환성)
+                    const lines = rawContent.split('\n');
+                    lines.forEach((line, i) => {
+                        const trimmed = line.trim();
+                        if (!trimmed) return;
+                        if (i === 0) html += `<h1>${trimmed}</h1>`;
+                        else if (trimmed.startsWith('일자:')) html += `<p style="color:#666; font-size: 10pt; margin-bottom: 20px;">${trimmed}</p>`;
+                        else if (trimmed.match(/^\d+\./)) html += `<div class="section-header">${trimmed}</div>`;
+                        else if (trimmed.startsWith('* ') || /^\d+\.\s/.test(trimmed)) {
+                            const cleanTitle = trimmed.replace(/^\*\s*/, '');
+                            html += `<div class="news-title">${cleanTitle}</div>`;
+                        } else if (trimmed.includes('--------------------------------------------------')) html += `<hr style="margin: 15px 0; border-top: 1px solid #000;">`;
+                        else if (trimmed.includes('본 리포트는')) html += `<div class="footer-note">${trimmed}</div>`;
+                        else {
+                            let content = trimmed.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+                            html += `<p>${content}</p>`;
+                        }
+                    });
                 }
-            });
+            } catch (e) {
+                console.error("JSON 파싱 에러:", e);
+                html = `<p>리포트 데이터를 불러오는 중 오류가 발생했습니다.</p><pre>${rawContent}</pre>`;
+            }
 
             document.getElementById('printArea').innerHTML = html;
         }
