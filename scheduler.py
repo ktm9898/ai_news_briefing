@@ -282,7 +282,7 @@ def run_pipeline():
             analysis_pool = top6_news + save_list[:10] 
             insight_content = analyzer.generate_insight_report(analysis_pool, date_str)
             
-            # 최종 리포트 구성 (헤더 간소화)
+            # 최종 리포트 구성 (total_solution 스타일: 좌측 정렬)
             doc_content = f"서울신용보증재단 인사이트 리포트\n"
             doc_content += f"일자: {date_str} ({weekday_str})\n"
             doc_content += "--------------------------------------------------\n\n"

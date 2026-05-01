@@ -168,16 +168,17 @@
             #printArea {
                 font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
                 color: #1a1a1a;
-                line-height: 1.7;
+                line-height: 1.6;
                 word-break: keep-all;
             }
-            #printArea h1 { font-size: 28pt; text-align: center; margin-bottom: 40px; color: #000; font-weight: 800; border-bottom: 2px solid #000; padding-bottom: 15px; }
-            #printArea h2 { font-size: 16pt; margin-top: 30px; margin-bottom: 15px; color: #000; font-weight: 700; display: inline-block; border-bottom: 2px solid #000; }
-            #printArea .badge-title { display: inline-block; background: #f3f4f6; color: #374151; padding: 4px 12px; border-radius: 6px; font-size: 11pt; font-weight: 700; margin-top: 15px; margin-bottom: 8px; border: 1px solid #e5e7eb; }
-            #printArea .news-title { font-size: 14pt; font-weight: 700; color: #111; margin-top: 25px; margin-bottom: 10px; padding-left: 10px; border-left: 4px solid #3b82f6; }
-            #printArea p, #printArea li { font-size: 11pt; color: #333; margin-bottom: 8px; }
-            #printArea hr { border-top: 1px solid #e5e7eb; border-bottom: none; margin: 30px 0; }
-            #printArea .footer-note { font-size: 9pt; color: #6b7280; text-align: center; margin-top: 50px; }
+            #printArea h1 { font-size: 20pt; text-align: left; margin-bottom: 10px; color: #000; font-weight: 700; }
+            #printArea h2 { font-size: 14pt; margin-top: 30px; margin-bottom: 15px; color: #000; font-weight: 700; border-bottom: 1px solid #000; padding-bottom: 5px; }
+            #printArea .section-header { font-size: 13pt; font-weight: 700; color: #000; margin-top: 25px; margin-bottom: 10px; }
+            #printArea .news-title { font-size: 12pt; font-weight: 700; color: #111; margin-top: 20px; margin-bottom: 8px; padding-left: 10px; border-left: 4px solid #3b82f6; }
+            #printArea p, #printArea li { font-size: 10.5pt; color: #333; margin-bottom: 6px; line-height: 1.6; }
+            #printArea b, #printArea strong { font-weight: 700; color: #000; }
+            #printArea hr { border-top: 1px solid #000; border-bottom: none; margin: 20px 0; }
+            #printArea .footer-note { font-size: 9pt; color: #6b7280; text-align: left; margin-top: 40px; border-top: 1px solid #e5e7eb; padding-top: 10px; }
         }
     </style>
 </head>
@@ -1948,7 +1949,6 @@
             md = md.replace(/#+/g, '');
             
             // 3. 커스텀 렌더링 (total_solution 스타일)
-            // 첫 줄은 대문자 제목으로
             const lines = md.split('\n');
             let html = '';
             
@@ -1959,20 +1959,22 @@
                 if (i === 0) {
                     html += `<h1>${trimmed}</h1>`;
                 } else if (trimmed.startsWith('일자:')) {
-                    html += `<p style="text-align:right; color:#666;">${trimmed}</p>`;
-                } else if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
-                    // [섹션 제목] -> 배지 스타일
-                    html += `<div class="badge-title">${trimmed}</div>`;
-                } else if (trimmed.startsWith('* ') || /^\d+\./.test(trimmed)) {
-                    // 뉴스 제목 (숫자 번호 포함)
+                    html += `<p style="text-align:left; color:#666; font-size: 10pt; margin-bottom: 20px;">${trimmed}</p>`;
+                } else if (trimmed.match(/^\d+\./)) {
+                    // 1. 2. 등의 섹션 제목
+                    html += `<div class="section-header">${trimmed}</div>`;
+                } else if (trimmed.startsWith('* ') || /^\d+\.\s/.test(trimmed)) {
+                    // 뉴스 제목
                     const cleanTitle = trimmed.replace(/^\*\s*/, '');
                     html += `<div class="news-title">${cleanTitle}</div>`;
                 } else if (trimmed.includes('--------------------------------------------------')) {
-                    html += `<hr>`;
+                    html += `<hr style="margin: 15px 0;">`;
                 } else if (trimmed.includes('본 리포트는')) {
                     html += `<div class="footer-note">${trimmed}</div>`;
                 } else {
-                    html += `<p>${trimmed}</p>`;
+                    // **강조**를 HTML <b>로 변환
+                    let content = trimmed.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+                    html += `<p>${content}</p>`;
                 }
             });
 
