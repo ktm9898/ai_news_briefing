@@ -832,6 +832,8 @@
             let fetchUrl = SCRIPT_URL;
             const params = [];
             if (dateVal) params.push(`date=${encodeURIComponent(dateVal)}`);
+            // 캐시 방지를 위해 타임스탬프 추가
+            params.push(`t=${Date.now()}`);
             if (params.length > 0) fetchUrl += '?' + params.join('&');
 
             showLoading(true);
@@ -1158,8 +1160,8 @@
             try {
                 // 키워드와 주제별 기준을 동시에 로드
                 const [settingsResp, criteriaResp] = await Promise.all([
-                    fetch(url + '?tab=Settings'),
-                    fetch(url + '?tab=Topic_Settings')
+                    fetch(url + '?tab=Settings&t=' + Date.now()),
+                    fetch(url + '?tab=Topic_Settings&t=' + Date.now())
                 ]);
 
                 let sData = await settingsResp.json();
@@ -1594,7 +1596,7 @@
 
             document.getElementById('ttsStatus').textContent = '대본 불러오는 중...';
 
-            fetch(SCRIPT_URL + '?tab=Briefing')
+            fetch(SCRIPT_URL + '?tab=Briefing&t=' + Date.now())
                 .then(r => r.json())
                 .then(data => {
                     if (data && data.length > 0) {
@@ -1914,7 +1916,7 @@
             loading.classList.remove('hidden');
 
             try {
-                const url = SCRIPT_URL + '?tab=Briefing_Docs';
+                const url = SCRIPT_URL + '?tab=Briefing_Docs&t=' + Date.now();
                 const resp = await fetch(url);
                 if (!resp.ok) throw new Error('HTTP ' + resp.status);
                 let data = await resp.json();
