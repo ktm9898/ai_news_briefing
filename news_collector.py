@@ -224,19 +224,19 @@ class NewsCollector:
             logger.error(f"네이버 API 호출 실패 (키워드: {keyword}): {e}")
             return []
 
-    def extract_article_body(self, url: str, timeout: int = 5) -> str:
+    def extract_article_body(self, url: str, timeout: int = 5) -> tuple[str, str]:
         """
-        newspaper4k를 사용하여 뉴스 원문 본문 추출.
-        실패 시 빈 문자열 반환.
+        newspaper4k를 사용하여 뉴스 원문 본문 및 제목 추출.
+        실패 시 ("", "") 반환.
         """
         try:
             article = Article(url, language="ko", request_timeout=timeout)
             article.download()
             article.parse()
-            return article.text or ""
+            return (article.title or ""), (article.text or "")
         except Exception as e:
             logger.warning(f"본문 추출 실패 ({url}): {e}")
-            return ""
+            return "", ""
 
     def collect_by_keyword(
         self,
@@ -389,18 +389,23 @@ class NewsCollector:
         logger.info(f"선별된 {len(news_list)}건 기사 본문 크롤링 시작 (병렬 {max_workers})")
 
         def _crawl_one(news: dict) -> dict:
-            title = news.get("제목", "")[:20]
+            title_preview = news.get("제목", "")[:20]
             link = news.get("링크", "")
             naver_link = news.get("네이버링크", "")
-            body = self.extract_article_body(link)
+            extracted_title, body = self.extract_article_body(link)
             
             if not body:
-                logger.warning(f"본문 추출 실패: {title} ({link})")
+                logger.warning(f"본문 추출 실패: {title_preview} ({link})")
             
             if not body:
-                logger.warning(f"본문 추출 최종 실패: {title} ({link})")
+                logger.warning(f"본문 추출 최종 실패: {title_preview} ({link})")
 
             news["본문 전문"] = body[:40000] if body else "(본문 추출 실패)"
+            
+            # 원문 페이지에서 추출한 전체 제목이 있으면 업데이트 (말줄임표 방지)
+            if extracted_title:
+                news["제목"] = extracted_title
+                
             return news
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:

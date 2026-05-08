@@ -215,7 +215,7 @@ def run_pipeline():
                     "날짜": today_str,
                     "주제": f"📌 주요뉴스({region_label})",
                     "언론사": item.get("언론사", ""),
-                    "제목": item.get("제목", ""),
+                    "제목": article_info.get("제목", item.get("제목", "")) if article_info else item.get("제목", ""),
                     "네이버 요약": item.get("네이버 요약", ""),
                     "본문 전문": final_body,
                     "링크": item.get("링크", ""), # 시트에는 접근 가능한 링크 저장
