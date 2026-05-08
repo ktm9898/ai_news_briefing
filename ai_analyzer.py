@@ -120,6 +120,7 @@ class AIAnalyzer:
 {criteria_text}
 
 반드시 아래 JSON 형식으로만 응답:
+(주의: JSON 문자열 내부에 큰따옴표(")를 사용할 경우 반드시 백슬래시(\\)로 이스케이프 처리하세요.)
 {{
   "importance": [{{"index": 1, "importance": "상"}}, ...],
   "top6": [
@@ -146,7 +147,17 @@ class AIAnalyzer:
                     )
                 )
                 text = response.text.strip()
-                result = json.loads(text)
+                # 간혹 모델이 마크다운 코드 블록을 포함할 경우 제거
+                if text.startswith("```json"): text = text[7:]
+                elif text.startswith("```"): text = text[3:]
+                if text.endswith("```"): text = text[:-3]
+                text = text.strip()
+                
+                try:
+                    result = json.loads(text)
+                except json.JSONDecodeError as e:
+                    logger.error(f"JSON 파싱 에러 (Stage 1). 일부 텍스트: {text[:200]} ... {text[-200:]}")
+                    raise e
 
                 # 1. 중요도 반영
                 importance_list = result.get("importance", [])
@@ -257,6 +268,7 @@ class AIAnalyzer:
 4. 모든 내용은 정중하고 전문적인 문체로 작성하며, 이모지는 절대 사용하지 마십시오.
 
 반드시 아래 JSON 형식을 엄수하여 응답하십시오:
+(주의: JSON 문자열 내부에 큰따옴표(")를 사용할 경우 반드시 백슬래시(\\)로 이스케이프 처리하세요.)
 {{
   "summaries": [
     {{"index": 1, "summary": "요약 내용..."}},
@@ -289,7 +301,19 @@ class AIAnalyzer:
                     )
                 )
                 import json
-                result = json.loads(response.text.strip())
+                
+                text = response.text.strip()
+                # 간혹 모델이 마크다운 코드 블록을 포함할 경우 제거
+                if text.startswith("```json"): text = text[7:]
+                elif text.startswith("```"): text = text[3:]
+                if text.endswith("```"): text = text[:-3]
+                text = text.strip()
+                
+                try:
+                    result = json.loads(text)
+                except json.JSONDecodeError as e:
+                    logger.error(f"JSON 파싱 에러 (Stage 2). 일부 텍스트: {text[:200]} ... {text[-200:]}")
+                    raise e
                 
                 # 요약 매칭 및 누락 방지
                 summary_map = {item.get('index'): item.get('summary') for item in result.get('summaries', [])}
