@@ -10,6 +10,8 @@ scheduler.py - APScheduler 기반 자동 실행 스케줄러
 """
 
 import logging
+import requests
+import re
 from datetime import datetime, timedelta, timezone
 
 # KST (UTC+9) 타임존 정의
@@ -17,7 +19,7 @@ KST = timezone(timedelta(hours=9))
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from config import SCHEDULE_HOUR, SCHEDULE_MINUTE, DEFAULT_CRITERIA, MAX_DISPLAY_PER_TOPIC, GWS_ENABLED
+from config import SCHEDULE_HOUR, SCHEDULE_MINUTE, DEFAULT_CRITERIA, MAX_DISPLAY_PER_TOPIC, GWS_ENABLED, GAS_SCRIPT_URL
 from sheets_manager import SheetsManager
 from news_collector import NewsCollector
 from ai_analyzer import AIAnalyzer
@@ -29,286 +31,258 @@ logger = logging.getLogger(__name__)
 
 
 def run_pipeline():
-    """2단계 AI 파이프라인 실행"""
+    """2단계 AI 파이프라인 실행 (사용자별 루프)"""
     start_time = datetime.now(KST)
     logger.info(f"=== 파이프라인 실행 시작: {start_time.strftime('%Y-%m-%d %H:%M:%S')} (KST) ===")
 
     result = {
         "status": "실행 중",
-        "collected": 0,
-        "screened": 0,
-        "crawled": 0,
-        "analyzed": 0,
-        "error": None,
+        "processed_users": [],
+        "errors": {},
     }
 
     try:
         sheets = SheetsManager()
+        # 전체 설정 읽기
+        all_settings = sheets.get_settings()
+        # 활성화된 이메일 추출
+        active_emails = set()
+        for s in all_settings:
+            if str(s.get("활성화", "")).upper() == "TRUE":
+                email = str(s.get("이메일", "")).strip()
+                if not email:
+                    email = "ktm9898@gmail.com" # default fallback
+                active_emails.add(email)
+
+        if not active_emails:
+            logger.info("활성화된 사용자가 없습니다.")
+            result["status"] = "완료 (활성 사용자 없음)"
+            return result
+
+        logger.info(f"발견된 활성 사용자 이메일 목록: {list(active_emails)}")
+
         collector = NewsCollector(sheets)
         analyzer = AIAnalyzer()
 
-        # ── 1단계: 네이버 API 검색 (크롤링 없음, 빠름) ──
-        logger.info("STEP 1/5: 네이버 API 뉴스 검색 (크롤링 없음)")
-        all_collected = collector.collect_all()
-        result["collected"] = len(all_collected)
+        for email in active_emails:
+            logger.info(f"--- 사용자 브리핑 생성 시작: {email} ---")
+            try:
+                # ── 1단계: 네이버 API 검색 (크롤링 없음, 빠름) ──
+                logger.info(f"[{email}] STEP 1/7: 네이버 API 뉴스 검색")
+                all_collected = collector.collect_all(email)
 
-        if not all_collected:
-            logger.info("수집된 새로운 뉴스가 없습니다.")
-            result["status"] = "완료 (수집 없음)"
-            return result
+                if not all_collected:
+                    logger.info(f"[{email}] 수집된 새로운 뉴스가 없습니다.")
+                    continue
 
-        elapsed_1 = (datetime.now(KST) - start_time).total_seconds()
-        logger.info(f"STEP 1 완료: {len(all_collected)}건 ({elapsed_1:.1f}초)")
+                # ── 2단계: AI 1차 선별 (중요도 판별 + Top6 선정) ──
+                logger.info(f"[{email}] STEP 2/7: AI 중요도 선별 + 주요뉴스 Top6 선정")
+                topic_criteria = sheets.get_all_topic_criteria(email)
+                user_active_settings = sheets.get_active_settings(email)
+                exclusion_keywords = list(set(s.get("키워드", "") for s in user_active_settings if s.get("키워드")))
 
-        # ── 2단계: AI 1차 선별 (중요도 판별 + Top6 선정) ──
-        logger.info("STEP 2/6: AI 1차 중요도 선별 + 주요뉴스 Top6 선정")
-        topic_criteria = sheets.get_all_topic_criteria()
-        active_settings = sheets.get_active_settings()
-        exclusion_keywords = list(set(s.get("키워드", "") for s in active_settings if s.get("키워드")))
-        
-        all_collected, top6_results = analyzer.screen_importance(
-            all_collected, 
-            topic_criteria, 
-            exclusion_keywords=exclusion_keywords
-        )
+                all_collected, top6_results = analyzer.screen_importance(
+                    all_collected,
+                    topic_criteria,
+                    exclusion_keywords=exclusion_keywords
+                )
 
+                # Top6 주요뉴스 링크 추출
+                top6_links = set()
+                if top6_results:
+                    for item in top6_results:
+                        link = item.get("original_link") or item.get("링크", "")
+                        if link:
+                            top6_links.add(link)
+                    logger.info(f"[{email}] Top6 주요뉴스 {len(top6_links)}건 선정 완료")
 
-        # Top6 주요뉴스 링크 추출 (크롤링 대상 식별 및 중복 방지용)
-        top6_links = set()
-        if top6_results:
-            for item in top6_results:
-                link = item.get("original_link") or item.get("링크", "")
-                if link:
-                    top6_links.add(link)
-            logger.info(f"Top6 주요뉴스 {len(top6_links)}건 선정 완료")
+                # 주제별 그룹화 및 중요도 순 정렬
+                topic_groups = {}
+                for news in all_collected:
+                    t = news.get("주제", "기타")
+                    if t == "경제헤드라인":
+                        continue
+                    topic_groups.setdefault(t, []).append(news)
 
-        # 주제별 그룹화 및 중요도 순 정렬
-        topic_groups = {}
-        for news in all_collected:
-            t = news.get("주제", "기타")
-            # '경제헤드라인'은 Top 6 선정을 위한 내부 풀이므로 일반 주제 목록에 포함하지 않음
-            if t == "경제헤드라인":
-                continue
-            topic_groups.setdefault(t, []).append(news)
+                importance_map = {"상": 0, "중": 1, "하": 2, "": 3}
+                final_selection_for_save = []
 
-        importance_map = {"상": 0, "중": 1, "하": 2, "": 3}
-        final_selection_for_save = [] # 최종적으로 시트에 저장될 기사들 (Top6 제외)
+                for topic, group in topic_groups.items():
+                    selected = [item for item in group if item.get("ai_selected") is True]
 
-        for topic, group in topic_groups.items():
-            # [수정] AI가 직접 선정한 기사(ai_selected)를 최우선으로 선택
-            # ai_analyzer.py에서 AI가 선정한 기사에 "ai_selected": True 플래그를 붙여줌
-            selected = [item for item in group if item.get("ai_selected") is True]
-            
-            # [폴백] 만약 AI가 해당 주제에서 아무것도 선정하지 않았다면 (또는 API 요류 등), 
-            # 기존처럼 중요도 순 상위 N건을 선택
-            if not selected:
-                sorted_group = sorted(group, key=lambda x: importance_map.get(x.get("중요도", ""), 3))
-                # Top6 중복 제거
-                filtered_group = [item for item in sorted_group 
-                                  if item.get("링크", "") not in top6_links]
-                selected = filtered_group[:MAX_DISPLAY_PER_TOPIC]
-                logger.info(f"[{topic}] AI 직접 선정 결과 없음 -> 중요도 순 {len(selected)}건 자동 선정")
-            else:
-                # Top6 중복 제거 (AI가 중복으로 뽑았을 경우 대비)
-                selected = [item for item in selected if item.get("링크", "") not in top6_links]
+                    if not selected:
+                        sorted_group = sorted(group, key=lambda x: importance_map.get(x.get("중요도", ""), 3))
+                        filtered_group = [item for item in sorted_group if item.get("링크", "") not in top6_links]
+                        selected = filtered_group[:MAX_DISPLAY_PER_TOPIC]
+                        logger.info(f"[{email}][{topic}] AI 직접 선정 결과 없음 -> 중요도 순 {len(selected)}건 자동 선정")
+                    else:
+                        selected = [item for item in selected if item.get("링크", "") not in top6_links]
 
-            final_selection_for_save.extend(selected)
+                    final_selection_for_save.extend(selected)
 
-            
-        # ── 3단계: 기사 본문 크롤링 (Top6 + 선별된 5건씩) ──
-        logger.info("STEP 3/6: 주요 기사 본문 크롤링")
-        
-        # 크롤링 대상: Top6에 속한 기사 원본들 + 각 주제별로 선별된 5건씩
-        top6_source_news = [n for n in all_collected if n.get("링크") in top6_links]
-        selected_for_crawl = top6_source_news + final_selection_for_save
-        
-        # 모든 선정 뉴스(16~17건)를 대본 필수 포함 대상으로 설정
-        for n in selected_for_crawl:
-            n["is_essential"] = True
-        
-        # 중복 제거 (혹시 모를 경우대비 링크 기준)
-        seen_links = set()
-        unique_crawl_list = []
-        for n in selected_for_crawl:
-            link = n.get("링크")
-            if link not in seen_links:
-                unique_crawl_list.append(n)
-                seen_links.add(link)
+                # ── 3단계: 기사 본문 크롤링 ──
+                logger.info(f"[{email}] STEP 3/7: 주요 기사 본문 크롤링")
+                top6_source_news = [n for n in all_collected if n.get("링크") in top6_links]
+                selected_for_crawl = top6_source_news + final_selection_for_save
 
-        if not unique_crawl_list:
-            logger.info("분석/저장할 기사가 없습니다.")
-            result["status"] = "완료 (기사 없음)"
-            return result
-        
-        # 본문 크롤링 수행
-        selected_for_crawl = collector.crawl_selected_articles(unique_crawl_list)
-        result["crawled"] = len(selected_for_crawl)
+                for n in selected_for_crawl:
+                    n["is_essential"] = True
 
-        elapsed_3 = (datetime.now(KST) - start_time).total_seconds()
-        logger.info(f"STEP 3 완료: {len(selected_for_crawl)}건 크롤링 완료 ({elapsed_3:.1f}초)")
+                seen_links = set()
+                unique_crawl_list = []
+                for n in selected_for_crawl:
+                    link = n.get("링크")
+                    if link not in seen_links:
+                        unique_crawl_list.append(n)
+                        seen_links.add(link)
 
-        # ── 4단계: AI 통합 분석 (요약 + 대본 + 인사이트 리포트) ──
-        logger.info("STEP 4/6: AI 통합 분석 수행 (요약+대본+인사이트)")
-        
-        # 날짜, 요일, 날씨 정보 준비
-        days = ["월요일", "화요일", "수요일", "목요일", "금요일", "토요일", "일요일"]
-        now = datetime.now(KST)
-        weekday_str = days[now.weekday()]
-        date_str = now.strftime("%Y년 %m월 %d일")
-        weather_str = get_weather_info()
-        
-        context_info = f"현재 일시: {date_str} {weekday_str}\n날씨 정보: {weather_str}"
-        logger.info(f"브리핑 컨텍스트 주입: {context_info}")
+                if not unique_crawl_list:
+                    logger.info(f"[{email}] 분석할 기사가 없습니다.")
+                    continue
 
-        # 모든 분석 작업을 단 한 번의 호출로 수행
-        analysis_result = analyzer.analyze_all_in_one(selected_for_crawl, context_info=context_info)
-        
-        # 결과 배분
-        briefing_script = analysis_result.get("briefing_script", "")
-        insight_data = analysis_result.get("insight_report")
-        
-        # 요약 데이터는 selected_for_crawl에 이미 반영되어 있음 (ai_analyzer 내부에서 처리)
-        result["analyzed"] = len(selected_for_crawl)
+                selected_for_crawl = collector.crawl_selected_articles(unique_crawl_list)
 
-        elapsed_4 = (datetime.now(KST) - start_time).total_seconds()
-        logger.info(f"STEP 4 완료: 통합 AI 분석 완료 ({elapsed_4:.1f}초)")
+                # ── 4단계: AI 통합 분석 (요약 + 대본 + 인사이트 리포트) ──
+                logger.info(f"[{email}] STEP 4/7: AI 통합 분석 수행")
+                days = ["월요일", "화요일", "수요일", "목요일", "금요일", "토요일", "일요일"]
+                now = datetime.now(KST)
+                weekday_str = days[now.weekday()]
+                date_str = now.strftime("%Y년 %m월 %d일")
+                weather_str = get_weather_info()
 
-        # 최종 저장용 주요뉴스 리스트 생성 (Top6)
-        top6_news = []
-        if top6_results:
-            today_str = datetime.now(KST).strftime("%Y-%m-%d")
-            
-            # ── 5.1단계: 크롤링/요약 결과 통합 룩업 테이블 생성 ──
-            # 링크가 리다이렉션되거나 네이버 링크로 변경되는 상황을 완벽하게 대응하기 위해 
-            # 수집 초기 시점의 고유 링크인 'original_link'를 키로 사용
-            crawled_lookup = {}
-            for n in selected_for_crawl:
-                # original_link가 있으면 최우선 키로 사용, 없으면 현재 링크 사용
-                key = n.get("original_link") or n.get("링크")
-                if key:
-                    crawled_lookup[key] = n
-                
-                # 폴백용: 네이버링크도 키로 등록 (혹시 모를 경우대비)
-                if n.get("네이버링크"):
-                    crawled_lookup.setdefault(n["네이버링크"], n)
+                context_info = f"현재 일시: {date_str} {weekday_str}\n날씨 정보: {weather_str}"
+                analysis_result = analyzer.analyze_all_in_one(selected_for_crawl, context_info=context_info)
 
-            # ── 5.2단계: top6_results에 크롤링된 데이터 병합 ──
-            for item in top6_results:
-                # Top6 아이템의 고유 링크(original_link)로 검색
-                link = item.get("original_link") or item.get("링크", "")
-                article_info = crawled_lookup.get(link)
-                
-                # 만약 못 찾았다면, 전체 리스트에서 필드 매칭 시도 (최후의 수단)
-                if not article_info:
+                briefing_script = analysis_result.get("briefing_script", "")
+                insight_data = analysis_result.get("insight_report")
+
+                # ── 5단계: 시트 저장 ──
+                logger.info(f"[{email}] STEP 5/7: 데이터 시트 저장")
+                top6_news = []
+                if top6_results:
+                    today_str = datetime.now(KST).strftime("%Y-%m-%d")
+                    crawled_lookup = {}
                     for n in selected_for_crawl:
-                        if n.get("original_link") == link or n.get("링크") == link or n.get("네이버링크") == link:
-                            article_info = n
-                            break
+                        key = n.get("original_link") or n.get("링크")
+                        if key:
+                            crawled_lookup[key] = n
+                        if n.get("네이버링크"):
+                            crawled_lookup.setdefault(n["네이버링크"], n)
 
-                region_label = "국내" if item.get("region") == "국내" else "해외"
+                    for item in top6_results:
+                        link = item.get("original_link") or item.get("링크", "")
+                        article_info = crawled_lookup.get(link)
+                        if not article_info:
+                            for n in selected_for_crawl:
+                                if n.get("original_link") == link or n.get("링크") == link or n.get("네이버링크") == link:
+                                    article_info = n
+                                    break
+
+                        region_label = "국내" if item.get("region") == "국내" else "해외"
+                        final_body = article_info.get("본문 전문", "") if article_info else item.get("본문 전문", "")
+                        final_summary = (article_info.get("AI 요약") if article_info else "") or item.get("summary", "")
+
+                        top6_news.append({
+                            "날짜": today_str,
+                            "주제": f"📌 주요뉴스({region_label})",
+                            "언론사": item.get("언론사", ""),
+                            "제목": article_info.get("제목", item.get("제목", "")) if article_info else item.get("제목", ""),
+                            "네이버 요약": item.get("네이버 요약", ""),
+                            "본문 전문": final_body,
+                            "링크": item.get("링크", ""),
+                            "AI 요약": final_summary,
+                            "중요도": "상",
+                        })
+
+                    top6_news.sort(key=lambda x: 0 if "해외" in x.get("주제", "") else 1)
+
+                import copy
+                topic_counts = {}
+                regular_news = []
+
+                for n in selected_for_crawl:
+                    link = n.get("링크", "")
+                    topic = n.get("주제", "기타")
+                    if link in top6_links:
+                        continue
+                    if topic in ["경제헤드라인", "기타(세부관심사)", "기타"]:
+                        continue
+                    if topic_counts.get(topic, 0) >= MAX_DISPLAY_PER_TOPIC:
+                        continue
+                    regular_news.append(n)
+                    topic_counts[topic] = topic_counts.get(topic, 0) + 1
+
+                save_list = copy.deepcopy(regular_news)
+                for news in save_list:
+                    news.pop("네이버링크", None)
+
+                final_save = top6_news + save_list
+                sheets.append_news(final_save, email)
+
+                sheets.save_briefing(briefing_script, email)
+
+                # ── 6단계: TTS 음성 생성 (이메일별 파일 구분) ──
+                logger.info(f"[{email}] STEP 6/7: TTS 음성 생성")
+                email_suffix = re.sub(r'[^a-zA-Z0-9]', '_', email)
+                try:
+                    from tts_engine import TTSEngine
+                    tts = TTSEngine()
+                    audio_path = tts.generate(briefing_script, prefix=f"briefing_{email_suffix}", suffix=email_suffix)
+                    if audio_path:
+                        logger.info(f"[{email}] 음성 파일 생성 완료: {audio_path}")
+                except Exception as e:
+                    logger.error(f"[{email}] TTS 생성 오류 (무시): {e}")
+
+                # ── 7단계: AI 인사이트 리포트 저장 및 이메일 전송 ──
+                logger.info(f"[{email}] STEP 7/7: 인사이트 리포트 저장 및 이메일 발송")
+                today_str = datetime.now(KST).strftime("%Y-%m-%d")
+                doc_title = f"AI News Insight Report - {date_str}"
                 
-                # 본문 및 2차 상세 요약 가져오기
-                final_body = article_info.get("본문 전문", "") if article_info else item.get("본문 전문", "")
-                final_summary = (article_info.get("AI 요약") if article_info else "") or item.get("summary", "")
-
-                top6_news.append({
-                    "날짜": today_str,
-                    "주제": f"📌 주요뉴스({region_label})",
-                    "언론사": item.get("언론사", ""),
-                    "제목": article_info.get("제목", item.get("제목", "")) if article_info else item.get("제목", ""),
-                    "네이버 요약": item.get("네이버 요약", ""),
-                    "본문 전문": final_body,
-                    "링크": item.get("링크", ""), # 시트에는 접근 가능한 링크 저장
-                    "AI 요약": final_summary,
-                    "중요도": "상",
-                })
-            
-            # 사용자 요청: 주요뉴스 표시 순서를 '해외' -> '국내' 순으로 정렬
-            top6_news.sort(key=lambda x: 0 if "해외" in x.get("주제", "") else 1)
-            
-            logger.info(f"Top6 본문 및 상세 요약 병합 완료 (original_link 기반, 해외 우선 정렬): {len(top6_news)}건")
-
-        # 저장할 데이터 준비: Top6 기사는 일반 목록에서 제외하고, 주요뉴스로만 저장
-        if selected_for_crawl:
-            import copy
-            
-            # 1. 선정된 Top6 기사 제외 및 내부 마커(경제헤드라인, 기타...) 기사 제외
-            # 2. 주제별로 최대 건수(MAX_PER_TOPIC) 재조정 (AI 선별 후 과다 발생 방지)
-            topic_counts = {}
-            regular_news = []
-            
-            for n in selected_for_crawl:
-                link = n.get("링크", "")
-                topic = n.get("주제", "기타")
-                
-                # 주요뉴스(Top6)에 포함된 건은 이미 별도로 처리함
-                if link in top6_links:
-                    continue
-                    
-                # 내부 분류용 마커 기사들은 주요뉴스 탈락 시 폐기함
-                if topic in ["경제헤드라인", "기타(세부관심사)", "기타"]:
-                    continue
-                
-                # 주제별 최대 건수(MAX_DISPLAY_PER_TOPIC) 초과 시 제외
-                if topic_counts.get(topic, 0) >= MAX_DISPLAY_PER_TOPIC:
-                    continue
-                
-                regular_news.append(n)
-                topic_counts[topic] = topic_counts.get(topic, 0) + 1
-            
-            # 네이버링크 필드 제거 (시트에 불필요)
-            save_list = copy.deepcopy(regular_news)
-            for news in save_list:
-                news.pop("네이버링크", None)
-            
-            # Top6 주요뉴스 + 일반 기사를 합쳐서 저장 (Top6가 먼저)
-            final_save = top6_news + save_list
-            sheets.append_news(final_save)
-            logger.info(f"최종 저장: Top6 {len(top6_news)}건 + 일반 {len(save_list)}건 = 총 {len(final_save)}건")
-
-            # 브리핑 대본 저장
-            sheets.save_briefing(briefing_script)
-            logger.info("브리핑 대본 저장 완료")
-        else:
-            logger.info("저장할 뉴스가 없습니다.")
-
-        # ── 6단계: TTS 음성 생성 ──
-        logger.info("STEP 6/6: TTS 음성 파일 생성")
-        try:
-            from tts_engine import TTSEngine
-            tts = TTSEngine()
-            audio_path = tts.generate(briefing_script)
-            if audio_path:
-                logger.info(f"음성 파일 생성 완료: {audio_path}")
-            else:
-                logger.warning("음성 파일 생성 실패 (대본은 저장됨)")
-        except Exception as e:
-            logger.error(f"TTS 생성 중 오류 (무시): {e}")
-
-        # ── 7단계: AI 인사이트 리포트 구성 및 시트 저장 ──
-        logger.info("STEP 7/7: AI 인사이트 리포트 구성 및 저장")
-        try:
-            doc_title = f"AI News Insight Report - {date_str}"
-            
-            # STEP 4에서 미리 생성해둔 insight_data 사용 (추가 AI 호출 없음)
-            if insight_data:
-                # 렌더링은 index.html에서 JSON을 파싱하므로, 여기서는 JSON 형태 그대로 저장하거나 
-                # 또는 예비용으로 마크다운 텍스트를 만들어 저장 (현재는 JSON 문자열로 저장)
                 import json
-                doc_content = json.dumps(insight_data, ensure_ascii=False)
+                if insight_data:
+                    doc_content = json.dumps(insight_data, ensure_ascii=False)
+                    sheets.save_briefing_doc(doc_title, doc_content, email)
                 
-                # Sheets에 저장
-                sheets.save_briefing_doc(doc_title, doc_content)
-                logger.info("인사이트 리포트 시트 저장 성공 (통합 데이터 사용)")
-            else:
-                logger.warning("인사이트 데이터가 없어 리포트를 생성하지 못했습니다.")
-        except Exception as e:
-            logger.error(f"리포트 구성 및 저장 중 오류 발생: {e}")
+                # GAS 이메일 발송 API 호출
+                if GAS_SCRIPT_URL:
+                    try:
+                        slim_news_list = []
+                        for n in final_save:
+                            slim_news_list.append({
+                                "주제": n.get("주제", ""),
+                                "언론사": n.get("언론사", ""),
+                                "제목": n.get("제목", ""),
+                                "링크": n.get("링크", ""),
+                                "AI요약": n.get("AI 요약", ""),
+                                "중요도": n.get("중요도", "")
+                            })
 
+                        payload = {
+                            "action": "sendDailyReport",
+                            "email": email,
+                            "date": today_str,
+                            "briefingScript": briefing_script,
+                            "insightReport": insight_data,
+                            "newsList": slim_news_list
+                        }
+                        resp = requests.post(GAS_SCRIPT_URL, json=payload, timeout=20)
+                        if resp.status_code == 200:
+                            logger.info(f"[{email}] 데일리 이메일 발송 API 호출 성공: {resp.text}")
+                        else:
+                            logger.error(f"[{email}] 데일리 이메일 발송 API 호출 실패: {resp.status_code} - {resp.text}")
+                    except Exception as e:
+                        logger.error(f"[{email}] 데일리 이메일 발송 중 오류: {e}")
+
+                result["processed_users"].append(email)
+                logger.info(f"--- 사용자 브리핑 생성 완료: {email} ---")
+
+            except Exception as user_err:
+                logger.error(f"[{email}] 처리 중 오류 발생: {user_err}", exc_info=True)
+                result["errors"][email] = str(user_err)
 
         result["status"] = "완료"
         elapsed = (datetime.now(KST) - start_time).total_seconds()
-        logger.info(f"=== 파이프라인 완료 ({elapsed:.1f}초) ===")
+        logger.info(f"=== 파이프라인 전체 완료 ({elapsed:.1f}초) ===")
 
     except Exception as e:
         result["status"] = "오류"
@@ -316,6 +290,7 @@ def run_pipeline():
         logger.error(f"파이프라인 실행 중 오류: {e}", exc_info=True)
 
     return result
+
 
 
 class NewsScheduler:

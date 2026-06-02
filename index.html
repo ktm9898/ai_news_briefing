@@ -201,6 +201,15 @@
             </div>
             <div class="flex items-center gap-2">
                 <span id="lastUpdate" class="text-xs text-muted hidden sm:inline"></span>
+                <!-- 이메일 표시 배지 -->
+                <div id="userEmailBadge" class="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700">
+                    <span id="userEmailText" class="truncate max-w-[150px]"></span>
+                    <button onclick="handleLogout()" class="text-slate-400 hover:text-rose-500 transition-colors" title="로그아웃">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                        </svg>
+                    </button>
+                </div>
                 <div class="hidden sm:flex items-center gap-2">
                     <button onclick="triggerCollection()" id="collectBtn"
                         class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded-lg hover:bg-emerald-700 transition-colors"
@@ -490,6 +499,33 @@
         </button>
     </nav>
 
+    <!-- ═══════════ 이메일 로그인 모달 (최초 진입용) ═══════════ -->
+    <div id="loginModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[200] flex items-center justify-center hidden">
+        <div class="bg-white/90 backdrop-blur-xl border border-white/20 p-8 rounded-3xl shadow-2xl max-w-md w-full mx-4 transition-all duration-300 transform scale-100">
+            <div class="flex flex-col items-center text-center space-y-4">
+                <div class="w-16 h-16 bg-blue-500/10 text-blue-600 rounded-2xl flex items-center justify-center mb-2 animate-pulse">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-bold tracking-tight text-slate-900">AI 뉴스 비서 로그인</h2>
+                <p class="text-sm text-slate-500">본인의 이메일 주소를 입력해 주세요.<br>사용자 별 맞춤 브리핑 및 일일 보고서가 발송됩니다.</p>
+                <div class="w-full space-y-3 pt-4">
+                    <input type="email" id="loginEmailInput" placeholder="example@email.com" 
+                        class="w-full text-base border border-slate-200 rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-accent focus:border-accent outline-none bg-white/70"
+                        onkeydown="if(event.key === 'Enter') submitLogin()">
+                    <button onclick="submitLogin()" 
+                        class="w-full py-4 bg-accent hover:bg-blue-700 text-white font-bold rounded-xl transition-all duration-200 shadow-lg shadow-accent/20 flex items-center justify-center gap-2">
+                        <span>시작하기</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ═══════════ 상세 모달 ═══════════ -->
     <div id="detailModal"
         class="modal-overlay fixed inset-0 bg-black/50 z-[100] hidden flex items-end sm:items-center justify-center"
@@ -610,8 +646,13 @@
                         </div>
                     </div>
 
-                    <!-- 시스템 관리 -->
+                    <!-- 계정 정보 및 시스템 관리 -->
                     <div class="mt-6 pt-4 border-t border-gray-100">
+                        <label class="text-[10px] font-bold text-muted uppercase block mb-2">계정 정보</label>
+                        <div class="flex items-center justify-between px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl mb-4 text-xs">
+                            <span id="settingsUserEmail" class="font-bold text-gray-700"></span>
+                            <button onclick="handleLogout(); closeSettingsModal();" class="text-rose-600 hover:text-rose-700 font-bold transition-colors">로그아웃</button>
+                        </div>
                         <label class="text-[10px] font-bold text-muted uppercase block mb-3">시스템 관리</label>
                         <div class="flex flex-col gap-2">
                             <button id="pwaInstallBtn" onclick="installPWA()"
@@ -668,6 +709,71 @@
             if (el1 && el1.offsetParent !== null) return el1.value;
             if (el2 && el2.offsetParent !== null) return el2.value;
             return el1 ? el1.value : '';
+        }
+
+        // ── 사용자 이메일 로그인/로그아웃 제어 ──
+        function checkUserLogin() {
+            const email = localStorage.getItem('user_email');
+            if (!email) {
+                document.getElementById('loginModal').classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            } else {
+                document.getElementById('loginModal').classList.add('hidden');
+                document.body.style.overflow = '';
+                
+                // 이메일 표시 배지 업데이트
+                const badge = document.getElementById('userEmailBadge');
+                const textEl = document.getElementById('userEmailText');
+                if (badge && textEl) {
+                    textEl.textContent = email;
+                    badge.classList.remove('hidden');
+                }
+                
+                // 설정 창 내 이메일 정보 업데이트
+                const settingsEmailEl = document.getElementById('settingsUserEmail');
+                if (settingsEmailEl) {
+                    settingsEmailEl.textContent = email;
+                }
+
+                // 데이터 로드 시작
+                loadData();
+            }
+        }
+
+        function submitLogin() {
+            const emailInput = document.getElementById('loginEmailInput');
+            const email = emailInput.value.trim();
+            if (!email) {
+                alert('이메일 주소를 입력해주세요.');
+                return;
+            }
+            // 이메일 형식 정규식 검사
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                alert('올바른 이메일 주소 형식이 아닙니다.');
+                return;
+            }
+            localStorage.setItem('user_email', email);
+            checkUserLogin();
+        }
+
+        function handleLogout() {
+            if (confirm('로그아웃 하시겠습니까?\n로그아웃하면 설정된 키워드와 뉴스를 보려면 다시 로그인해야 합니다.')) {
+                localStorage.removeItem('user_email');
+                // 기존 캐시도 지워서 타인 노출 방지
+                localStorage.removeItem(CACHE_KEY);
+                
+                // UI 초기화
+                const badge = document.getElementById('userEmailBadge');
+                if (badge) badge.classList.add('hidden');
+                
+                // 모달 닫기 및 로그인 창 노출
+                document.getElementById('loginModal').classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+                
+                // 입력필드 비우기
+                document.getElementById('loginEmailInput').value = '';
+            }
         }
 
         // 초기 수집 여부 (최초 실행 시 1회만 되도록)
@@ -797,8 +903,8 @@
             if (document.getElementById('filterDateMobile')) document.getElementById('filterDateMobile').value = targetDate;
             updateDayOfWeek();
 
-            // 데이터 로드 시작
-            loadData();
+            // 이메일 로그인 여부 확인 및 데이터 로드 시작
+            checkUserLogin();
         });
 
         // ── 요일 및 날짜 텍스트 업데이트 ──
@@ -825,12 +931,19 @@
 
         // ── 데이터 로드 ──
         async function loadData() {
+            const email = localStorage.getItem('user_email');
+            if (!email) {
+                checkUserLogin();
+                return;
+            }
+
             const dateVal = getVisibleValue('filterDateDesktop', 'filterDateMobile');
             const topicVal = getVisibleValue('filterCategoryDesktop', 'filterCategoryMobile');
 
-            // 날짜 필터를 GAS에 파라미터로 전달 (과거 날짜 조회 가능)
+            // 날짜 및 이메일 필터를 GAS에 파라미터로 전달
             let fetchUrl = SCRIPT_URL;
             const params = [];
+            params.push(`email=${encodeURIComponent(email)}`);
             if (dateVal) params.push(`date=${encodeURIComponent(dateVal)}`);
             // 캐시 방지를 위해 타임스탬프 추가
             params.push(`t=${Date.now()}`);
@@ -1154,14 +1267,16 @@
         }
 
         async function loadSettings() {
+            const email = localStorage.getItem('user_email');
+            if (!email) return;
             const url = SCRIPT_URL;
             showSettingsLoading(true);
 
             try {
                 // 키워드와 주제별 기준을 동시에 로드
                 const [settingsResp, criteriaResp] = await Promise.all([
-                    fetch(url + '?tab=Settings&t=' + Date.now()),
-                    fetch(url + '?tab=Topic_Settings&t=' + Date.now())
+                    fetch(url + '?tab=Settings&email=' + encodeURIComponent(email) + '&t=' + Date.now()),
+                    fetch(url + '?tab=Topic_Settings&email=' + encodeURIComponent(email) + '&t=' + Date.now())
                 ]);
 
                 let sData = await settingsResp.json();
@@ -1264,7 +1379,7 @@
                 await fetch(SCRIPT_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify({ action: 'updateTopicCriteria', topic: name, criteria: '' }),
+                    body: JSON.stringify({ action: 'updateTopicCriteria', topic: name, criteria: '', email: localStorage.getItem('user_email') }),
                 });
                 document.getElementById('newTopicInput').value = '';
                 await loadSettings();
@@ -1291,7 +1406,7 @@
                 await fetch(SCRIPT_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify({ action: 'updateTopicCriteria', topic, criteria }),
+                    body: JSON.stringify({ action: 'updateTopicCriteria', topic, criteria, email: localStorage.getItem('user_email') }),
                 });
                 topicCriteriaMap[topic] = criteria;
                 btn.textContent = '✅ 저장됨';
@@ -1315,7 +1430,7 @@
                 await fetch(SCRIPT_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify({ action: 'addKeyword', topic, keyword }),
+                    body: JSON.stringify({ action: 'addKeyword', topic, keyword, email: localStorage.getItem('user_email') }),
                 });
                 document.getElementById('newKeyword').value = '';
                 await loadSettings();
@@ -1331,7 +1446,7 @@
                 await fetch(SCRIPT_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify({ action: 'deleteKeyword', topic, keyword }),
+                    body: JSON.stringify({ action: 'deleteKeyword', topic, keyword, email: localStorage.getItem('user_email') }),
                 });
                 await loadSettings();
                 onSettingsTopicChange();
@@ -1345,7 +1460,7 @@
                 await fetch(SCRIPT_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify({ action: 'toggleKeyword', topic, keyword }),
+                    body: JSON.stringify({ action: 'toggleKeyword', topic, keyword, email: localStorage.getItem('user_email') }),
                 });
                 await loadSettings();
                 onSettingsTopicChange();
@@ -1430,15 +1545,18 @@
             const dateVal = getVisibleValue('filterDateDesktop', 'filterDateMobile');
             const now = new Date();
             const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+            
+            const email = localStorage.getItem('user_email');
+            const emailSuffix = email ? email.replace(/[^a-zA-Z0-9]/g, '_') : 'default';
 
             let audioUrl;
             if (dateVal === today) {
                 // 오늘 날짜면 최신 파일 시도
-                audioUrl = `audio/briefing_latest.mp3?t=${Date.now()}`;
+                audioUrl = `audio/briefing_latest_${emailSuffix}.mp3?t=${Date.now()}`;
             } else {
                 // 특정 날짜면 해당 날짜 파일 시도 (YYYYMMDD 형식)
                 const yyyymmdd = dateVal.replace(/-/g, '');
-                audioUrl = `audio/briefing_${yyyymmdd}.mp3`;
+                audioUrl = `audio/briefing_${emailSuffix}_${yyyymmdd}.mp3`;
             }
 
             briefingAudio = new Audio(audioUrl);
@@ -1596,7 +1714,10 @@
 
             document.getElementById('ttsStatus').textContent = '대본 불러오는 중...';
 
-            fetch(SCRIPT_URL + '?tab=Briefing&t=' + Date.now())
+            const email = localStorage.getItem('user_email');
+            const emailParam = email ? '&email=' + encodeURIComponent(email) : '';
+
+            fetch(SCRIPT_URL + '?tab=Briefing' + emailParam + '&t=' + Date.now())
                 .then(r => r.json())
                 .then(data => {
                     if (data && data.length > 0) {
@@ -1910,13 +2031,15 @@
         }
 
         async function loadReports() {
+            const email = localStorage.getItem('user_email');
+            if (!email) return;
             const container = document.getElementById('reportListContent');
             const loading = document.getElementById('reportListLoading');
             container.innerHTML = '';
             loading.classList.remove('hidden');
 
             try {
-                const url = SCRIPT_URL + '?tab=Briefing_Docs&t=' + Date.now();
+                const url = SCRIPT_URL + '?tab=Briefing_Docs&email=' + encodeURIComponent(email) + '&t=' + Date.now();
                 const resp = await fetch(url);
                 if (!resp.ok) throw new Error('HTTP ' + resp.status);
                 let data = await resp.json();

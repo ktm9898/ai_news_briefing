@@ -38,9 +38,10 @@ class TTSEngine:
         today = datetime.now(self.KST).strftime("%Y%m%d")
         return AUDIO_DIR / f"{prefix}_{today}.mp3"
 
-    def _get_latest_path(self) -> Path:
+    def _get_latest_path(self, suffix: str = "") -> Path:
         """최신 오디오 파일 고정 경로"""
-        return AUDIO_DIR / "briefing_latest.mp3"
+        filename = f"briefing_latest_{suffix}.mp3" if suffix else "briefing_latest.mp3"
+        return AUDIO_DIR / filename
 
     # ── 1순위: Google Cloud TTS ──
 
@@ -208,15 +209,16 @@ class TTSEngine:
 
     # ── 메인 생성 메서드 ──
 
-    def generate(self, text: str, prefix: str = "briefing") -> Path | None:
+    def generate(self, text: str, prefix: str = "briefing", suffix: str = "") -> Path | None:
         """
         텍스트를 음성 파일(mp3)로 변환.
         Google Cloud TTS → edge-tts → gTTS 순서로 시도.
-        생성 후 briefing_latest.mp3로 복사 + 오래된 파일 정리.
+        생성 후 briefing_latest_{suffix}.mp3로 복사 + 오래된 파일 정리.
 
         Args:
             text: 변환할 텍스트 (브리핑 대본)
             prefix: 파일명 접두사
+            suffix: 사용자 구분용 접미사
 
         Returns:
             생성된 오디오 파일 경로 또는 None
@@ -232,7 +234,7 @@ class TTSEngine:
 
         # 1차: Google Cloud TTS
         if self._generate_google_tts(text, output_path):
-            self._copy_to_latest(output_path)
+            self._copy_to_latest(output_path, suffix)
             self._cleanup_old_files(prefix)
             return output_path
 
@@ -247,14 +249,14 @@ class TTSEngine:
             loop.close()
 
         if success:
-            self._copy_to_latest(output_path)
+            self._copy_to_latest(output_path, suffix)
             self._cleanup_old_files(prefix)
             return output_path
 
         # 3차: gTTS
         logger.info("edge-tts 실패, gTTS로 폴백 시도...")
         if self._generate_gtts(text, output_path):
-            self._copy_to_latest(output_path)
+            self._copy_to_latest(output_path, suffix)
             self._cleanup_old_files(prefix)
             return output_path
 
@@ -263,9 +265,9 @@ class TTSEngine:
 
     # ── 유틸리티 ──
 
-    def _copy_to_latest(self, source_path: Path):
-        """최신 파일을 briefing_latest.mp3로 복사"""
-        latest = self._get_latest_path()
+    def _copy_to_latest(self, source_path: Path, suffix: str = "") -> None:
+        """최신 파일을 briefing_latest_{suffix}.mp3로 복사"""
+        latest = self._get_latest_path(suffix)
         try:
             shutil.copy2(source_path, latest)
             logger.info(f"최신 파일 복사: {source_path.name} → {latest.name}")

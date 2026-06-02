@@ -69,12 +69,12 @@ GWS_DRIVE_FOLDER_ID = _get_config("GWS_DRIVE_FOLDER_ID", "10943q-ULxI18680w_82UV
 
 
 # Settings 탭 헤더
-SETTINGS_HEADERS = ["주제", "키워드", "활성화"]
-TOPIC_SETTINGS_HEADERS = ["Topic", "Criteria"]
+SETTINGS_HEADERS = ["이메일", "주제", "키워드", "활성화"]
+TOPIC_SETTINGS_HEADERS = ["이메일", "Topic", "Criteria"]
 
 # News_Data 탭 헤더
 NEWS_DATA_HEADERS = [
-    "날짜", "주제", "언론사", "제목", "네이버 요약",
+    "이메일", "날짜", "주제", "언론사", "제목", "네이버 요약",
     "본문 전문", "링크", "AI 요약", "중요도"
 ]
 
@@ -86,3 +86,6 @@ AUDIO_RETENTION_DAYS = int(_get_config("AUDIO_RETENTION_DAYS", "10"))
 # ── 스케줄러 ───────────────────────────────────────────
 SCHEDULE_HOUR = 7   # 매일 실행 시각 (시)
 SCHEDULE_MINUTE = 0  # 매일 실행 시각 (분)
+
+# ── 구글 앱스 스크립트 웹앱 주소 ──
+GAS_SCRIPT_URL = _get_config("GAS_SCRIPT_URL", "https://script.google.com/macros/s/AKfycbwtgUJ0QfKHPn6HLt2U41OLUog92RFVaKPyLLVwQodq03LMm50qm4dwQk798D3ovFcaHw/exec")
