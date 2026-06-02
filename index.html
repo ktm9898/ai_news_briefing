@@ -624,7 +624,7 @@
                     </div>
 
                     <div id="topicDetailSection" class="animate-in fade-in duration-300 space-y-5">
-                        <div>
+                        <div id="criteriaSection">
                             <div class="flex items-center justify-between mb-1.5">
                                 <label class="text-xs font-bold text-muted uppercase">2. AI 중요도 판단 기준</label>
                                 <button onclick="saveTopicCriteria()"
@@ -635,7 +635,7 @@
                                 class="w-full text-sm border border-border rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-accent outline-none resize-none bg-white"></textarea>
                         </div>
 
-                        <div>
+                        <div id="keywordInputSection">
                             <label class="text-xs font-bold text-muted uppercase block mb-1.5">3. 키워드 목록</label>
                             <div class="flex flex-col sm:flex-row gap-2 mb-3">
                                 <input type="text" id="newKeyword" placeholder="새 키워드 입력 (예: 소상공인 대출)"
@@ -1310,7 +1310,7 @@
         function populateSettingsTopicSelect() {
             const topicsFromSettings = [...new Set(allSettings.map(s => s['주제'] || s['카테고리']))];
             const topicsFromCriteria = Object.keys(topicCriteriaMap);
-            const allTopics = [...new Set([...topicsFromSettings, ...topicsFromCriteria])].filter(Boolean).sort();
+            const allTopics = [...new Set([...topicsFromSettings, ...topicsFromCriteria, "주요뉴스"])].filter(Boolean).sort();
 
             const sel = document.getElementById('settingsTopicSelect');
             const current = sel.value;
@@ -1329,10 +1329,21 @@
         function onSettingsTopicChange() {
             const topic = document.getElementById('settingsTopicSelect').value;
             const deleteBtn = document.getElementById('deleteTopicBtn');
-            if (topic) {
+            const criteriaSection = document.getElementById('criteriaSection');
+            const keywordInputSection = document.getElementById('keywordInputSection');
+
+            if (topic && topic !== "주요뉴스") {
                 if (deleteBtn) deleteBtn.classList.remove('hidden');
             } else {
                 if (deleteBtn) deleteBtn.classList.add('hidden');
+            }
+
+            if (topic === "주요뉴스") {
+                if (criteriaSection) criteriaSection.classList.add('hidden');
+                if (keywordInputSection) keywordInputSection.classList.add('hidden');
+            } else {
+                if (criteriaSection) criteriaSection.classList.remove('hidden');
+                if (keywordInputSection) keywordInputSection.classList.remove('hidden');
             }
 
             if (!topic) {
@@ -1351,6 +1362,32 @@
 
         function renderFilteredKeywords(topic) {
             const container = document.getElementById('settingsList');
+
+            if (topic === "주요뉴스") {
+                // 주요뉴스는 개별 키워드가 없고 활성화/비활성화 전체 설정만 존재
+                const setting = allSettings.find(s => (s['주제'] || s['카테고리']) === "주요뉴스" || (s['주제'] || s['카테고리']) === "경제헤드라인");
+                const isActive = setting ? String(setting['활성화'] || '').toUpperCase() === 'TRUE' : true; // 기본값은 활성화
+
+                container.innerHTML = `
+                    <div class="p-4 rounded-xl border border-dashed border-border bg-gray-50 flex flex-col gap-3">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h4 class="text-sm font-bold text-gray-800">📌 주요뉴스(경제헤드라인) 수집</h4>
+                                <p class="text-xs text-muted mt-0.5">매일 아침 주요 경제 헤드라인 6개 뉴스를 자동으로 선별합니다.</p>
+                            </div>
+                            <button onclick="toggleMainNews(${isActive})" class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isActive ? 'bg-accent' : 'bg-gray-200'}">
+                                <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isActive ? 'translate-x-5' : 'translate-x-0'}"></span>
+                            </button>
+                        </div>
+                        <div class="text-xs text-muted-foreground flex items-start gap-1.5 bg-white p-2.5 rounded-lg border border-border">
+                            <span class="text-accent shrink-0">💡</span> 
+                            <span>주요뉴스는 별도의 검색 키워드를 입력하지 않아도 자동으로 매일 아침 최신 핵심 헤드라인을 수집 및 브리핑에 추가합니다. 필요 없으신 경우 우측 스위치로 꺼둘 수 있습니다.</span>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
             const keywords = allSettings.filter(s => (s['주제'] || s['카테고리']) === topic);
 
             if (keywords.length === 0) {
@@ -1374,6 +1411,28 @@
                         </button>
                     </div>`;
             }).join('');
+        }
+
+        async function toggleMainNews(currentStatus) {
+            const nextStatus = !currentStatus;
+            showSettingsLoading(true);
+            try {
+                await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({
+                        action: 'toggleMainNews',
+                        email: localStorage.getItem('user_email'),
+                        enabled: nextStatus
+                    }),
+                });
+                await loadSettings();
+                renderFilteredKeywords("주요뉴스");
+            } catch (err) {
+                alert('주요뉴스 설정 변경 실패: ' + err.message);
+            } finally {
+                showSettingsLoading(false);
+            }
         }
 
         async function deleteTopic() {

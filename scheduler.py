@@ -151,7 +151,12 @@ def run_pipeline():
                 weather_str = get_weather_info()
 
                 context_info = f"현재 일시: {date_str} {weekday_str}\n날씨 정보: {weather_str}"
-                analysis_result = analyzer.analyze_all_in_one(selected_for_crawl, context_info=context_info)
+                generate_insight = (email.strip().lower() == "ktm98@seoulshinbo.co.kr")
+                analysis_result = analyzer.analyze_all_in_one(
+                    selected_for_crawl, 
+                    context_info=context_info, 
+                    generate_insight=generate_insight
+                )
 
                 briefing_script = analysis_result.get("briefing_script", "")
                 insight_data = analysis_result.get("insight_report")
@@ -244,7 +249,7 @@ def run_pipeline():
                     sheets.save_briefing_doc(doc_title, doc_content, email)
                 
                 # GAS 이메일 발송 API 호출
-                if GAS_SCRIPT_URL:
+                if GAS_SCRIPT_URL and generate_insight:
                     try:
                         slim_news_list = []
                         for n in final_save:

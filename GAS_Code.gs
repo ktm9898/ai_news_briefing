@@ -240,6 +240,34 @@ function doPost(e) {
     return createResponse({ success: true });
   }
 
+  // 주요뉴스 활성화 여부 토글 (Settings 탭)
+  if (action === 'toggleMainNews') {
+    const sheet = getOrCreateTab(ss, 'Settings', ['이메일', '주제', '키워드', '활성화']);
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    const emailIdx = headers.indexOf('이메일') !== -1 ? headers.indexOf('이메일') : headers.indexOf('Email');
+    const topicIdx = headers.indexOf('주제') !== -1 ? headers.indexOf('주제') : headers.indexOf('카테고리');
+    const keyIdx = headers.indexOf('키워드');
+    const activeIdx = headers.indexOf('활성화');
+    
+    const targetEmail = String(email).trim().toLowerCase();
+    const isEnabledStr = params.enabled ? 'TRUE' : 'FALSE';
+
+    // 기존 주요뉴스 행이 있으면 업데이트
+    for (let i = 1; i < data.length; i++) {
+      const rowEmail = emailIdx !== -1 ? String(data[i][emailIdx] || '').trim().toLowerCase() : '';
+      const rowTopic = topicIdx !== -1 ? String(data[i][topicIdx] || '').trim() : '';
+      if (rowEmail === targetEmail && (rowTopic === '주요뉴스' || rowTopic === '경제헤드라인')) {
+        sheet.getRange(i + 1, activeIdx + 1).setValue(isEnabledStr);
+        return createResponse({ success: true });
+      }
+    }
+    
+    // 없으면 새로 추가
+    sheet.appendRow([email, '주요뉴스', '전체', isEnabledStr]);
+    return createResponse({ success: true });
+  }
+
   // 키워드 토글 (Settings 탭)
   if (action === 'toggleKeyword') {
     const sheet = ss.getSheetByName('Settings');
