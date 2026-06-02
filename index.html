@@ -603,10 +603,15 @@
                     <div>
                         <label class="text-xs font-bold text-muted uppercase block mb-1.5">1. 주제 선택</label>
                         <div class="flex flex-col sm:flex-row gap-2">
-                            <select id="settingsTopicSelect" onchange="onSettingsTopicChange()"
-                                class="w-full sm:flex-1 text-sm border border-border rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-accent outline-none bg-white">
-                                <option value="">주제 선택...</option>
-                            </select>
+                            <div class="flex-1 flex gap-2">
+                                <select id="settingsTopicSelect" onchange="onSettingsTopicChange()"
+                                    class="flex-1 text-sm border border-border rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-accent outline-none bg-white">
+                                    <option value="">주제 선택...</option>
+                                </select>
+                                <button onclick="deleteTopic()" id="deleteTopicBtn" class="hidden shrink-0 px-3 py-2.5 bg-rose-50 text-rose-600 text-sm font-bold rounded-lg hover:bg-rose-100 border border-rose-200 whitespace-nowrap transition-colors" title="선택한 주제와 모든 키워드 삭제">
+                                    주제 삭제
+                                </button>
+                            </div>
                             <div class="flex gap-2 w-full sm:w-auto">
                                 <input type="text" id="newTopicInput" placeholder="새 주제 추가..."
                                     class="flex-1 min-w-0 sm:w-32 text-sm border border-border rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-accent outline-none">
@@ -1323,6 +1328,12 @@
 
         function onSettingsTopicChange() {
             const topic = document.getElementById('settingsTopicSelect').value;
+            const deleteBtn = document.getElementById('deleteTopicBtn');
+            if (topic) {
+                if (deleteBtn) deleteBtn.classList.remove('hidden');
+            } else {
+                if (deleteBtn) deleteBtn.classList.add('hidden');
+            }
 
             if (!topic) {
                 // 주제 미선택 시 필드만 초기화 (섹션은 계속 표시)
@@ -1363,6 +1374,29 @@
                         </button>
                     </div>`;
             }).join('');
+        }
+
+        async function deleteTopic() {
+            const topic = document.getElementById('settingsTopicSelect').value;
+            if (!topic) return;
+
+            if (!confirm(`'${topic}' 주제와 해당 주제에 등록된 모든 키워드를 삭제하시겠습니까?`)) return;
+
+            showSettingsLoading(true);
+            try {
+                await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({ action: 'deleteTopic', topic, email: localStorage.getItem('user_email') }),
+                });
+                document.getElementById('settingsTopicSelect').value = '';
+                await loadSettings();
+                onSettingsTopicChange();
+            } catch (err) {
+                alert('주제 삭제 실패: ' + err.message);
+            } finally {
+                showSettingsLoading(false);
+            }
         }
 
         async function addNewTopic() {

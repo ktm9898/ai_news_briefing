@@ -199,6 +199,47 @@ function doPost(e) {
     return createResponse({ error: 'Keyword not found' });
   }
 
+  // 주제 및 관련 키워드 전체 삭제 (Settings 및 Topic_Settings 탭)
+  if (action === 'deleteTopic') {
+    const targetEmail = String(email).trim().toLowerCase();
+
+    // 1. Topic_Settings 시트에서 해당 주제 삭제
+    const topicSheet = ss.getSheetByName('Topic_Settings');
+    if (topicSheet) {
+      const data = topicSheet.getDataRange().getValues();
+      const headers = data[0];
+      const emailIdx = headers.indexOf('이메일') !== -1 ? headers.indexOf('이메일') : headers.indexOf('Email');
+      const topicIdx = headers.indexOf('Topic') !== -1 ? headers.indexOf('Topic') : (headers.indexOf('주제') !== -1 ? headers.indexOf('주제') : 0);
+      
+      for (let i = data.length - 1; i >= 1; i--) {
+        const rowEmail = emailIdx !== -1 ? String(data[i][emailIdx] || '').trim().toLowerCase() : '';
+        const matchEmail = (emailIdx === -1) || (rowEmail === targetEmail) || (rowEmail === '');
+        if (matchEmail && data[i][topicIdx] === params.topic) {
+          topicSheet.deleteRow(i + 1);
+        }
+      }
+    }
+
+    // 2. Settings 시트에서 해당 주제의 모든 키워드 삭제
+    const settingsSheet = ss.getSheetByName('Settings');
+    if (settingsSheet) {
+      const data = settingsSheet.getDataRange().getValues();
+      const headers = data[0];
+      const emailIdx = headers.indexOf('이메일') !== -1 ? headers.indexOf('이메일') : headers.indexOf('Email');
+      const topicIdx = headers.indexOf('주제') !== -1 ? headers.indexOf('주제') : headers.indexOf('카테고리');
+      
+      for (let i = data.length - 1; i >= 1; i--) {
+        const rowEmail = emailIdx !== -1 ? String(data[i][emailIdx] || '').trim().toLowerCase() : '';
+        const matchEmail = (emailIdx === -1) || (rowEmail === targetEmail) || (rowEmail === '');
+        if (matchEmail && data[i][topicIdx] === params.topic) {
+          settingsSheet.deleteRow(i + 1);
+        }
+      }
+    }
+
+    return createResponse({ success: true });
+  }
+
   // 키워드 토글 (Settings 탭)
   if (action === 'toggleKeyword') {
     const sheet = ss.getSheetByName('Settings');
