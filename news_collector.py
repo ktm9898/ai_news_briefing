@@ -479,7 +479,7 @@ class NewsCollector:
         for setting in settings:
             topic = setting.get("주제", "기타")
             keyword = setting.get("키워드", "")
-            if not keyword:
+            if not keyword or topic in ["주요뉴스", "경제헤드라인"]:
                 continue
 
             try:

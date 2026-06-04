@@ -143,6 +143,15 @@ class SheetsManager:
         if SETTINGS_TAB in existing:
             self._ensure_email_column(SETTINGS_TAB, SETTINGS_HEADERS)
 
+        # Approved_Users
+        if "Approved_Users" not in existing:
+            ws = self.spreadsheet.add_worksheet(
+                title="Approved_Users", rows=100, cols=4
+            )
+            ws.append_row(["이메일", "상태", "등록일", "승인일"])
+        else:
+            self._ensure_email_column("Approved_Users", ["이메일", "상태", "등록일", "승인일"])
+
     # ── Settings 탭 ──────────────────────────────────
 
     def get_settings(self, email: str | None = None) -> list[dict]:
@@ -162,6 +171,20 @@ class SheetsManager:
             s for s in self.get_settings(email)
             if str(s.get("활성화", "")).upper() == "TRUE"
         ]
+
+    def get_approved_emails(self) -> set[str]:
+        """Approved_Users 탭에서 승인된 이메일 목록 반환"""
+        try:
+            ws = self.spreadsheet.worksheet("Approved_Users")
+            records = ws.get_all_records()
+            return set(
+                str(r.get("이메일", "")).strip().lower() 
+                for r in records 
+                if str(r.get("상태", "")).strip().lower() == "approved" and str(r.get("이메일", "")).strip()
+            )
+        except Exception as e:
+            logger.error(f"Approved_Users 시트 조회 실패 (기본값 빈 셋 반환): {e}")
+            return set()
 
     def update_settings(self, data: list[dict], email: str | None = None):
         """

@@ -59,12 +59,26 @@ def run_pipeline():
             result["status"] = "완료 (활성 사용자 없음)"
             return result
 
-        logger.info(f"발견된 활성 사용자 이메일 목록: {list(active_emails)}")
+        # Approved_Users에 등록된(approved) 사용자만 추출
+        approved_emails = sheets.get_approved_emails()
+        valid_emails = set()
+        for email in active_emails:
+            if email.lower() in approved_emails:
+                valid_emails.add(email)
+            else:
+                logger.info(f"사용자 '{email}'는 미승인 상태이므로 건너뜁니다.")
+
+        if not valid_emails:
+            logger.info("수집을 진행할 승인된 사용자가 없습니다.")
+            result["status"] = "완료 (승인된 사용자 없음)"
+            return result
+
+        logger.info(f"최종 승인된 사용자 이메일 목록: {list(valid_emails)}")
 
         collector = NewsCollector(sheets)
         analyzer = AIAnalyzer()
 
-        for email in active_emails:
+        for email in valid_emails:
             logger.info(f"--- 사용자 브리핑 생성 시작: {email} ---")
             try:
                 # ── 1단계: 네이버 API 검색 (크롤링 없음, 빠름) ──

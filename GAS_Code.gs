@@ -7,6 +7,12 @@
  */
 
 function doGet(e) {
+  // POST 리다이렉트 대응 (Python requests의 302 리다이렉트 처리)
+  if (e.parameter && e.parameter.action && e.parameter.isRedirect === 'true') {
+    e.postData = { contents: JSON.stringify(e.parameter) };
+    return doPost(e);
+  }
+
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const tab = e.parameter.tab || 'News_Data';
   const dateStr = e.parameter.date; // YYYY-MM-DD
@@ -90,13 +96,15 @@ function doGet(e) {
           itemDate = Utilities.formatDate(itemDate, "GMT+9", "yyyy-MM-dd");
         } else if (itemDate) {
           itemDate = String(itemDate).trim();
-          const dObj = new Date(itemDate);
-          if (!isNaN(dObj.getTime())) {
-             itemDate = Utilities.formatDate(dObj, "GMT+9", "yyyy-MM-dd");
+          // 정규식으로 YYYY-MM-DD 형식 우선 추출
+          const match = itemDate.match(/(\d{4})[\.\-\/\s]+(\d{1,2})[\.\-\/\s]+(\d{1,2})/);
+          if (match) {
+            itemDate = match[1] + '-' + ('0' + match[2]).slice(-2) + '-' + ('0' + match[3]).slice(-2);
           } else {
-            const match = String(itemDate).match(/(\d{4})[\.\-\/\s]+(\d{1,2})[\.\-\/\s]+(\d{1,2})/);
-            if (match) {
-              itemDate = match[1] + '-' + ('0' + match[2]).slice(-2) + '-' + ('0' + match[3]).slice(-2);
+            // 정규식 실패 시 Date 파싱 시도
+            const dObj = new Date(itemDate);
+            if (!isNaN(dObj.getTime())) {
+               itemDate = Utilities.formatDate(dObj, "GMT+9", "yyyy-MM-dd");
             }
           }
         }
@@ -159,7 +167,13 @@ function doPost(e) {
     const dateStr = params.date || Utilities.formatDate(new Date(), "GMT+9", "yyyy-MM-dd");
     const briefingScript = params.briefingScript || '';
     const insightReport = params.insightReport || null;
-    const newsList = params.newsList || [];
+    let newsList = params.newsList || [];
+    if (typeof newsList === 'string') {
+      try { newsList = JSON.parse(newsList); } catch(e) { newsList = []; }
+    }
+    if (typeof insightReport === 'string') {
+      try { insightReport = JSON.parse(insightReport); } catch(e) {}
+    }
 
     try {
       sendDailyReportEmail(targetEmail, dateStr, briefingScript, insightReport, newsList);
@@ -167,6 +181,101 @@ function doPost(e) {
     } catch (err) {
       return createResponse({ success: false, error: err.toString() });
     }
+  }
+
+  // ── 관리자 및 승인 API ──
+  const ADMIN_PW = PropertiesService.getScriptProperties().getProperty('ADMIN_PW');
+
+  if (action === 'adminLogin') {
+    if (params.pw === ADMIN_PW) {
+      return createResponse({ success: true });
+    } else {
+      return createResponse({ success: false, error: '비밀번호가 일치하지 않습니다.' });
+    }
+  }
+
+  if (action === 'checkApproval') {
+    const sheet = getOrCreateTab(ss, 'Approved_Users', ['이메일', '상태', '등록일', '승인일']);
+    const data = sheet.getDataRange().getValues();
+    const targetEmail = String(email).trim().toLowerCase();
+    
+    // 기본 관리자 자동 승인 (초기화용)
+    if (targetEmail === 'ktm98@seoulshinbo.co.kr' || targetEmail === 'ktm9898@gmail.com') {
+      let found = false;
+      for (let i = 1; i < data.length; i++) {
+        if (String(data[i][0]).trim().toLowerCase() === targetEmail) {
+          found = true;
+          if (data[i][1] !== 'approved') {
+            sheet.getRange(i + 1, 2).setValue('approved');
+            sheet.getRange(i + 1, 4).setValue(new Date());
+          }
+          break;
+        }
+      }
+      if (!found) {
+        sheet.appendRow([targetEmail, 'approved', new Date(), new Date()]);
+      }
+      return createResponse({ success: true, status: 'approved' });
+    }
+
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]).trim().toLowerCase() === targetEmail) {
+        return createResponse({ success: true, status: data[i][1] });
+      }
+    }
+    
+    // 없으면 pending 등록
+    sheet.appendRow([targetEmail, 'pending', new Date(), '']);
+    return createResponse({ success: true, status: 'pending' });
+  }
+
+  if (action === 'getUsers') {
+    if (params.pw !== ADMIN_PW) return createResponse({ success: false, error: 'Unauthorized' });
+    const sheet = getOrCreateTab(ss, 'Approved_Users', ['이메일', '상태', '등록일', '승인일']);
+    const data = sheet.getDataRange().getValues();
+    const users = [];
+    for (let i = 1; i < data.length; i++) {
+      users.push({
+        email: data[i][0],
+        status: data[i][1],
+        regDate: data[i][2],
+        appDate: data[i][3]
+      });
+    }
+    return createResponse({ success: true, users: users });
+  }
+
+  if (action === 'approveUser') {
+    if (params.pw !== ADMIN_PW) return createResponse({ success: false, error: 'Unauthorized' });
+    const sheet = ss.getSheetByName('Approved_Users');
+    if (!sheet) return createResponse({ success: false, error: 'Sheet not found' });
+    const data = sheet.getDataRange().getValues();
+    const targetEmail = String(params.targetEmail).trim().toLowerCase();
+    
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]).trim().toLowerCase() === targetEmail) {
+        sheet.getRange(i + 1, 2).setValue('approved');
+        sheet.getRange(i + 1, 4).setValue(new Date());
+        return createResponse({ success: true });
+      }
+    }
+    return createResponse({ success: false, error: 'User not found' });
+  }
+
+  if (action === 'rejectUser') {
+    if (params.pw !== ADMIN_PW) return createResponse({ success: false, error: 'Unauthorized' });
+    const sheet = ss.getSheetByName('Approved_Users');
+    if (!sheet) return createResponse({ success: false, error: 'Sheet not found' });
+    const data = sheet.getDataRange().getValues();
+    const targetEmail = String(params.targetEmail).trim().toLowerCase();
+    
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]).trim().toLowerCase() === targetEmail) {
+        sheet.deleteRow(i + 1);
+        return createResponse({ success: true });
+      }
+    }
+    return createResponse({ success: false, error: 'User not found' });
   }
 
   // 키워드 설정 (Settings 탭)

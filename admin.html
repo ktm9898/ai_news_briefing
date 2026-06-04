@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 뉴스 비서 | 관리자 페이지</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Pretendard', '-apple-system', 'sans-serif'] },
+                    colors: { primary: '#0f172a', accent: '#2563eb' }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Pretendard', sans-serif; background-color: #f8fafc; }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+            <h1 class="text-xl font-bold tracking-tight">AI 뉴스 비서 <span class="text-accent text-sm ml-2">관리자</span></h1>
+            <button id="logoutBtn" class="hidden text-sm text-slate-500 hover:text-slate-800" onclick="logout()">로그아웃</button>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 py-8">
+        <!-- Login Section -->
+        <section id="loginSection" class="max-w-sm mx-auto mt-20 bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+            <h2 class="text-2xl font-bold text-center mb-6">관리자 로그인</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">비밀번호</label>
+                    <input type="password" id="adminPw" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-accent focus:border-accent outline-none" placeholder="비밀번호를 입력하세요" onkeypress="if(event.key === 'Enter') login()">
+                </div>
+                <button onclick="login()" id="loginBtn" class="w-full bg-slate-900 text-white py-3 rounded-xl font-medium hover:bg-slate-800 transition-colors flex justify-center items-center">
+                    <span id="loginText">로그인</span>
+                    <svg id="loginSpinner" class="hidden animate-spin ml-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                </button>
+            </div>
+        </section>
+
+        <!-- Dashboard Section -->
+        <section id="dashboardSection" class="hidden">
+            <div class="flex justify-between items-end mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold">사용자 승인 관리</h2>
+                    <p class="text-sm text-slate-500 mt-1">이메일 계정의 시스템 접근 권한을 관리합니다.</p>
+                </div>
+                <button onclick="loadUsers()" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors flex items-center">
+                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    새로고침
+                </button>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-600 text-sm border-b border-slate-200">
+                                <th class="py-4 px-6 font-semibold">이메일</th>
+                                <th class="py-4 px-6 font-semibold">상태</th>
+                                <th class="py-4 px-6 font-semibold">등록일</th>
+                                <th class="py-4 px-6 font-semibold text-center">관리</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userTableBody" class="divide-y divide-slate-100">
+                            <!-- 로딩 UI -->
+                            <tr>
+                                <td colspan="4" class="py-12 text-center text-slate-500">
+                                    <div class="flex justify-center items-center">
+                                        <svg class="animate-spin h-6 w-6 text-accent mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                        데이터를 불러오는 중...
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-6 right-6 transform transition-all duration-300 translate-y-full opacity-0 bg-slate-800 text-white px-6 py-3 rounded-xl shadow-lg flex items-center z-50">
+        <span id="toastMsg" class="text-sm font-medium"></span>
+    </div>
+
+    <script>
+        // Apps Script 웹앱 URL (index.html에 있는 것과 동일하게 수정 필요)
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzL5zR_x30BfMclB0RofkGjZ4NeyvC2R_E1yU3e3Ue4oP9g168qB2446fS-G8aM-DIF/exec'; // config.py의 URL로 교체하세요
+
+        let currentPw = '';
+
+        function showToast(msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMsg');
+            toastMsg.textContent = msg;
+            
+            if(type === 'error') {
+                toast.classList.replace('bg-slate-800', 'bg-red-600');
+            } else {
+                toast.classList.replace('bg-red-600', 'bg-slate-800');
+            }
+
+            toast.classList.remove('translate-y-full', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-full', 'opacity-0');
+            }, 3000);
+        }
+
+        async function login() {
+            const pwInput = document.getElementById('adminPw').value;
+            if(!pwInput) return alert('비밀번호를 입력하세요.');
+
+            const btn = document.getElementById('loginBtn');
+            const text = document.getElementById('loginText');
+            const spinner = document.getElementById('loginSpinner');
+
+            btn.disabled = true;
+            text.textContent = '확인 중...';
+            spinner.classList.remove('hidden');
+
+            try {
+                const formData = new FormData();
+                formData.append('action', 'adminLogin');
+                formData.append('isRedirect', 'true');
+                formData.append('pw', pwInput);
+
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if(result.success) {
+                    currentPw = pwInput;
+                    document.getElementById('loginSection').classList.add('hidden');
+                    document.getElementById('dashboardSection').classList.remove('hidden');
+                    document.getElementById('logoutBtn').classList.remove('hidden');
+                    showToast('로그인 성공');
+                    loadUsers();
+                } else {
+                    showToast(result.error || '비밀번호가 틀렸습니다.', 'error');
+                }
+            } catch(e) {
+                showToast('서버 연결 오류', 'error');
+                console.error(e);
+            } finally {
+                btn.disabled = false;
+                text.textContent = '로그인';
+                spinner.classList.add('hidden');
+            }
+        }
+
+        function logout() {
+            currentPw = '';
+            document.getElementById('adminPw').value = '';
+            document.getElementById('loginSection').classList.remove('hidden');
+            document.getElementById('dashboardSection').classList.add('hidden');
+            document.getElementById('logoutBtn').classList.add('hidden');
+        }
+
+        function formatDate(dateString) {
+            if(!dateString) return '-';
+            const d = new Date(dateString);
+            if(isNaN(d)) return dateString;
+            return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+        }
+
+        async function loadUsers() {
+            const tbody = document.getElementById('userTableBody');
+            tbody.innerHTML = `<tr><td colspan="4" class="py-12 text-center text-slate-500"><svg class="animate-spin h-6 w-6 text-accent mx-auto mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>데이터 불러오는 중...</td></tr>`;
+
+            try {
+                const formData = new FormData();
+                formData.append('action', 'getUsers');
+                formData.append('isRedirect', 'true');
+                formData.append('pw', currentPw);
+
+                const response = await fetch(SCRIPT_URL, { method: 'POST', body: formData });
+                const result = await response.json();
+                
+                if(result.success) {
+                    renderUsers(result.users);
+                } else {
+                    if(result.error === 'Unauthorized') logout();
+                    showToast('데이터 조회 실패', 'error');
+                }
+            } catch(e) {
+                showToast('서버 연결 오류', 'error');
+                tbody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-red-500">데이터를 불러오지 못했습니다.</td></tr>`;
+            }
+        }
+
+        function renderUsers(users) {
+            const tbody = document.getElementById('userTableBody');
+            if(users.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-slate-500">등록된 사용자가 없습니다.</td></tr>`;
+                return;
+            }
+
+            // pending 먼저, 그 다음 approved
+            users.sort((a, b) => {
+                if(a.status === 'pending' && b.status !== 'pending') return -1;
+                if(a.status !== 'pending' && b.status === 'pending') return 1;
+                return new Date(b.regDate) - new Date(a.regDate);
+            });
+
+            tbody.innerHTML = users.map(u => {
+                const isApproved = u.status === 'approved';
+                const statusBadge = isApproved 
+                    ? `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800"><span class="w-1.5 h-1.5 bg-green-600 rounded-full mr-1.5"></span>승인됨</span>`
+                    : `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800"><span class="w-1.5 h-1.5 bg-amber-600 rounded-full mr-1.5"></span>대기 중</span>`;
+                
+                const actionBtn = isApproved
+                    ? `<button onclick="actionUser('${u.email}', 'rejectUser')" class="text-sm px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-200">권한 해제</button>`
+                    : `<button onclick="actionUser('${u.email}', 'approveUser')" class="text-sm px-3 py-1.5 bg-accent text-white hover:bg-blue-700 rounded-lg transition-colors shadow-sm">승인 처리</button>
+                       <button onclick="actionUser('${u.email}', 'rejectUser')" class="text-sm px-3 py-1.5 ml-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">거부(삭제)</button>`;
+
+                return `
+                    <tr class="hover:bg-slate-50 transition-colors group">
+                        <td class="py-4 px-6">
+                            <div class="font-medium text-slate-900">${u.email}</div>
+                        </td>
+                        <td class="py-4 px-6">${statusBadge}</td>
+                        <td class="py-4 px-6 text-sm text-slate-500">
+                            <div>등록: ${formatDate(u.regDate)}</div>
+                            ${isApproved ? `<div class="text-xs text-slate-400 mt-0.5">승인: ${formatDate(u.appDate)}</div>` : ''}
+                        </td>
+                        <td class="py-4 px-6 text-center">
+                            <div class="flex justify-center items-center">
+                                ${actionBtn}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function actionUser(email, action) {
+            const confirmMsg = action === 'approveUser' ? `'${email}' 계정을 승인하시겠습니까?` : `'${email}' 계정을 삭제/권한해제 하시겠습니까?`;
+            if(!confirm(confirmMsg)) return;
+
+            try {
+                const formData = new FormData();
+                formData.append('action', action);
+                formData.append('isRedirect', 'true');
+                formData.append('pw', currentPw);
+                formData.append('targetEmail', email);
+
+                const response = await fetch(SCRIPT_URL, { method: 'POST', body: formData });
+                const result = await response.json();
+                
+                if(result.success) {
+                    showToast('처리 완료');
+                    loadUsers();
+                } else {
+                    showToast(result.error || '처리 실패', 'error');
+                }
+            } catch(e) {
+                showToast('서버 연결 오류', 'error');
+            }
+        }
+    </script>
+</body>
+</html>
