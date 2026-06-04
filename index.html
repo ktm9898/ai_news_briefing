@@ -768,17 +768,14 @@
             }
 
             try {
-                const formData = new FormData();
-                formData.append('action', 'checkApproval');
-                formData.append('isRedirect', 'true');
-                
-                // e.parameter.email 로 읽기 위해 body가 아닌 url parameter로 전달하거나 FormData 사용.
-                // FormData와 isRedirect=true 면 doPost로 넘어가고 contents를 파싱하는데
-                // checkApproval에서 params.email이 아닌 그냥 e.parameter.email로 읽거나 params.email로 읽도록
-                // e.postData.contents 로 넘길때 params.email을 쓸 수 있도록 JSON.stringify 됨.
-                formData.append('email', email);
-
-                const response = await fetch(SCRIPT_URL, { method: 'POST', body: formData });
+                const response = await fetch(SCRIPT_URL, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({
+                        action: 'checkApproval',
+                        email: email
+                    })
+                });
                 const result = await response.json();
 
                 if (result.success) {
