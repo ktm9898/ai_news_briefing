@@ -183,6 +183,60 @@ function doPost(e) {
     }
   }
 
+  // ── 테스트 리포트 이메일 수동/테스트 발송 ──
+  if (action === 'sendTestReport') {
+    const targetEmail = params.email || 'ktm98@seoulshinbo.co.kr';
+    const dateStr = params.date || Utilities.formatDate(new Date(), "GMT+9", "yyyy-MM-dd");
+    
+    try {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const sheet = getOrCreateTab(ss, 'Briefing_Docs', ['이메일', '날짜', '제목', '내용']);
+      const data = sheet.getDataRange().getValues();
+      if (data.length <= 1) {
+        return createResponse({ success: false, error: '저장된 인사이트 리포트가 없습니다. (시트가 비어있음)' });
+      }
+      
+      const headers = data[0];
+      const emailIdx = headers.indexOf('이메일') !== -1 ? headers.indexOf('이메일') : headers.indexOf('Email');
+      const dateIdx = headers.indexOf('날짜') !== -1 ? headers.indexOf('날짜') : headers.indexOf('Date');
+      const contentIdx = headers.indexOf('내용') !== -1 ? headers.indexOf('내용') : headers.indexOf('Content');
+      
+      let latestReport = null;
+      let reportDate = dateStr;
+      
+      // 뒤에서부터 검색하여 해당 이메일의 가장 최근 리포트 추출
+      for (let i = data.length - 1; i >= 1; i--) {
+        const rowEmail = emailIdx !== -1 ? String(data[i][emailIdx]).trim().toLowerCase() : '';
+        if (rowEmail === targetEmail.toLowerCase()) {
+          latestReport = contentIdx !== -1 ? data[i][contentIdx] : null;
+          let rDate = dateIdx !== -1 ? data[i][dateIdx] : dateStr;
+          if (rDate instanceof Date || (rDate && Object.prototype.toString.call(rDate) === '[object Date]')) {
+            reportDate = Utilities.formatDate(rDate, "GMT+9", "yyyy-MM-dd");
+          } else {
+            reportDate = String(rDate);
+          }
+          break;
+        }
+      }
+      
+      if (!latestReport) {
+        return createResponse({ success: false, error: '저장된 인사이트 리포트를 찾을 수 없습니다. Email: ' + targetEmail });
+      }
+      
+      let insightReport = null;
+      try {
+        insightReport = JSON.parse(latestReport);
+      } catch(e) {
+        return createResponse({ success: false, error: '인사이트 리포트 JSON 파싱 실패: ' + e.toString() });
+      }
+      
+      sendDailyReportEmail(targetEmail, reportDate, '', insightReport, []);
+      return createResponse({ success: true, message: '테스트 리포트 메일이 발송되었습니다. 수신처: ' + targetEmail });
+    } catch (err) {
+      return createResponse({ success: false, error: err.toString() });
+    }
+  }
+
   // ── 관리자 및 승인 API ──
   const ADMIN_PW = PropertiesService.getScriptProperties().getProperty('ADMIN_PW');
 
@@ -476,106 +530,139 @@ function escapeHtml(str) {
     .replace(/'/g, "&#039;");
 }
 
+function formatParagraphs(text) {
+  if (!text) return "";
+  text = String(text).trim();
+  
+  // 만약 개행문자(\n)가 이미 포함되어 있다면 개행문자를 <br>로 치환하여 그대로 반환
+  if (text.indexOf('\n') !== -1) {
+    return text.replace(/\n/g, '<br>');
+  }
+  
+  // 개행문자가 없는 긴 문장의 경우, 2~3문장 단위로 문단을 분리
+  const sentences = text.split(/(?<=\.|\!|\?)\s+/);
+  let formatted = "";
+  let paragraph = [];
+  for (let i = 0; i < sentences.length; i++) {
+    paragraph.push(sentences[i]);
+    if (paragraph.length === 3 || i === sentences.length - 1) {
+      formatted += (formatted ? '<br><br>' : '') + paragraph.join(' ');
+      paragraph = [];
+    }
+  }
+  return formatted;
+}
+
+function generateInsightReportPdf(date, insightReport) {
+  if (!insightReport) return null;
+
+  let html = '<!DOCTYPE html><html><head><meta charset="utf-8">';
+  html += '<link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700&display=swap" rel="stylesheet">';
+  html += '<style>';
+  html += '@page { size: A4; margin: 20mm; }';
+  html += 'body { font-family: "Nanum Gothic", sans-serif; color: #1a1a1a; line-height: 1.7; padding: 0; margin: 0; }';
+  html += '.header-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }';
+  html += '.header-title { font-size: 20pt; font-weight: bold; color: #000; }';
+  html += '.header-date { text-align: right; color: #666; font-size: 10pt; padding-bottom: 5px; }';
+  html += 'hr { border: 0; border-top: 1px solid #000; margin: 0 0 20px 0; }';
+  html += '.section-header { font-size: 14pt; font-weight: bold; color: #000; margin-top: 30px; margin-bottom: 12px; }';
+  html += '.news-title { font-size: 12pt; font-weight: bold; color: #000; margin-top: 25px; margin-bottom: 10px; }';
+  html += 'p { font-size: 10.5pt; color: #333; margin-top: 0; margin-bottom: 10px; line-height: 1.7; text-align: justify; word-break: break-all; }';
+  html += '.footer-note { font-size: 9pt; color: #6b7280; text-align: left; margin-top: 40px; border-top: 1px solid #e5e7eb; padding-top: 10px; }';
+  html += '</style></head><body>';
+
+  // 1. 헤더 (같은 줄에 배치)
+  html += '<table class="header-table"><tr>';
+  html += '<td class="header-title">서울신용보증재단 인사이트 리포트</td>';
+  html += '<td class="header-date" valign="bottom">일자: ' + escapeHtml(date) + '</td>';
+  html += '</tr></table>';
+  html += '<hr>';
+
+  // 2. 주요 경제 흐름
+  html += '<div class="section-header">1. 주요 경제 흐름</div>';
+  html += '<p>' + escapeHtml(insightReport.economic_trend || '').replace(/\n/g, '<br>') + '</p>';
+
+  // 3. 업무 인사이트
+  html += '<div class="section-header">2. 업무 인사이트</div>';
+  if (insightReport.news_insights && Array.isArray(insightReport.news_insights)) {
+    insightReport.news_insights.forEach(function(item) {
+      html += '<div class="news-title"><b>' + escapeHtml(item.title) + '</b></div>';
+      html += '<p><b>주요내용:</b> ' + formatParagraphs(item.summary || '') + '</p>';
+      html += '<p style="margin-bottom: 25px;"><b>시사점:</b> ' + formatParagraphs(item.implication || '') + '</p>';
+    });
+  }
+
+  html += '<div class="footer-note">본 리포트는 서울신용보증재단의 정책 결정 및 업무 지원을 위해 AI를 통해 분석된 결과입니다.</div>';
+  html += '</body></html>';
+
+  const htmlOutput = HtmlService.createHtmlOutput(html);
+  return htmlOutput.getAs('application/pdf').setName('서울신용보증재단_인사이트_리포트_' + date + '.pdf');
+}
+
 function sendDailyReportEmail(email, date, briefingScript, insightReport, newsList) {
   if (!email) return;
 
-  let insightReportHtml = "";
-  if (insightReport) {
-    insightReportHtml += '<div style="background-color: #ffffff; border-radius: 16px; padding: 24px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02); margin-bottom: 24px;">';
-    insightReportHtml += '<h2 style="margin-top: 0; margin-bottom: 16px; font-size: 18px; font-weight: 700; color: #1e3a8a; border-bottom: 2px solid #eff6ff; padding-bottom: 8px;">📊 오늘의 경제 흐름 및 인사이트</h2>';
-    
-    if (insightReport.economic_trend) {
-      insightReportHtml += '<div style="margin-bottom: 20px;">';
-      insightReportHtml += '<h3 style="margin-top: 0; margin-bottom: 8px; font-size: 15px; font-weight: 700; color: #0f172a;">📈 거시 경제 동향 요약</h3>';
-      insightReportHtml += '<p style="margin: 0; font-size: 14px; color: #334155; line-height: 1.6; background-color: #faf5ff; border: 1px solid #f3e8ff; border-radius: 8px; padding: 12px;">' + escapeHtml(insightReport.economic_trend) + '</p>';
-      insightReportHtml += '</div>';
-    }
-    
-    if (insightReport.news_insights && insightReport.news_insights.length > 0) {
-      insightReportHtml += '<div>';
-      insightReportHtml += '<h3 style="margin-top: 0; margin-bottom: 12px; font-size: 15px; font-weight: 700; color: #0f172a;">💡 서울신용보증재단 정책 연계 인사이트</h3>';
-      insightReportHtml += '<div style="space-y: 12px;">';
-      for (let i = 0; i < insightReport.news_insights.length; i++) {
-        const ins = insightReport.news_insights[i];
-        insightReportHtml += '<div style="border: 1px solid #f1f5f9; border-radius: 12px; padding: 16px; background-color: #f8fafc; margin-bottom: 12px;">';
-        insightReportHtml += '<h4 style="margin-top: 0; margin-bottom: 8px; font-size: 14px; font-weight: 700; color: #1e40af;">' + escapeHtml(ins.title) + '</h4>';
-        insightReportHtml += '<p style="margin: 0 0 8px 0; font-size: 13px; color: #475569;"><strong>주요내용:</strong> ' + escapeHtml(ins.summary) + '</p>';
-        insightReportHtml += '<p style="margin: 0; font-size: 13px; color: #334155; line-height: 1.6; border-top: 1px dashed #e2e8f0; padding-top: 8px;"><strong>시사점 및 통찰:</strong> ' + escapeHtml(ins.implication) + '</p>';
-        insightReportHtml += '</div>';
-      }
-      insightReportHtml += '</div>';
-      insightReportHtml += '</div>';
-    }
-    insightReportHtml += '</div>';
+  // 인사이트 리포트가 없는 경우 로그 기록 및 조기 리턴
+  if (!insightReport) {
+    Logger.log("인사이트 리포트 데이터가 없어서 이메일을 발송하지 않습니다. Email: " + email);
+    return;
   }
 
-  let newsListHtml = "";
-  if (newsList && newsList.length > 0) {
-    newsListHtml += '<div style="space-y: 16px;">';
-    for (let i = 0; i < newsList.length; i++) {
-      const news = newsList[i];
-      const badgeBg = news.중요도 === '상' ? '#ffe4e6' : (news.중요도 === '하' ? '#e0f2fe' : '#fef3c7');
-      const badgeTextColor = news.중요도 === '상' ? '#991b1b' : (news.중요도 === '하' ? '#075985' : '#78350f');
-      
-      newsListHtml += '<div style="padding: 16px 0; border-bottom: 1px solid #f1f5f9;';
-      if (i === newsList.length - 1) {
-        newsListHtml += ' border-bottom: none;';
-      }
-      newsListHtml += '">';
-      newsListHtml += '<div style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center; flex-wrap: wrap;">';
-      newsListHtml += '<span style="display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; background-color: ' + badgeBg + '; color: ' + badgeTextColor + ';">중요도 ' + escapeHtml(news.중요도) + '</span>';
-      newsListHtml += '<span style="display: inline-block; font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 4px; background-color: #f1f5f9; color: #475569;">' + escapeHtml(news.주제) + '</span>';
-      newsListHtml += '<span style="font-size: 11px; color: #94a3b8; margin-left: 8px;">' + escapeHtml(news.언론사) + '</span>';
-      newsListHtml += '</div>';
-      newsListHtml += '<h3 style="margin-top: 0; margin-bottom: 8px; font-size: 15px; font-weight: 700; color: #0f172a; line-height: 1.4;">';
-      if (news.링크) {
-        newsListHtml += '<a href="' + news.링크 + '" target="_blank" style="color: #3b82f6; text-decoration: none;">' + escapeHtml(news.제목) + '</a>';
-      } else {
-        newsListHtml += escapeHtml(news.제목);
-      }
-      newsListHtml += '</h3>';
-      newsListHtml += '<p style="margin: 0; font-size: 13px; color: #475569; line-height: 1.6;">' + escapeHtml(news.AI요약 || news.AI_요약 || news.summary || "") + '</p>';
-      newsListHtml += '</div>';
-    }
-    newsListHtml += '</div>';
-  } else {
-    newsListHtml = '<p style="margin: 0; font-size: 14px; color: #94a3b8; text-align: center;">오늘 수집된 분석 기사가 없습니다.</p>';
+  // 1. PDF 첨부파일 생성
+  const pdfBlob = generateInsightReportPdf(date, insightReport);
+  if (!pdfBlob) {
+    Logger.log("PDF 생성 실패. Email: " + email);
+    return;
   }
 
-  const htmlBody = `
-<div style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc; color: #1e293b; line-height: 1.6;">
-  <!-- Header -->
-  <div style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); padding: 30px 24px; border-radius: 16px; color: #ffffff; text-align: center; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.15); margin-bottom: 24px;">
-    <h1 style="margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">📰 데일리 AI 뉴스 브리핑</h1>
-    <p style="margin: 8px 0 0 0; font-size: 14px; opacity: 0.9; font-weight: 500;">${escapeHtml(date)}</p>
-  </div>
+  // 2. 이메일 본문 HTML 작성 (인쇄 화면 레이아웃과 동일하게 디자인)
+  let newsInsightsHtml = "";
+  if (insightReport.news_insights && Array.isArray(insightReport.news_insights)) {
+    insightReport.news_insights.forEach(function(item) {
+      newsInsightsHtml += '<div style="font-size: 12pt; font-weight: bold; color: #000; margin-top: 25px; margin-bottom: 10px;"><b>' + escapeHtml(item.title) + '</b></div>';
+      newsInsightsHtml += '<p style="font-size: 10.5pt; color: #333; margin-top: 0; margin-bottom: 10px; line-height: 1.7; text-align: justify; word-break: break-all;"><b>주요내용:</b> ' + formatParagraphs(item.summary || '') + '</p>';
+      newsInsightsHtml += '<p style="font-size: 10.5pt; color: #333; margin-top: 0; margin-bottom: 25px; line-height: 1.7; text-align: justify; word-break: break-all;"><b>시사점:</b> ' + formatParagraphs(item.implication || '') + '</p>';
+    });
+  }
+
+  let htmlBody = '<div style="font-family: \'Nanum Gothic\', \'Malgun Gothic\', \'Apple SD Gothic Neo\', sans-serif; background-color: #f8fafc; padding: 40px 20px; color: #1a1a1a;">';
+  htmlBody += '<div style="max-width: 700px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; padding: 40px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border-radius: 8px;">';
   
-  <!-- Briefing Script Card -->
-  <div style="background-color: #ffffff; border-radius: 16px; padding: 24px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02); margin-bottom: 24px;">
-    <h2 style="margin-top: 0; margin-bottom: 16px; font-size: 18px; font-weight: 700; color: #1e3a8a; border-bottom: 2px solid #eff6ff; padding-bottom: 8px;">🎙️ 오늘의 라디오 브리핑 대본</h2>
-    <div style="background-color: #f8fafc; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 8px; font-style: italic; color: #475569; font-size: 14px; white-space: pre-wrap; line-height: 1.7;">${escapeHtml(briefingScript)}</div>
-  </div>
+  // 헤더
+  htmlBody += '<table width="100%" style="border-collapse: collapse; margin-bottom: 15px;"><tr>';
+  htmlBody += '<td align="left" style="font-size: 20pt; font-weight: bold; color: #000;">서울신용보증재단 인사이트 리포트</td>';
+  htmlBody += '<td align="right" valign="bottom" style="color: #666; font-size: 10pt; padding-bottom: 5px;">일자: ' + escapeHtml(date) + '</td>';
+  htmlBody += '</tr></table>';
+  htmlBody += '<hr style="border: 0; border-top: 1px solid #000; margin: 0 0 20px 0;">';
 
-  <!-- Economic Trend & Insights -->
-  ${insightReportHtml}
+  // 1. 주요 경제 흐름
+  htmlBody += '<div style="font-size: 14pt; font-weight: bold; color: #000; margin-top: 30px; margin-bottom: 12px;">1. 주요 경제 흐름</div>';
+  htmlBody += '<p style="font-size: 10.5pt; color: #333; margin-top: 0; margin-bottom: 10px; line-height: 1.7; text-align: justify; word-break: break-all;">' + escapeHtml(insightReport.economic_trend || '').replace(/\n/g, '<br>') + '</p>';
 
-  <!-- Key News Cards -->
-  <div style="background-color: #ffffff; border-radius: 16px; padding: 24px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02); margin-bottom: 24px;">
-    <h2 style="margin-top: 0; margin-bottom: 16px; font-size: 18px; font-weight: 700; color: #1e3a8a; border-bottom: 2px solid #eff6ff; padding-bottom: 8px;">📌 선별된 주요 뉴스 요약</h2>
-    ${newsListHtml}
-  </div>
+  // 2. 업무 인사이트
+  htmlBody += '<div style="font-size: 14pt; font-weight: bold; color: #000; margin-top: 30px; margin-bottom: 12px;">2. 업무 인사이트</div>';
+  htmlBody += newsInsightsHtml;
 
-  <!-- Footer -->
-  <div style="text-align: center; padding-top: 16px; border-top: 1px solid #e2e8f0; margin-top: 32px; font-size: 12px; color: #94a3b8;">
-    <p style="margin: 0;">본 메일은 AI News Briefing 시스템에서 자동으로 발송한 맞춤형 보고서입니다.</p>
-    <p style="margin: 4px 0 0 0;">수신 이메일: <strong>${escapeHtml(email)}</strong> | 발송처: 서울신용보증재단 AI 뉴스 센터</p>
-  </div>
-</div>
-  `;
+  // 푸터 안내선 및 비고
+  htmlBody += '<div style="font-size: 9pt; color: #6b7280; text-align: left; margin-top: 40px; border-top: 1px solid #e5e7eb; padding-top: 10px;">';
+  htmlBody += '본 리포트는 서울신용보증재단의 정책 결정 및 업무 지원을 위해 AI를 통해 분석된 결과입니다.';
+  htmlBody += '</div>';
+  
+  htmlBody += '</div>'; // card end
+  
+  // 이메일 외곽 하단부
+  htmlBody += '<div style="max-width: 700px; margin: 20px auto 0 auto; text-align: center; font-size: 11px; color: #94a3b8; line-height: 1.5;">';
+  htmlBody += '<p style="margin: 0;">* 본 메일에는 <strong>PDF 파일</strong>이 첨부되어 있습니다. 인쇄 또는 보관을 원하시면 첨부파일을 다운로드해 주세요.</p>';
+  htmlBody += '<p style="margin: 4px 0 0 0;">수신 이메일: <strong>' + escapeHtml(email) + '</strong> | 발송처: 서울신용보증재단 AI 뉴스 센터</p>';
+  htmlBody += '</div>';
+  
+  htmlBody += '</div>'; // wrapper end
 
+  // 3. 메일 발송
   MailApp.sendEmail({
     to: email,
     subject: `📰 [AI News Briefing] ${date} 데일리 맞춤 보고서`,
-    htmlBody: htmlBody
+    htmlBody: htmlBody,
+    attachments: [pdfBlob]
   });
 }
