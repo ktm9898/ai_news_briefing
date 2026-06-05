@@ -183,6 +183,23 @@ function doPost(e) {
     }
   }
 
+  // ── 주간 맞춤형 HTML 이메일 발송 ──
+  if (action === 'sendWeeklyReport') {
+    const targetEmail = params.email;
+    const dateRange = params.dateRange || '';
+    let insightReport = params.insightReport || null;
+    if (typeof insightReport === 'string') {
+      try { insightReport = JSON.parse(insightReport); } catch(e) {}
+    }
+
+    try {
+      sendWeeklyReportEmail(targetEmail, dateRange, insightReport);
+      return createResponse({ success: true });
+    } catch (err) {
+      return createResponse({ success: false, error: err.toString() });
+    }
+  }
+
   // ── 테스트 리포트 이메일 수동/테스트 발송 ──
   if (action === 'sendTestReport') {
     const targetEmail = params.email || 'ktm98@seoulshinbo.co.kr';
@@ -574,7 +591,7 @@ function generateInsightReportPdf(date, insightReport) {
   // 1. 헤더 (같은 줄에 배치)
   html += '<table class="header-table"><tr>';
   html += '<td class="header-title">서울신용보증재단 인사이트 리포트</td>';
-  html += '<td class="header-date" valign="bottom">일자: ' + escapeHtml(date) + '</td>';
+  html += '<td class="header-date" valign="bottom">' + escapeHtml(date) + '</td>';
   html += '</tr></table>';
   html += '<hr>';
 
@@ -631,7 +648,7 @@ function sendDailyReportEmail(email, date, briefingScript, insightReport, newsLi
   // 헤더
   htmlBody += '<table width="100%" style="border-collapse: collapse; margin-bottom: 15px;"><tr>';
   htmlBody += '<td align="left" style="font-size: 20pt; font-weight: bold; color: #000;">서울신용보증재단 인사이트 리포트</td>';
-  htmlBody += '<td align="right" valign="bottom" style="color: #666; font-size: 10pt; padding-bottom: 5px;">일자: ' + escapeHtml(date) + '</td>';
+  htmlBody += '<td align="right" valign="bottom" style="color: #666; font-size: 10pt; padding-bottom: 5px;">' + escapeHtml(date) + '</td>';
   htmlBody += '</tr></table>';
   htmlBody += '<hr style="border: 0; border-top: 1px solid #000; margin: 0 0 20px 0;">';
 
@@ -662,6 +679,120 @@ function sendDailyReportEmail(email, date, briefingScript, insightReport, newsLi
   MailApp.sendEmail({
     to: email,
     subject: `📰 [AI News Briefing] ${date} 데일리 맞춤 보고서`,
+    htmlBody: htmlBody,
+    attachments: [pdfBlob]
+  });
+}
+
+function generateWeeklyInsightReportPdf(dateRange, insightReport) {
+  if (!insightReport) return null;
+
+  const displayDateRange = dateRange.replace(/-/g, '.');
+
+  let html = '<!DOCTYPE html><html><head><meta charset="utf-8">';
+  html += '<link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700&display=swap" rel="stylesheet">';
+  html += '<style>';
+  html += '@page { size: A4; margin: 20mm; }';
+  html += 'body { font-family: "Nanum Gothic", sans-serif; color: #1a1a1a; line-height: 1.7; padding: 0; margin: 0; }';
+  html += '.header-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }';
+  html += '.header-title { font-size: 20pt; font-weight: bold; color: #000; }';
+  html += '.header-date { text-align: right; color: #666; font-size: 10pt; padding-bottom: 5px; }';
+  html += 'hr { border: 0; border-top: 1px solid #000; margin: 0 0 20px 0; }';
+  html += '.section-header { font-size: 14pt; font-weight: bold; color: #000; margin-top: 30px; margin-bottom: 12px; }';
+  html += '.news-title { font-size: 12pt; font-weight: bold; color: #000; margin-top: 25px; margin-bottom: 10px; }';
+  html += 'p { font-size: 10.5pt; color: #333; margin-top: 0; margin-bottom: 10px; line-height: 1.7; text-align: justify; word-break: break-all; }';
+  html += '.footer-note { font-size: 9pt; color: #6b7280; text-align: left; margin-top: 40px; border-top: 1px solid #e5e7eb; padding-top: 10px; }';
+  html += '</style></head><body>';
+
+  // 1. 헤더 (같은 줄에 배치)
+  html += '<table class="header-table"><tr>';
+  html += '<td class="header-title">소기업·소상공인 주간 인사이트 리포트</td>';
+  html += '<td class="header-date" valign="bottom">' + escapeHtml(displayDateRange) + '</td>';
+  html += '</tr></table>';
+  html += '<hr>';
+
+  // 2. 주요 경제 흐름
+  html += '<div class="section-header">1. 주요 경제 흐름</div>';
+  html += '<p>' + escapeHtml(insightReport.economic_trend || '').replace(/\\n/g, '<br>') + '</p>';
+
+  // 3. 사업운영 인사이트
+  html += '<div class="section-header">2. 사업운영 인사이트</div>';
+  if (insightReport.news_insights && Array.isArray(insightReport.news_insights)) {
+    insightReport.news_insights.forEach(function(item) {
+      html += '<div class="news-title"><b>' + escapeHtml(item.title) + '</b></div>';
+      html += '<p><b>주요내용:</b> ' + formatParagraphs(item.summary || '') + '</p>';
+      html += '<p style="margin-bottom: 25px;"><b>사업운영 인사이트:</b> ' + formatParagraphs(item.implication || '') + '</p>';
+    });
+  }
+
+  html += '<div class="footer-note">본 리포트는 서울시 소기업 및 소상공인의 사업운영을 지원하기 위해 AI를 통해 분석된 주간 경제 보고서입니다.</div>';
+  html += '</body></html>';
+
+  const htmlOutput = HtmlService.createHtmlOutput(html);
+  return htmlOutput.getAs('application/pdf').setName('소상공인_주간_인사이트_리포트_' + dateRange.replace(/\\s/g, '') + '.pdf');
+}
+
+function sendWeeklyReportEmail(email, dateRange, insightReport) {
+  if (!email) return;
+
+  if (!insightReport) {
+    Logger.log("주간 인사이트 리포트 데이터가 없어서 이메일을 발송하지 않습니다. Email: " + email);
+    return;
+  }
+
+  const pdfBlob = generateWeeklyInsightReportPdf(dateRange, insightReport);
+  if (!pdfBlob) {
+    Logger.log("주간 PDF 생성 실패. Email: " + email);
+    return;
+  }
+
+  const displayDateRange = dateRange.replace(/-/g, '.');
+
+  let newsInsightsHtml = "";
+  if (insightReport.news_insights && Array.isArray(insightReport.news_insights)) {
+    insightReport.news_insights.forEach(function(item) {
+      newsInsightsHtml += '<div style="font-size: 12pt; font-weight: bold; color: #000; margin-top: 25px; margin-bottom: 10px;"><b>' + escapeHtml(item.title) + '</b></div>';
+      newsInsightsHtml += '<p style="font-size: 10.5pt; color: #333; margin-top: 0; margin-bottom: 10px; line-height: 1.7; text-align: justify; word-break: break-all;"><b>주요내용:</b> ' + formatParagraphs(item.summary || '') + '</p>';
+      newsInsightsHtml += '<p style="font-size: 10.5pt; color: #333; margin-top: 0; margin-bottom: 25px; line-height: 1.7; text-align: justify; word-break: break-all;"><b>사업운영 인사이트:</b> ' + formatParagraphs(item.implication || '') + '</p>';
+    });
+  }
+
+  let htmlBody = '<div style="font-family: \\\'Nanum Gothic\\\', \\\'Malgun Gothic\\\', \\\'Apple SD Gothic Neo\\\', sans-serif; background-color: #f8fafc; padding: 40px 20px; color: #1a1a1a;">';
+  htmlBody += '<div style="max-width: 700px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; padding: 40px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border-radius: 8px;">';
+  
+  // 헤더
+  htmlBody += '<table width="100%" style="border-collapse: collapse; margin-bottom: 15px;"><tr>';
+  htmlBody += '<td align="left" style="font-size: 20pt; font-weight: bold; color: #000;">소기업·소상공인 주간 인사이트 리포트</td>';
+  htmlBody += '<td align="right" valign="bottom" style="color: #666; font-size: 10pt; padding-bottom: 5px;">' + escapeHtml(displayDateRange) + '</td>';
+  htmlBody += '</tr></table>';
+  htmlBody += '<hr style="border: 0; border-top: 1px solid #000; margin: 0 0 20px 0;">';
+
+  // 1. 주요 경제 흐름
+  htmlBody += '<div style="font-size: 14pt; font-weight: bold; color: #000; margin-top: 30px; margin-bottom: 12px;">1. 주요 경제 흐름</div>';
+  htmlBody += '<p style="font-size: 10.5pt; color: #333; margin-top: 0; margin-bottom: 10px; line-height: 1.7; text-align: justify; word-break: break-all;">' + escapeHtml(insightReport.economic_trend || '').replace(/\\n/g, '<br>') + '</p>';
+
+  // 2. 사업운영 인사이트
+  htmlBody += '<div style="font-size: 14pt; font-weight: bold; color: #000; margin-top: 30px; margin-bottom: 12px;">2. 사업운영 인사이트</div>';
+  htmlBody += newsInsightsHtml;
+
+  // 푸터 안내선 및 비고
+  htmlBody += '<div style="font-size: 9pt; color: #6b7280; text-align: left; margin-top: 40px; border-top: 1px solid #e5e7eb; padding-top: 10px;">';
+  htmlBody += '본 리포트는 서울시 소기업 및 소상공인의 사업운영을 지원하기 위해 AI를 통해 분석된 주간 경제 보고서입니다.';
+  htmlBody += '</div>';
+  
+  htmlBody += '</div>'; // card end
+  
+  // 이메일 외곽 하단부
+  htmlBody += '<div style="max-width: 700px; margin: 20px auto 0 auto; text-align: center; font-size: 11px; color: #94a3b8; line-height: 1.5;">';
+  htmlBody += '<p style="margin: 0;">* 본 메일에는 <strong>PDF 파일</strong>이 첨부되어 있습니다. 인쇄 또는 보관을 원하시면 첨부파일을 다운로드해 주세요.</p>';
+  htmlBody += '<p style="margin: 4px 0 0 0;">수신 이메일: <strong>' + escapeHtml(email) + '</strong> | 발송처: 서울신용보증재단 AI 뉴스 센터</p>';
+  htmlBody += '</div>';
+  
+  htmlBody += '</div>'; // wrapper end
+
+  MailApp.sendEmail({
+    to: email,
+    subject: `📰 [AI News Briefing] 주간 소기업·소상공인 인사이트 보고서 (${displayDateRange})`,
     htmlBody: htmlBody,
     attachments: [pdfBlob]
   });

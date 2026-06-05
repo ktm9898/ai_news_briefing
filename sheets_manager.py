@@ -152,6 +152,15 @@ class SheetsManager:
         else:
             self._ensure_email_column("Approved_Users", ["이메일", "상태", "등록일", "승인일"])
 
+        # Weekly_Briefing_Docs
+        if "Weekly_Briefing_Docs" not in existing:
+            ws = self.spreadsheet.add_worksheet(
+                title="Weekly_Briefing_Docs", rows=100, cols=4
+            )
+            ws.append_row(["이메일", "날짜", "제목", "내용"])
+        else:
+            self._ensure_email_column("Weekly_Briefing_Docs", ["이메일", "날짜", "제목", "내용"])
+
     # ── Settings 탭 ──────────────────────────────────
 
     def get_settings(self, email: str | None = None) -> list[dict]:
@@ -425,3 +434,78 @@ class SheetsManager:
 
         if not updated:
             ws.append_row([email, today, title, content])
+
+    def get_news_by_date_range(self, start_date: str, end_date: str, email: str | None = None) -> list[dict]:
+        """시작 날짜와 종료 날짜 사이(포함)의 뉴스 반환"""
+        ws = self.spreadsheet.worksheet(NEWS_DATA_TAB)
+        records = ws.get_all_records()
+        if email:
+            target = email.strip().lower()
+            records = [r for r in records if str(r.get("이메일", "")).strip().lower() == target]
+        
+        import datetime
+        try:
+            start_dt = datetime.datetime.strptime(start_date, "%Y-%m-%d").date()
+            end_dt = datetime.datetime.strptime(end_date, "%Y-%m-%d").date()
+        except ValueError as e:
+            logger.error(f"날짜 포맷 오류 (YYYY-MM-DD 필요): start={start_date}, end={end_date}. Error: {e}")
+            return []
+
+        results = []
+        for r in records:
+            r_date_str = r.get("날짜", "")
+            if not r_date_str:
+                continue
+            try:
+                r_date_formatted = self._format_date_string(r_date_str)
+                r_dt = datetime.datetime.strptime(r_date_formatted, "%Y-%m-%d").date()
+                if start_dt <= r_dt <= end_dt:
+                    results.append(r)
+            except Exception as ex:
+                continue
+        return results
+
+    def _format_date_string(self, date_str: str) -> str:
+        """날짜 문자열을 YYYY-MM-DD 형식으로 변환"""
+        import re
+        import datetime
+        date_str = str(date_str).strip()
+        match = re.match(r'(\d{4})[\.\-\/\s]+(\d{1,2})[\.\-\/\s]+(\d{1,2})', date_str)
+        if match:
+            return f"{match[1]}-{int(match[2]):02d}-{int(match[3]):02d}"
+        try:
+            d = datetime.datetime.strptime(date_str, "%Y-%m-%d")
+            return d.strftime("%Y-%m-%d")
+        except Exception:
+            return date_str
+
+    def save_weekly_briefing_doc(self, title: str, content: str, date_range_str: str, email: str = ""):
+        """
+        AI 주간 브리핑 리포트를 Weekly_Briefing_Docs 탭에 저장.
+        """
+        tab_name = "Weekly_Briefing_Docs"
+        existing = [ws.title for ws in self.spreadsheet.worksheets()]
+
+        if tab_name not in existing:
+            ws = self.spreadsheet.add_worksheet(title=tab_name, rows=100, cols=4)
+            ws.append_row(["이메일", "날짜", "제목", "내용"])
+        else:
+            ws = self.spreadsheet.worksheet(tab_name)
+
+        target_email = email.strip().lower()
+
+        data = ws.get_all_values()
+        updated = False
+        for idx, row in enumerate(data):
+            if idx == 0:
+                continue
+            row_email = str(row[0]).strip().lower()
+            row_date = str(row[1]).strip()
+            if row_email == target_email and row_date == date_range_str:
+                ws.update_cell(idx + 1, 3, title)
+                ws.update_cell(idx + 1, 4, content)
+                updated = True
+                break
+
+        if not updated:
+            ws.append_row([email, date_range_str, title, content])

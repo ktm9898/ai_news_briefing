@@ -292,6 +292,51 @@ def run_pipeline():
                     except Exception as e:
                         logger.error(f"[{email}] 데일리 이메일 발송 중 오류: {e}")
 
+                # ── (신규) 일요일인 경우 주간 소기업·소상공인 인사이트 리포트 생성 ──
+                if generate_insight and now.weekday() == 6:
+                    logger.info(f"[{email}] 📅 일요일 주간 소상공인 인사이트 리포트 생성 프로세스 시작")
+                    try:
+                        # 오늘(일요일)부터 6일 전(월요일)까지의 기사를 시트에서 읽어옴
+                        end_date_str = now.strftime("%Y-%m-%d")
+                        start_date_str = (now - timedelta(days=6)).strftime("%Y-%m-%d")
+                        weekly_date_range = f"{start_date_str} ~ {end_date_str}"
+                        
+                        logger.info(f"[{email}] 주간 날짜 범위: {weekly_date_range}")
+                        weekly_news = sheets.get_news_by_date_range(start_date_str, end_date_str, email)
+                        logger.info(f"[{email}] 지난 7일간 뉴스 수집 건수: {len(weekly_news)}건")
+                        
+                        if weekly_news:
+                            # 주간 리포트 분석
+                            weekly_insight_data = analyzer.analyze_weekly_insight(weekly_news, weekly_date_range)
+                            
+                            # Weekly_Briefing_Docs 시트에 저장
+                            weekly_title = f"AI News Weekly Insight Report - {weekly_date_range}"
+                            sheets.save_weekly_briefing_doc(
+                                weekly_title, 
+                                json.dumps(weekly_insight_data, ensure_ascii=False), 
+                                weekly_date_range, 
+                                email
+                            )
+                            logger.info(f"[{email}] Weekly_Briefing_Docs 저장 성공")
+                            
+                            # GAS 주간 보고서 이메일 발송 API 호출
+                            if GAS_SCRIPT_URL:
+                                payload = {
+                                    "action": "sendWeeklyReport",
+                                    "email": email,
+                                    "dateRange": weekly_date_range,
+                                    "insightReport": weekly_insight_data
+                                }
+                                resp = requests.post(GAS_SCRIPT_URL, json=payload, timeout=20)
+                                if resp.status_code == 200:
+                                    logger.info(f"[{email}] 주간 이메일 발송 API 호출 성공: {resp.text}")
+                                else:
+                                    logger.error(f"[{email}] 주간 이메일 발송 API 호출 실패: {resp.status_code} - {resp.text}")
+                        else:
+                            logger.warning(f"[{email}] 지난 7일간 기사 데이터가 존재하지 않아 주간 리포트를 생성할 수 없습니다.")
+                    except Exception as weekly_err:
+                        logger.error(f"[{email}] 주간 리포트 생성 중 오류 발생: {weekly_err}", exc_info=True)
+
                 result["processed_users"].append(email)
                 logger.info(f"--- 사용자 브리핑 생성 완료: {email} ---")
 

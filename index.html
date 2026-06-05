@@ -573,6 +573,11 @@
                     </button>
                 </div>
             </div>
+            <!-- 리포트 탭 네비게이션 -->
+            <div id="reportTabMenu" class="flex border-b border-gray-200 bg-gray-50 shrink-0">
+                <button onclick="switchReportTab('foundation')" id="tab-foundation" class="flex-1 py-3 text-sm font-bold text-blue-600 border-b-2 border-blue-600 bg-white transition-colors">재단 업무 리포트</button>
+                <button onclick="switchReportTab('business')" id="tab-business" class="flex-1 py-3 text-sm font-bold text-gray-500 border-b-2 border-transparent hover:text-gray-700 hover:bg-gray-100 transition-colors">소상공인 주간 리포트</button>
+            </div>
             <!-- 리포트 목록 -->
             <div id="reportListContainer" class="p-5 overflow-y-auto flex-1">
                 <div id="reportListLoading" class="text-center py-10 hidden">
@@ -2145,13 +2150,27 @@
         }
 
         // ── 리포트 문서함 제어 ──
-        let allReports = [];
+        let allFoundationReports = [];
+        let allBusinessReports = [];
+        let currentReportTab = 'foundation';
         
+        function switchReportTab(tab) {
+            currentReportTab = tab;
+            if (tab === 'foundation') {
+                document.getElementById('tab-foundation').className = "flex-1 py-3 text-sm font-bold text-blue-600 border-b-2 border-blue-600 bg-white transition-colors";
+                document.getElementById('tab-business').className = "flex-1 py-3 text-sm font-bold text-gray-500 border-b-2 border-transparent hover:text-gray-700 hover:bg-gray-100 transition-colors";
+            } else {
+                document.getElementById('tab-business').className = "flex-1 py-3 text-sm font-bold text-blue-600 border-b-2 border-blue-600 bg-white transition-colors";
+                document.getElementById('tab-foundation').className = "flex-1 py-3 text-sm font-bold text-gray-500 border-b-2 border-transparent hover:text-gray-700 hover:bg-gray-100 transition-colors";
+            }
+            showReportList();
+            loadReports();
+        }
+
         function openReportsModal() {
             document.getElementById('reportsModal').classList.remove('hidden');
             document.body.style.overflow = 'hidden';
-            showReportList();
-            loadReports();
+            switchReportTab('foundation');
         }
 
         function closeReportsModal() {
@@ -2160,6 +2179,7 @@
         }
 
         function showReportList() {
+            document.getElementById('reportTabMenu').classList.remove('hidden');
             document.getElementById('reportListContainer').classList.remove('hidden');
             document.getElementById('reportDetailContainer').classList.add('hidden');
             document.getElementById('printReportBtn').classList.add('hidden');
@@ -2176,22 +2196,28 @@
             loading.classList.remove('hidden');
 
             try {
-                const url = SCRIPT_URL + '?tab=Briefing_Docs&email=' + encodeURIComponent(email) + '&t=' + Date.now();
+                const sheetTab = currentReportTab === 'foundation' ? 'Briefing_Docs' : 'Weekly_Briefing_Docs';
+                const url = SCRIPT_URL + '?tab=' + sheetTab + '&email=' + encodeURIComponent(email) + '&t=' + Date.now();
                 const resp = await fetch(url);
                 if (!resp.ok) throw new Error('HTTP ' + resp.status);
                 let data = await resp.json();
                 
+                let targetArray = [];
                 if (Array.isArray(data)) {
                     data.sort((a, b) => new Date(b['날짜'] || 0) - new Date(a['날짜'] || 0));
-                    allReports = data;
+                    targetArray = data;
+                }
+                
+                if (currentReportTab === 'foundation') {
+                    allFoundationReports = targetArray;
                 } else {
-                    allReports = [];
+                    allBusinessReports = targetArray;
                 }
 
-                if (allReports.length === 0) {
+                if (targetArray.length === 0) {
                     container.innerHTML = '<p class="text-sm text-center text-muted py-8">저장된 리포트가 없습니다.</p>';
                 } else {
-                    container.innerHTML = allReports.map((r, i) => `
+                    container.innerHTML = targetArray.map((r, i) => `
                         <div class="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 border border-border rounded-xl cursor-pointer transition-colors" onclick="viewReport(${i})">
                             <div>
                                 <h3 class="text-sm font-bold text-gray-900">${r['제목']}</h3>
@@ -2208,10 +2234,31 @@
             }
         }
 
+        function formatParagraphs(text) {
+            if (!text) return "";
+            text = String(text).trim();
+            if (text.indexOf('\\n') !== -1) {
+                return text.replace(/\\n/g, '<br>');
+            }
+            const sentences = text.split(/(?<=\\.|\\!|\\?)\\s+/);
+            let formatted = "";
+            let paragraph = [];
+            for (let i = 0; i < sentences.length; i++) {
+                paragraph.push(sentences[i]);
+                if (paragraph.length === 3 || i === sentences.length - 1) {
+                    formatted += (formatted ? '<br><br>' : '') + paragraph.join(' ');
+                    paragraph = [];
+                }
+            }
+            return formatted;
+        }
+
         function viewReport(index) {
-            const report = allReports[index];
+            const reportArray = currentReportTab === 'foundation' ? allFoundationReports : allBusinessReports;
+            const report = reportArray[index];
             if (!report) return;
 
+            document.getElementById('reportTabMenu').classList.add('hidden');
             document.getElementById('reportListContainer').classList.add('hidden');
             document.getElementById('reportDetailContainer').classList.remove('hidden');
             document.getElementById('printReportBtn').classList.remove('hidden');
@@ -2222,47 +2269,50 @@
             let html = '';
 
             try {
-                // JSON 형식인지 확인
                 if (rawContent.trim().startsWith('{')) {
                     const data = JSON.parse(rawContent);
-                    // 1. 헤더 (같은 줄에 배치)
+                    const isFoundation = currentReportTab === 'foundation';
+                    const mainTitle = isFoundation ? '서울신용보증재단 인사이트 리포트' : '소기업·소상공인 주간 인사이트 리포트';
+                    const insightTitle = isFoundation ? '2. 업무 인사이트' : '2. 사업운영 인사이트';
+                    const insightLabel = isFoundation ? '시사점' : '사업운영 인사이트';
+                    const footerText = isFoundation ? '본 리포트는 서울신용보증재단의 정책 결정 및 업무 지원을 위해 AI를 통해 분석된 결과입니다.' : '본 리포트는 서울시 소기업 및 소상공인의 사업운영을 지원하기 위해 AI를 통해 분석된 주간 경제 보고서입니다.';
+                    
+                    const displayDate = isFoundation ? report['날짜'] : String(report['날짜']).replace(/-/g, '.');
+
                     html += `<div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px;">`;
-                    html += `<h1 style="margin: 0; font-size: 20pt; color: #000; font-weight: 700;">서울신용보증재단 인사이트 리포트</h1>`;
-                    html += `<span style="color:#666; font-size: 10pt;">일자: ${report['날짜']}</span>`;
+                    html += `<h1 style="margin: 0; font-size: 20pt; color: #000; font-weight: 700;">${mainTitle}</h1>`;
+                    html += `<span style="color:#666; font-size: 10pt;">${displayDate}</span>`;
                     html += `</div>`;
                     html += `<hr style="margin: 0 0 20px 0; border: 0; border-top: 1px solid #000;">`;
 
-                    // 2. 주요 경제 흐름
                     html += `<div class="section-header">1. 주요 경제 흐름</div>`;
-                    html += `<p>${data.economic_trend || ''}</p>`;
+                    html += `<p>${formatParagraphs(data.economic_trend || '')}</p>`;
 
-                    // 3. 업무 인사이트
-                    html += `<div class="section-header">2. 업무 인사이트</div>`;
+                    html += `<div class="section-header">${insightTitle}</div>`;
                     if (data.news_insights && Array.isArray(data.news_insights)) {
-                        data.news_insights.forEach((item, idx) => {
+                        data.news_insights.forEach((item) => {
                             html += `<div class="news-title"><b>${item.title}</b></div>`;
-                            html += `<p><b>주요내용:</b> ${item.summary}</p>`;
-                            html += `<p style="margin-bottom: 25px;"><b>시사점:</b> ${item.implication}</p>`;
+                            html += `<p><b>주요내용:</b> ${formatParagraphs(item.summary)}</p>`;
+                            html += `<p style="margin-bottom: 25px;"><b>${insightLabel}:</b> ${formatParagraphs(item.implication)}</p>`;
                         });
                     }
 
-                    html += `<div class="footer-note">본 리포트는 서울신용보증재단의 정책 결정 및 업무 지원을 위해 AI를 통해 분석된 결과입니다.</div>`;
+                    html += `<div class="footer-note">${footerText}</div>`;
                 } else {
-                    // 기존 텍스트 방식 (하위 호환성)
-                    const lines = rawContent.split('\n');
+                    const lines = rawContent.split('\\n');
                     lines.forEach((line, i) => {
                         const trimmed = line.trim();
                         if (!trimmed) return;
                         if (i === 0) html += `<h1>${trimmed}</h1>`;
-                        else if (trimmed.startsWith('일자:')) html += `<p style="color:#666; font-size: 10pt; margin-bottom: 20px;">${trimmed}</p>`;
-                        else if (trimmed.match(/^\d+\./)) html += `<div class="section-header">${trimmed}</div>`;
-                        else if (trimmed.startsWith('* ') || /^\d+\.\s/.test(trimmed)) {
-                            const cleanTitle = trimmed.replace(/^\*\s*/, '');
+                        else if (trimmed.startsWith('일자:')) html += `<p style="color:#666; font-size: 10pt; margin-bottom: 20px;">${trimmed.replace('일자: ', '')}</p>`;
+                        else if (trimmed.match(/^\\d+\\./)) html += `<div class="section-header">${trimmed}</div>`;
+                        else if (trimmed.startsWith('* ') || /^\\d+\\.\\s/.test(trimmed)) {
+                            const cleanTitle = trimmed.replace(/^\\*\\s*/, '');
                             html += `<div class="news-title"><b>${cleanTitle}</b></div>`;
                         } else if (trimmed.includes('--------------------------------------------------')) html += `<hr style="margin: 15px 0; border-top: 1px solid #000;">`;
                         else if (trimmed.includes('본 리포트는')) html += `<div class="footer-note">${trimmed}</div>`;
                         else {
-                            let content = trimmed.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+                            let content = trimmed.replace(/\\*\\*(.*?)\\*\\*/g, '<b>$1</b>');
                             html += `<p>${content}</p>`;
                         }
                     });

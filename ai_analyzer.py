@@ -368,3 +368,90 @@ class AIAnalyzer:
         """레거시 호환 — 사용되지 않음"""
         _, briefing = self.summarize_and_brief(news_list)
         return briefing
+
+    def analyze_weekly_insight(self, news_list: list[dict], date_range_str: str) -> dict:
+        """
+        주간 소상공인 인사이트 리포트 생성
+        """
+        import time
+        import json
+        import google.generativeai as genai
+
+        if not news_list:
+            return {"economic_trend": "수집된 뉴스가 없습니다.", "news_insights": []}
+
+        news_texts = []
+        for idx, news in enumerate(news_list):
+            naver_desc = news.get("네이버 요약", "") or news.get("description", "") or news.get("본문 전문", "")[:300]
+            body_preview = (news.get("본문 전문", "") or "")[:1000]
+            news_texts.append(
+                f"[뉴스 {idx + 1}]\n"
+                f"날짜: {news.get('날짜', '')}\n"
+                f"주제: {news.get('주제', '기타')}\n"
+                f"제목: {news.get('제목', '')}\n"
+                f"요약: {naver_desc}\n"
+                f"본문(일부): {body_preview}\n"
+            )
+
+        prompt = f"""당신은 공공기관 및 소상공인 비즈니스 컨설팅 전문가입니다.
+제공된 지난 일주일간({date_range_str})의 뉴스 목록을 바탕으로, 바쁜 서울시 소기업 및 소상공인 사장님들을 위한 주간 인사이트 리포트를 작성해 주세요.
+리포트는 소상공인 사장님들이 세상 돌아가는 경제 흐름을 파악하고, 실제 사업운영에 유용한 인사이트를 얻을 수 있도록 돕는 목적입니다.
+
+[작업 지침]
+1. 일주일간의 주요 경제 상황과 흐름을 'economic_trend'에 500자 이내로 핵심만 요약하십시오.
+2. 수집된 뉴스 중 서울시 소기업, 소상공인의 사업운영에 가장 큰 영향이나 실질적인 팁, 아이디어를 제공할 수 있는 중요 뉴스 **3개**를 신중하게 선정하여 'news_insights' 리스트에 담으십시오.
+3. 각 인사이트 항목은 'title'(뉴스 제목, 원문 그대로 생략 없이 전체 작성), 'summary'(주요내용 요약), 'implication'(사업운영 인사이트)으로 구성하십시오.
+   - **implication(사업운영 인사이트) 작성 가이드**: 단순히 기사를 해설하는 것을 넘어, 소상공인 사장님이 실질적으로 어떻게 대비하거나 활용해야 하는지 구체적인 비즈니스 팁, 대응 방안, 아이디어를 제공해야 합니다.
+   - 가독성을 극대화하기 위해 내용이 길어질 경우 논리적 흐름에 따라 2~3개의 문단으로 구분하고, 문단 사이에는 반드시 빈 줄(\\n\\n)을 삽입하십시오.
+4. 모든 내용은 친절하고 전문적인 구어체 혹은 격식체 경어(예: "~시기 바랍니다", "~할 필요가 있습니다")로 작성하며, 이모지는 절대 사용하지 마십시오.
+
+반드시 아래 JSON 형식을 엄수하여 응답하십시오:
+(주의: JSON 문자열 내부에 큰따옴표(")를 사용할 경우 반드시 백슬래시(\\)로 이스케이프 처리하세요.)
+{{
+  "economic_trend": "주간 거시 경제 흐름 요약 내용 (500자 이내)",
+  "news_insights": [
+    {{
+      "title": "기사 제목",
+      "summary": "주요내용 요약",
+      "implication": "사업운영을 위한 구체적인 시사점 및 대응 방향"
+    }},
+    ... (총 3개)
+  ]
+}}
+
+[일주일간의 뉴스 목록]
+{"".join(news_texts)}
+"""
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                response = self.model.generate_content(
+                    prompt,
+                    generation_config=genai.types.GenerationConfig(
+                        response_mime_type="application/json",
+                    )
+                )
+                text = response.text.strip()
+                if text.startswith("```json"): text = text[7:]
+                elif text.startswith("```"): text = text[3:]
+                if text.endswith("```"): text = text[:-3]
+                text = text.strip()
+                
+                try:
+                    result = json.loads(text)
+                except json.JSONDecodeError as e:
+                    logger.warning(f"주간 JSON 파싱 1차 에러 (복구 시도 중): {e}")
+                    import re
+                    text_repaired = re.sub(r'[\x00-\x1f]', lambda m: '\\u{:04x}'.format(ord(m.group(0))), text)
+                    match = re.search(r'\{.*\}', text_repaired, re.DOTALL)
+                    if match:
+                        text_repaired = match.group(0)
+                    result = json.loads(text_repaired)
+                    logger.info("주간 JSON 복구 파싱 성공!")
+                
+                return result
+            except Exception as e:
+                logger.error(f"주간 인사이트 분석 시도 {attempt+1} 실패: {e}")
+                if attempt == max_retries - 1:
+                    return {"economic_trend": "주간 경제 흐름 요약 로딩 실패", "news_insights": []}
+                time.sleep(2)
