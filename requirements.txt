@@ -1,6 +1,6 @@
 gspread
 google-auth
-google-generativeai
+google-genai
 requests
 newspaper4k
 lxml_html_clean

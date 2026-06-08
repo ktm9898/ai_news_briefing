@@ -9,24 +9,38 @@ ai_analyzer.py - Gemini API 기반 뉴스 분석 모듈
 import json
 import logging
 import time
-
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 from config import GEMINI_API_KEY, GEMINI_MODEL, DEFAULT_CRITERIA
 
 logger = logging.getLogger(__name__)
-
-# Gemini API 초기화
-genai.configure(api_key=GEMINI_API_KEY)
 
 
 class AIAnalyzer:
     """Gemini 기반 뉴스 분석기 (2단계 파이프라인)"""
 
     def __init__(self):
-        # 사용자 요청에 따라 2.5 Flash 모델 사용
-        self.model = genai.GenerativeModel('gemini-2.5-flash')
+        # google-genai Client 초기화 (API key가 빈 값이면 환경변수에서 자동 참조)
+        if GEMINI_API_KEY:
+            self.client = genai.Client(api_key=GEMINI_API_KEY)
+        else:
+            self.client = genai.Client()
 
+    @staticmethod
+    def _extract_retry_delay(error) -> float:
+        """429 에러에서 API가 권장하는 retry_delay(초)를 추출. 없으면 30초 반환."""
+        import re
+        error_str = str(error)
+        # "Please retry in 14.126154886s" 패턴에서 초 추출
+        match = re.search(r'retry in ([\d.]+)s', error_str, re.IGNORECASE)
+        if match:
+            return float(match.group(1)) + 2  # 여유 2초 추가
+        # retry_delay { seconds: 14 } 패턴
+        match = re.search(r'retry_delay.*?seconds:\s*([\d.]+)', error_str, re.DOTALL)
+        if match:
+            return float(match.group(1)) + 2
+        return 30.0  # 기본 대기 시간
 
     # ═══════════════════════════════════════════════════
     # Stage 1: 중요도 선별 (크롤링 전, 제목+설명만 사용)
@@ -140,9 +154,10 @@ class AIAnalyzer:
         max_retries = 3
         for attempt in range(max_retries):
             try:
-                response = self.model.generate_content(
-                    prompt,
-                    generation_config=genai.types.GenerationConfig(
+                response = self.client.models.generate_content(
+                    model=GEMINI_MODEL,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
                         response_mime_type="application/json",
                     )
                 )
@@ -195,7 +210,9 @@ class AIAnalyzer:
                     for news in news_list:
                         news["중요도"] = "중"
                 else:
-                    time.sleep(2)
+                    wait_sec = self._extract_retry_delay(e) if '429' in str(e) else 5
+                    logger.info(f"⏳ {wait_sec:.1f}초 대기 후 재시도...")
+                    time.sleep(wait_sec)
 
         return news_list, []
 
@@ -301,13 +318,13 @@ class AIAnalyzer:
         max_retries = 3
         for attempt in range(max_retries):
             try:
-                response = self.model.generate_content(
-                    prompt,
-                    generation_config=genai.types.GenerationConfig(
+                response = self.client.models.generate_content(
+                    model=GEMINI_MODEL,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
                         response_mime_type="application/json",
                     )
                 )
-                import json
                 
                 text = response.text.strip()
                 # 간혹 모델이 마크다운 코드 블록을 포함할 경우 제거
@@ -348,7 +365,9 @@ class AIAnalyzer:
                 logger.error(f"통합 분석 시도 {attempt+1} 실패: {e}")
                 if attempt == max_retries - 1:
                     return {"summaries": [], "briefing_script": "오류 발생", "insight_report": None}
-                time.sleep(2)
+                wait_sec = self._extract_retry_delay(e) if '429' in str(e) else 5
+                logger.info(f"⏳ {wait_sec:.1f}초 대기 후 재시도...")
+                time.sleep(wait_sec)
 
     def summarize_and_brief(self, news_list: list[dict], context_info: str = "") -> tuple[list[dict], str]:
         """기존 코드와 호환성을 유지하기 위한 래퍼 메서드"""
@@ -373,10 +392,6 @@ class AIAnalyzer:
         """
         주간 소상공인 인사이트 리포트 생성
         """
-        import time
-        import json
-        import google.generativeai as genai
-
         if not news_list:
             return {"economic_trend": "수집된 뉴스가 없습니다.", "news_insights": []}
 
@@ -425,9 +440,10 @@ class AIAnalyzer:
         max_retries = 3
         for attempt in range(max_retries):
             try:
-                response = self.model.generate_content(
-                    prompt,
-                    generation_config=genai.types.GenerationConfig(
+                response = self.client.models.generate_content(
+                    model=GEMINI_MODEL,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
                         response_mime_type="application/json",
                     )
                 )
@@ -454,4 +470,6 @@ class AIAnalyzer:
                 logger.error(f"주간 인사이트 분석 시도 {attempt+1} 실패: {e}")
                 if attempt == max_retries - 1:
                     return {"economic_trend": "주간 경제 흐름 요약 로딩 실패", "news_insights": []}
-                time.sleep(2)
+                wait_sec = self._extract_retry_delay(e) if '429' in str(e) else 5
+                logger.info(f"⏳ {wait_sec:.1f}초 대기 후 재시도...")
+                time.sleep(wait_sec)
