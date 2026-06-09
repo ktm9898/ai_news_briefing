@@ -341,18 +341,13 @@ class AIAnalyzer:
                     logger.warning(f"JSON 파싱 1차 에러 (복구 시도 중): {e}")
                     import re
                     
-                    # 1. 제어 문자 이스케이프 복구 (제어문자가 리터럴로 들어간 경우 \n 등으로 치환)
-                    # JSON 스펙상 유효하지 않은 제어 문자(0x00-0x1f)를 \u00XX 형태로 이스케이프
+                    # 1. 제어 문자 이스케이프 복구
                     text_repaired = re.sub(r'[\x00-\x1f]', lambda m: '\\u{:04x}'.format(ord(m.group(0))), text)
                     
-                    # 2. 첫 번째 { 와 마지막 } 사이 추출 (Extra data 뒤에 붙은 불필요한 텍스트 제거)
-                    match = re.search(r'\{.*\}', text_repaired, re.DOTALL)
-                    if match:
-                        text_repaired = match.group(0)
-                        
                     try:
-                        result = json.loads(text_repaired)
-                        logger.info("JSON 복구 파싱 성공!")
+                        # 2. raw_decode: JSON 뒤에 붙은 Extra data를 무시하고 첫 번째 유효한 JSON만 파싱
+                        result, _ = json.JSONDecoder().raw_decode(text_repaired)
+                        logger.info("JSON 복구 파싱 성공! (raw_decode)")
                     except json.JSONDecodeError as e2:
                         logger.error(f"JSON 파싱 2차 복구 에러. 원본 에러: {e}. 일부 텍스트: {text_repaired[:200]} ... {text_repaired[-200:]}")
                         raise e2
@@ -465,11 +460,13 @@ class AIAnalyzer:
                     logger.warning(f"주간 JSON 파싱 1차 에러 (복구 시도 중): {e}")
                     import re
                     text_repaired = re.sub(r'[\x00-\x1f]', lambda m: '\\u{:04x}'.format(ord(m.group(0))), text)
-                    match = re.search(r'\{.*\}', text_repaired, re.DOTALL)
-                    if match:
-                        text_repaired = match.group(0)
-                    result = json.loads(text_repaired)
-                    logger.info("주간 JSON 복구 파싱 성공!")
+                    try:
+                        # raw_decode: JSON 뒤에 붙은 Extra data를 무시하고 첫 번째 유효한 JSON만 파싱
+                        result, _ = json.JSONDecoder().raw_decode(text_repaired)
+                        logger.info("주간 JSON 복구 파싱 성공! (raw_decode)")
+                    except json.JSONDecodeError as e2:
+                        logger.error(f"주간 JSON 2차 복구 에러. 원본: {e}. 텍스트: {text_repaired[:200]}")
+                        raise e2
                 
                 return result
             except Exception as e:
