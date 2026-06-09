@@ -297,7 +297,7 @@ def run_pipeline():
                         logger.error(f"[{email}] 데일리 이메일 발송 중 오류: {e}")
 
                 # ── (신규) 일요일인 경우 주간 소기업·소상공인 인사이트 리포트 생성 ──
-                if generate_insight and now.weekday() == 6:
+                if generate_insight and now.weekday() == 1:  # TEMP: 1=화요일(테스트용), 원래는 6=일요일
                     logger.info(f"[{email}] 📅 일요일 주간 소상공인 인사이트 리포트 생성 프로세스 시작")
                     try:
                         # 오늘(일요일)부터 6일 전(월요일)까지의 기사를 시트에서 읽어옴
