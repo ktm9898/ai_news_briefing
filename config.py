@@ -42,7 +42,7 @@ SIMILARITY_THRESHOLD = 0.65  # 중복 기사 판별을 위한 제목 유사도 �
 
 # ── Google Gemini API ─────────────────────────────────
 GEMINI_API_KEY = _get_config("GEMINI_API_KEY")
-GEMINI_MODEL = "gemini-3.1-flash-lite"  # TEMP TEST: 원래는 gemini-3-flash-preview
+GEMINI_MODEL = "gemini-3-flash-preview"  # 종료일 없는 3.0 세대 대형 프리뷰 모델
 
 # 기본 중요도 판단 기준
 DEFAULT_CRITERIA = """
