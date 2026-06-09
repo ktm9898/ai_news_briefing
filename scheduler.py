@@ -39,6 +39,8 @@ def run_pipeline():
         "status": "실행 중",
         "processed_users": [],
         "errors": {},
+        "collected": 0,
+        "analyzed": 0,
     }
 
     try:
@@ -84,6 +86,7 @@ def run_pipeline():
                 # ── 1단계: 네이버 API 검색 (크롤링 없음, 빠름) ──
                 logger.info(f"[{email}] STEP 1/7: 네이버 API 뉴스 검색")
                 all_collected = collector.collect_all(email)
+                result["collected"] += len(all_collected)
 
                 if not all_collected:
                     logger.info(f"[{email}] 수집된 새로운 뉴스가 없습니다.")
@@ -155,6 +158,7 @@ def run_pipeline():
                     continue
 
                 selected_for_crawl = collector.crawl_selected_articles(unique_crawl_list)
+                result["analyzed"] += len(selected_for_crawl)
 
                 # ── 4단계: AI 통합 분석 (요약 + 대본 + 인사이트 리포트) ──
                 logger.info(f"[{email}] STEP 4/7: AI 통합 분석 수행")
@@ -344,7 +348,11 @@ def run_pipeline():
                 logger.error(f"[{email}] 처리 중 오류 발생: {user_err}", exc_info=True)
                 result["errors"][email] = str(user_err)
 
-        result["status"] = "완료"
+        if result["errors"]:
+            result["status"] = "오류"
+            result["error"] = ", ".join(f"{email}: {err}" for email, err in result["errors"].items())
+        else:
+            result["status"] = "완료"
         elapsed = (datetime.now(KST) - start_time).total_seconds()
         logger.info(f"=== 파이프라인 전체 완료 ({elapsed:.1f}초) ===")
 

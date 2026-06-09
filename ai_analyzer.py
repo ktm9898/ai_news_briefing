@@ -82,9 +82,9 @@ class AIAnalyzer:
                         break
                 
                 if found_exclusion:
-                    logger.info(f"주요뉴스 후보 배제 (키워드 매칭): {news.get('제목')}")
-                    news["주제"] = "기타(세부관심사)" 
-                    topic_news_pool.append(news)
+                    logger.info(f"주요뉴스 후보 배제 (키워드 매칭) 및 완전히 제외: {news.get('제목')}")
+                    # 이 기사는 주요뉴스 후보에서 배제되고, 일반 주제에도 속하지 않으므로 완전히 제외합니다.
+                    continue
                 else:
                     headline_candidates.append(news)
             else:
@@ -151,7 +151,7 @@ class AIAnalyzer:
 {chr(10).join(news_texts)}
 """
 
-        max_retries = 3
+        max_retries = 5
         for attempt in range(max_retries):
             try:
                 response = self.client.models.generate_content(
@@ -207,10 +207,12 @@ class AIAnalyzer:
             except Exception as e:
                 logger.error(f"AI 1차 선별 실패 (시도 {attempt + 1}/{max_retries}): {e}")
                 if attempt == max_retries - 1:
-                    for news in news_list:
-                        news["중요도"] = "중"
+                    raise e
                 else:
-                    wait_sec = self._extract_retry_delay(e) if '429' in str(e) else 5
+                    if '429' in str(e):
+                        wait_sec = self._extract_retry_delay(e)
+                    else:
+                        wait_sec = 10 * (attempt + 1)
                     logger.info(f"⏳ {wait_sec:.1f}초 대기 후 재시도...")
                     time.sleep(wait_sec)
 
@@ -315,7 +317,7 @@ class AIAnalyzer:
 {chr(10).join(news_texts)}
 """
 
-        max_retries = 3
+        max_retries = 5
         for attempt in range(max_retries):
             try:
                 response = self.client.models.generate_content(
@@ -364,10 +366,14 @@ class AIAnalyzer:
             except Exception as e:
                 logger.error(f"통합 분석 시도 {attempt+1} 실패: {e}")
                 if attempt == max_retries - 1:
-                    return {"summaries": [], "briefing_script": "오류 발생", "insight_report": None}
-                wait_sec = self._extract_retry_delay(e) if '429' in str(e) else 5
-                logger.info(f"⏳ {wait_sec:.1f}초 대기 후 재시도...")
-                time.sleep(wait_sec)
+                    raise e
+                else:
+                    if '429' in str(e):
+                        wait_sec = self._extract_retry_delay(e)
+                    else:
+                        wait_sec = 10 * (attempt + 1)
+                    logger.info(f"⏳ {wait_sec:.1f}초 대기 후 재시도...")
+                    time.sleep(wait_sec)
 
     def summarize_and_brief(self, news_list: list[dict], context_info: str = "") -> tuple[list[dict], str]:
         """기존 코드와 호환성을 유지하기 위한 래퍼 메서드"""
@@ -437,7 +443,7 @@ class AIAnalyzer:
 [일주일간의 뉴스 목록]
 {"".join(news_texts)}
 """
-        max_retries = 3
+        max_retries = 5
         for attempt in range(max_retries):
             try:
                 response = self.client.models.generate_content(
@@ -469,7 +475,11 @@ class AIAnalyzer:
             except Exception as e:
                 logger.error(f"주간 인사이트 분석 시도 {attempt+1} 실패: {e}")
                 if attempt == max_retries - 1:
-                    return {"economic_trend": "주간 경제 흐름 요약 로딩 실패", "news_insights": []}
-                wait_sec = self._extract_retry_delay(e) if '429' in str(e) else 5
-                logger.info(f"⏳ {wait_sec:.1f}초 대기 후 재시도...")
-                time.sleep(wait_sec)
+                    raise e
+                else:
+                    if '429' in str(e):
+                        wait_sec = self._extract_retry_delay(e)
+                    else:
+                        wait_sec = 10 * (attempt + 1)
+                    logger.info(f"⏳ {wait_sec:.1f}초 대기 후 재시도...")
+                    time.sleep(wait_sec)
