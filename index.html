@@ -181,6 +181,11 @@
             }
             @page { size: A4; margin: 20mm; }
             #printArea { padding: 0 !important; }
+            .reference-link {
+                text-decoration: none !important;
+                color: inherit !important;
+                pointer-events: none;
+            }
         }
 
         /* 모바일에서 이메일 뱃지 숨김 (줄바꿈 및 레이아웃 깨짐 방지) */
@@ -2293,7 +2298,15 @@
                         data.news_insights.forEach((item) => {
                             html += `<div class="news-title"><b>${item.title}</b></div>`;
                             html += `<p><b>주요내용:</b> ${formatParagraphs(item.summary)}</p>`;
-                            html += `<p style="margin-bottom: 25px;"><b>${insightLabel}:</b> ${formatParagraphs(item.implication)}</p>`;
+                            
+                            // 참고 출처를 구글 검색 링크로 변환
+                            let impText = formatParagraphs(item.implication);
+                            impText = impText.replace(/\\[참고 출처:\\s*(.*?)\\]/g, function(match, p1) {
+                                const q = encodeURIComponent(p1.replace(/"/g, ''));
+                                return `<a href="https://www.google.com/search?q=${q}" target="_blank" class="reference-link" style="text-decoration: underline; color: #2563eb;">[참고 출처: ${p1}]</a>`;
+                            });
+                            
+                            html += `<p style="margin-bottom: 25px;"><b>${insightLabel}:</b> ${impText}</p>`;
                         });
                     }
 

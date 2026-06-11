@@ -403,8 +403,13 @@ class NewsCollector:
             news["본문 전문"] = body[:40000] if body else "(본문 추출 실패)"
             
             # 원문 페이지에서 추출한 전체 제목이 있으면 업데이트 (말줄임표 방지)
+            # newspaper4k가 '-'나 '|'를 기준으로 사이트명을 자르다가 본제목까지 자르는 경우 방지
             if extracted_title:
-                news["제목"] = extracted_title
+                orig_title = news.get("제목", "")
+                if ("..." in orig_title or "…" in orig_title) and len(extracted_title) > 5:
+                    news["제목"] = extracted_title
+                elif len(extracted_title) > len(orig_title) and not extracted_title.endswith("..."):
+                    news["제목"] = extracted_title
                 
             return news
 
