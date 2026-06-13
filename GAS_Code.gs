@@ -605,7 +605,10 @@ function generateInsightReportPdf(date, insightReport) {
     insightReport.news_insights.forEach(function(item) {
       html += '<div class="news-title"><b>' + escapeHtml(item.title) + '</b></div>';
       html += '<p><b>주요내용:</b> ' + formatParagraphs(item.summary || '') + '</p>';
-      html += '<p style="margin-bottom: 25px;"><b>시사점:</b> ' + formatParagraphs(item.implication || '') + '</p>';
+      html += '<p style="margin-bottom: ' + (item.reference ? '15px' : '25px') + ';"><b>시사점:</b> ' + formatParagraphs(item.implication || '') + '</p>';
+      if (item.reference) {
+        html += '<p style="margin-bottom: 25px; color: #666;">[참고 출처: ' + escapeHtml(item.reference) + ']</p>';
+      }
     });
   }
 
@@ -638,7 +641,11 @@ function sendDailyReportEmail(email, date, briefingScript, insightReport, newsLi
     insightReport.news_insights.forEach(function(item) {
       newsInsightsHtml += '<div style="font-size: 12pt; font-weight: bold; color: #000; margin-top: 25px; margin-bottom: 10px;"><b>' + escapeHtml(item.title) + '</b></div>';
       newsInsightsHtml += '<p style="font-size: 10.5pt; color: #333; margin-top: 0; margin-bottom: 10px; line-height: 1.7; text-align: justify; word-break: break-all;"><b>주요내용:</b> ' + formatParagraphs(item.summary || '') + '</p>';
-      newsInsightsHtml += '<p style="font-size: 10.5pt; color: #333; margin-top: 0; margin-bottom: 25px; line-height: 1.7; text-align: justify; word-break: break-all;"><b>시사점:</b> ' + formatParagraphs(item.implication || '') + '</p>';
+      newsInsightsHtml += '<p style="font-size: 10.5pt; color: #333; margin-top: 0; margin-bottom: ' + (item.reference ? '15px' : '25px') + '; line-height: 1.7; text-align: justify; word-break: break-all;"><b>시사점:</b> ' + formatParagraphs(item.implication || '') + '</p>';
+      if (item.reference) {
+        const q = encodeURIComponent(item.reference.replace(/"/g, ''));
+        newsInsightsHtml += '<p style="font-size: 10.5pt; color: #2563eb; margin-top: 0; margin-bottom: 25px; line-height: 1.7; text-align: justify; word-break: break-all;"><a href="https://www.google.com/search?q=' + q + '" target="_blank" style="text-decoration: underline; color: #2563eb;">[참고 출처: ' + escapeHtml(item.reference) + ']</a></p>';
+      }
     });
   }
 
@@ -721,7 +728,10 @@ function generateWeeklyInsightReportPdf(dateRange, insightReport) {
     insightReport.news_insights.forEach(function(item) {
       html += '<div class="news-title"><b>' + escapeHtml(item.title) + '</b></div>';
       html += '<p><b>주요내용:</b> ' + formatParagraphs(item.summary || '') + '</p>';
-      html += '<p style="margin-bottom: 25px;"><b>사업운영 인사이트:</b> ' + formatParagraphs(item.implication || '') + '</p>';
+      html += '<p style="margin-bottom: ' + (item.reference ? '15px' : '25px') + ';"><b>사업운영 인사이트:</b> ' + formatParagraphs(item.implication || '') + '</p>';
+      if (item.reference) {
+        html += '<p style="margin-bottom: 25px; color: #666;">[참고 출처: ' + escapeHtml(item.reference) + ']</p>';
+      }
     });
   }
 
@@ -753,7 +763,11 @@ function sendWeeklyReportEmail(email, dateRange, insightReport) {
     insightReport.news_insights.forEach(function(item) {
       newsInsightsHtml += '<div style="font-size: 12pt; font-weight: bold; color: #000; margin-top: 25px; margin-bottom: 10px;"><b>' + escapeHtml(item.title) + '</b></div>';
       newsInsightsHtml += '<p style="font-size: 10.5pt; color: #333; margin-top: 0; margin-bottom: 10px; line-height: 1.7; text-align: justify; word-break: break-all;"><b>주요내용:</b> ' + formatParagraphs(item.summary || '') + '</p>';
-      newsInsightsHtml += '<p style="font-size: 10.5pt; color: #333; margin-top: 0; margin-bottom: 25px; line-height: 1.7; text-align: justify; word-break: break-all;"><b>사업운영 인사이트:</b> ' + formatParagraphs(item.implication || '') + '</p>';
+      newsInsightsHtml += '<p style="font-size: 10.5pt; color: #333; margin-top: 0; margin-bottom: ' + (item.reference ? '15px' : '25px') + '; line-height: 1.7; text-align: justify; word-break: break-all;"><b>사업운영 인사이트:</b> ' + formatParagraphs(item.implication || '') + '</p>';
+      if (item.reference) {
+        const q = encodeURIComponent(item.reference.replace(/"/g, ''));
+        newsInsightsHtml += '<p style="font-size: 10.5pt; color: #2563eb; margin-top: 0; margin-bottom: 25px; line-height: 1.7; text-align: justify; word-break: break-all;"><a href="https://www.google.com/search?q=' + q + '" target="_blank" style="text-decoration: underline; color: #2563eb;">[참고 출처: ' + escapeHtml(item.reference) + ']</a></p>';
+      }
     });
   }
 

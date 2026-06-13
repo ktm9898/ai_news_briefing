@@ -564,7 +564,7 @@
     <div id="reportsModal"
         class="modal-overlay fixed inset-0 bg-black/50 z-[100] hidden flex items-end sm:items-center justify-center print-hide"
         onclick="if(event.target===this) closeReportsModal()">
-        <div class="modal-content bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-2xl max-h-[85vh] flex flex-col h-[85vh] sm:h-auto">
+        <div class="modal-content bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-2xl max-h-[85vh] flex flex-col h-[85vh] sm:h-auto overflow-hidden">
             <div class="sticky top-0 bg-white border-b border-border px-5 py-3 flex items-center justify-between shrink-0">
                 <h2 class="text-sm font-bold" id="reportsModalTitle">📑 지난 리포트</h2>
                 <div class="flex items-center gap-2">
@@ -2209,7 +2209,11 @@
                 
                 let targetArray = [];
                 if (Array.isArray(data)) {
-                    data.sort((a, b) => new Date(b['날짜'] || 0) - new Date(a['날짜'] || 0));
+                    data.sort((a, b) => {
+                        const dateA = a['날짜'] ? new Date(String(a['날짜']).substring(0, 10)) : new Date(0);
+                        const dateB = b['날짜'] ? new Date(String(b['날짜']).substring(0, 10)) : new Date(0);
+                        return dateB - dateA;
+                    });
                     targetArray = data;
                 }
                 
