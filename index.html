@@ -2282,8 +2282,8 @@
                     const data = JSON.parse(rawContent);
                     const isFoundation = currentReportTab === 'foundation';
                     const mainTitle = isFoundation ? '서울신용보증재단 인사이트 리포트' : '소기업·소상공인 주간 인사이트 리포트';
-                    const insightTitle = isFoundation ? '2. 업무 인사이트' : '2. 사업운영 인사이트';
-                    const insightLabel = isFoundation ? '시사점' : '사업운영 인사이트';
+                    const insightTitle = isFoundation ? '2. 업무 인사이트' : '2. 인사이트';
+                    const insightLabel = isFoundation ? '시사점' : '인사이트';
                     const footerText = isFoundation ? '본 리포트는 서울신용보증재단의 정책 결정 및 업무 지원을 위해 AI를 통해 분석된 결과입니다.' : '본 리포트는 서울시 소기업 및 소상공인의 사업운영을 지원하기 위해 AI를 통해 분석된 주간 경제 보고서입니다.';
                     
                     const displayDate = isFoundation ? report['날짜'] : String(report['날짜']).replace(/-/g, '.');

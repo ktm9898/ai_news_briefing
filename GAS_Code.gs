@@ -722,13 +722,13 @@ function generateWeeklyInsightReportPdf(dateRange, insightReport) {
   html += '<div class="section-header">1. 주요 경제 흐름</div>';
   html += '<p>' + escapeHtml(insightReport.economic_trend || '').replace(/\\n/g, '<br>') + '</p>';
 
-  // 3. 사업운영 인사이트
-  html += '<div class="section-header">2. 사업운영 인사이트</div>';
+  // 3. 인사이트
+  html += '<div class="section-header">2. 인사이트</div>';
   if (insightReport.news_insights && Array.isArray(insightReport.news_insights)) {
     insightReport.news_insights.forEach(function(item) {
       html += '<div class="news-title"><b>' + escapeHtml(item.title) + '</b></div>';
       html += '<p><b>주요내용:</b> ' + formatParagraphs(item.summary || '') + '</p>';
-      html += '<p style="margin-bottom: ' + (item.reference ? '15px' : '25px') + ';"><b>사업운영 인사이트:</b> ' + formatParagraphs(item.implication || '') + '</p>';
+      html += '<p style="margin-bottom: ' + (item.reference ? '15px' : '25px') + ';"><b>인사이트:</b> ' + formatParagraphs(item.implication || '') + '</p>';
       if (item.reference) {
         html += '<p style="margin-bottom: 25px; color: #666;">[참고 출처: ' + escapeHtml(item.reference) + ']</p>';
       }
@@ -763,7 +763,7 @@ function sendWeeklyReportEmail(email, dateRange, insightReport) {
     insightReport.news_insights.forEach(function(item) {
       newsInsightsHtml += '<div style="font-size: 12pt; font-weight: bold; color: #000; margin-top: 25px; margin-bottom: 10px;"><b>' + escapeHtml(item.title) + '</b></div>';
       newsInsightsHtml += '<p style="font-size: 10.5pt; color: #333; margin-top: 0; margin-bottom: 10px; line-height: 1.7; text-align: justify; word-break: break-all;"><b>주요내용:</b> ' + formatParagraphs(item.summary || '') + '</p>';
-      newsInsightsHtml += '<p style="font-size: 10.5pt; color: #333; margin-top: 0; margin-bottom: ' + (item.reference ? '15px' : '25px') + '; line-height: 1.7; text-align: justify; word-break: break-all;"><b>사업운영 인사이트:</b> ' + formatParagraphs(item.implication || '') + '</p>';
+      newsInsightsHtml += '<p style="font-size: 10.5pt; color: #333; margin-top: 0; margin-bottom: ' + (item.reference ? '15px' : '25px') + '; line-height: 1.7; text-align: justify; word-break: break-all;"><b>인사이트:</b> ' + formatParagraphs(item.implication || '') + '</p>';
       if (item.reference) {
         const q = encodeURIComponent(item.reference.replace(/"/g, ''));
         newsInsightsHtml += '<p style="font-size: 10.5pt; color: #2563eb; margin-top: 0; margin-bottom: 25px; line-height: 1.7; text-align: justify; word-break: break-all;"><a href="https://www.google.com/search?q=' + q + '" target="_blank" style="text-decoration: underline; color: #2563eb;">[참고 출처: ' + escapeHtml(item.reference) + ']</a></p>';
@@ -785,8 +785,8 @@ function sendWeeklyReportEmail(email, dateRange, insightReport) {
   htmlBody += '<div style="font-size: 14pt; font-weight: bold; color: #000; margin-top: 30px; margin-bottom: 12px;">1. 주요 경제 흐름</div>';
   htmlBody += '<p style="font-size: 10.5pt; color: #333; margin-top: 0; margin-bottom: 10px; line-height: 1.7; text-align: justify; word-break: break-all;">' + escapeHtml(insightReport.economic_trend || '').replace(/\\n/g, '<br>') + '</p>';
 
-  // 2. 사업운영 인사이트
-  htmlBody += '<div style="font-size: 14pt; font-weight: bold; color: #000; margin-top: 30px; margin-bottom: 12px;">2. 사업운영 인사이트</div>';
+  // 2. 인사이트
+  htmlBody += '<div style="font-size: 14pt; font-weight: bold; color: #000; margin-top: 30px; margin-bottom: 12px;">2. 인사이트</div>';
   htmlBody += newsInsightsHtml;
 
   // 푸터 안내선 및 비고
