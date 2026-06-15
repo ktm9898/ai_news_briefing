@@ -487,3 +487,49 @@ class AIAnalyzer:
                         wait_sec = 10 * (attempt + 1)
                     logger.info(f"⏳ {wait_sec:.1f}초 대기 후 재시도...")
                     time.sleep(wait_sec)
+
+    def enrich_references_with_urls(self, insight_data: dict) -> dict:
+        """
+        인사이트 리포트의 reference 텍스트를 Google Search Grounding을 통해 실제 URL로 보강합니다.
+        Gemini 2.5 Flash에서 JSON 모드와 Grounding 동시 사용 제약을 우회하기 위한 2단계 호출입니다.
+        """
+        if not insight_data or "news_insights" not in insight_data:
+            return insight_data
+
+        insights = insight_data.get("news_insights", [])
+        if not insights:
+            return insight_data
+
+        logger.info(f"🔍 참고출처 URL 검색 (Grounding) 시작: 총 {len(insights)}건")
+        
+        for item in insights:
+            ref_text = item.get("reference", "").strip()
+            if not ref_text:
+                continue
+
+            prompt = f"다음 설명에 해당하는 공식적인 원문 보고서, 기사, 발표 자료 등의 URL을 1개만 찾아주세요.\n설명: {ref_text}\nURL 주소만 정확하게 반환하고 다른 설명이나 마크다운은 절대 포함하지 마세요."
+            
+            try:
+                # Grounding 호출은 JSON 모드 없이 텍스트 모드로 수행
+                response = self.client.models.generate_content(
+                    model=GEMINI_MODEL,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        tools=[types.Tool(google_search=types.GoogleSearch())],
+                    )
+                )
+                
+                url = response.text.strip()
+                # 마크다운 링크 형식 제거 (예: [링크](https://...))
+                import re
+                url_match = re.search(r'(https?://[^\s]+)', url)
+                if url_match:
+                    clean_url = url_match.group(1).rstrip(')"]')
+                    item["reference_url"] = clean_url
+                    logger.info(f"  - [{ref_text}] -> {clean_url}")
+                else:
+                    logger.warning(f"  - [{ref_text}] -> URL 검색 실패 (반환값: {url})")
+            except Exception as e:
+                logger.error(f"  - [{ref_text}] URL 검색 중 오류: {e}")
+
+        return insight_data

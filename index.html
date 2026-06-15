@@ -2306,10 +2306,14 @@
                             let impText = formatParagraphs(item.implication);
                             html += `<p style="margin-bottom: ${item.reference ? '15px' : '25px'};"><b>${insightLabel}:</b> ${impText}</p>`;
                             
-                            // reference 필드가 별도로 존재하면 구글 검색 링크로 표시
+                            // reference_url이 있으면 해당 URL 사용, 없으면 구글 검색 링크로 fallback
                             if (item.reference && item.reference.trim() !== '') {
-                                const q = encodeURIComponent(item.reference.replace(/"/g, ''));
-                                html += `<p style="margin-bottom: 25px; color: #2563eb;"><a href="https://www.google.com/search?q=${q}" target="_blank" class="reference-link" style="text-decoration: underline; color: #2563eb;">[참고 출처: ${item.reference}]</a></p>`;
+                                if (item.reference_url && item.reference_url.trim() !== '') {
+                                    html += `<p style="margin-bottom: 25px; color: #2563eb;"><a href="${item.reference_url}" target="_blank" class="reference-link" style="text-decoration: underline; color: #2563eb;">[참고 출처: ${item.reference}]</a></p>`;
+                                } else {
+                                    const q = encodeURIComponent(item.reference.replace(/"/g, ''));
+                                    html += `<p style="margin-bottom: 25px; color: #2563eb;"><a href="https://www.google.com/search?q=${q}" target="_blank" class="reference-link" style="text-decoration: underline; color: #2563eb;">[참고 출처: ${item.reference}]</a></p>`;
+                                }
                             }
                         });
                     }

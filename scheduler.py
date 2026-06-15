@@ -178,6 +178,11 @@ def run_pipeline():
 
                 briefing_script = analysis_result.get("briefing_script", "")
                 insight_data = analysis_result.get("insight_report")
+                
+                # 인사이트 리포트 참고출처 URL 보강 (Google Search Grounding)
+                if insight_data:
+                    insight_data = analyzer.enrich_references_with_urls(insight_data)
+
 
                 # ── 5단계: 시트 저장 ──
                 logger.info(f"[{email}] STEP 5/7: 데이터 시트 저장")
@@ -312,6 +317,10 @@ def run_pipeline():
                         if weekly_news:
                             # 주간 리포트 분석
                             weekly_insight_data = analyzer.analyze_weekly_insight(weekly_news, weekly_date_range)
+                            
+                            # 인사이트 리포트 참고출처 URL 보강 (Google Search Grounding)
+                            if weekly_insight_data:
+                                weekly_insight_data = analyzer.enrich_references_with_urls(weekly_insight_data)
                             
                             # Weekly_Briefing_Docs 시트에 저장
                             weekly_title = f"AI News Weekly Insight Report - {weekly_date_range}"
