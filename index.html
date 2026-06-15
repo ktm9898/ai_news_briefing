@@ -2303,14 +2303,14 @@
                             html += `<div class="news-title"><b>${item.title}</b></div>`;
                             html += `<p><b>주요내용:</b> ${formatParagraphs(item.summary)}</p>`;
                             
-                            // 참고 출처를 구글 검색 링크로 변환
                             let impText = formatParagraphs(item.implication);
-                            impText = impText.replace(/\\[참고 출처:\\s*(.*?)\\]/g, function(match, p1) {
-                                const q = encodeURIComponent(p1.replace(/"/g, ''));
-                                return `<a href="https://www.google.com/search?q=${q}" target="_blank" class="reference-link" style="text-decoration: underline; color: #2563eb;">[참고 출처: ${p1}]</a>`;
-                            });
+                            html += `<p style="margin-bottom: ${item.reference ? '15px' : '25px'};"><b>${insightLabel}:</b> ${impText}</p>`;
                             
-                            html += `<p style="margin-bottom: 25px;"><b>${insightLabel}:</b> ${impText}</p>`;
+                            // reference 필드가 별도로 존재하면 구글 검색 링크로 표시
+                            if (item.reference && item.reference.trim() !== '') {
+                                const q = encodeURIComponent(item.reference.replace(/"/g, ''));
+                                html += `<p style="margin-bottom: 25px; color: #2563eb;"><a href="https://www.google.com/search?q=${q}" target="_blank" class="reference-link" style="text-decoration: underline; color: #2563eb;">[참고 출처: ${item.reference}]</a></p>`;
+                            }
                         });
                     }
 
