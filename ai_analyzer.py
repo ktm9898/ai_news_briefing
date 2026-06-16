@@ -265,7 +265,7 @@ class AIAnalyzer:
 3. 각 인사이트 항목은 'title'(뉴스 제목, 원문 그대로 생략 없이 전체 작성), 'summary'(주요내용), 'implication'(시사점)으로 구성하십시오.
    - **summary 작성 가이드**: 단순 요약을 넘어 기사의 배경, 구체적인 수치, 핵심 쟁점 등을 상세하고 구체적으로 설명하십시오.
    - **implication 작성 가이드**: 단순히 표면적인 대응("지원해야 함", "모니터링해야 함")을 넘어, 해당 뉴스의 이면과 배경을 통찰하십시오. 타 지역 뉴스라면 서울시 환경에 비추어 유추하고, 국내외 거시 뉴스라면 국내 소상공인 생태계나 재단 정책에 미칠 파급 효과를 구체적으로 짚어주십시오. 억지로 연결할 필요는 없으나, 정책적으로 참고할 만한 밀도 높은 통찰을 제공해야 합니다. 특히, 실질적인 도움이 될 수 있도록 관련된 국내외 유사 사례나 성공/실패 레퍼런스를 1~2개 이상 구체적으로 포함하여 통찰을 제공하되, **[할루시네이션(거짓 정보) 엄격 금지]** 반드시 대중적으로 널리 알려지고 교차 검증된 실제 팩트(Fact) 사례만 인용하십시오. 만약 완전히 확신할 수 있는 실제 사례가 없다면, 억지로 꾸며내지 말고 논리적으로 예상되는 가상의 시나리오(예: "만약 이 제도가 도입된다면~") 형태로 명확히 구분하여 서술하십시오.
-   - **[외부 사례 출처 표기 (필수)]**: 시사점(implication)을 작성할 때 반드시 1~2개의 적절한 외부 유사 사례, 타 기관의 대응 사례, 또는 관련 연구/보고서를 인용하여 구체성을 높이십시오. 인용한 외부 레퍼런스의 출처(예: 언론사명, 보고서명, 기관명 등)를 'reference' 필드에 반드시 기재해야 합니다. 현재 요약 중인 원본 기사의 출처는 절대 적지 마십시오. 빈 문자열("")로 비워두는 것은 허용되지 않습니다.
+   - **[외부 사례 출처 표기 (필수)]**: 시사점(implication)을 작성할 때 반드시 1~2개의 적절한 외부 유사 사례, 타 기관의 대응 사례, 관련 연구/보고서를 인용하여 구체성을 높이십시오. 인용한 외부 레퍼런스 각각의 정확한 명칭(예: 언론사명 기사제목, 기관명 보고서명 등)을 'references' 배열에 개별 항목으로 반드시 기재하십시오. 여러 출처를 하나의 문자열로 묶거나 쉼표로 연결하지 마십시오. 존재하지 않는 가상의 출처나 만료된 보고서를 지어내지 말고, 구글 검색을 통해 실제로 확인 가능한 정확한 명칭만 기재하십시오. 현재 요약 중인 원본 기사의 출처는 절대 적지 마십시오.
    - 가독성을 극대화하기 위해 내용이 길어질 경우 논리적 흐름에 따라 2~3개의 문단으로 구분하고, 문단 사이에는 반드시 빈 줄(엔터 키 두 번, \n\n)을 삽입하십시오.
 4. 모든 내용은 정중하고 전문적인 문체로 작성하며, 이모지는 절대 사용하지 마십시오.
 
@@ -277,7 +277,10 @@ class AIAnalyzer:
         \"title\": \"기사 제목\",
         \"summary\": \"주요내용\",
         \"implication\": \"시사점 및 깊이 있는 통찰\",
-        \"reference\": \"필수로 인용한 1-2개의 외부 사례 출처 (예: 한국은행 보고서, 중소벤처기업부 발표 등)\"
+        \"references\": [
+          \"첫 번째 외부 사례 출처의 정확한 명칭 (예: 한국은행 '2024 경제전망 보고서')\",
+          \"두 번째 외부 사례 출처의 정확한 명칭 (있는 경우)\"
+        ]
       }}
     ]
   }}"""
@@ -490,8 +493,8 @@ class AIAnalyzer:
 
     def enrich_references_with_urls(self, insight_data: dict) -> dict:
         """
-        인사이트 리포트의 reference 텍스트를 Google Search Grounding을 통해 실제 URL로 보강합니다.
-        Gemini 2.5 Flash에서 JSON 모드와 Grounding 동시 사용 제약을 우회하기 위한 2단계 호출입니다.
+        인사이트 리포트의 references 배열을 순회하며 Google Search Grounding을 통해 실제 URL로 보강합니다.
+        각 출처명에 대해 검색된 URL을 포함하는 딕셔너리 리스트로 변환합니다.
         """
         if not insight_data or "news_insights" not in insight_data:
             return insight_data
@@ -500,36 +503,50 @@ class AIAnalyzer:
         if not insights:
             return insight_data
 
-        logger.info(f"🔍 참고출처 URL 검색 (Grounding) 시작: 총 {len(insights)}건")
+        logger.info(f"🔍 참고출처 URL 검색 (Grounding) 시작: 총 {len(insights)}개 기사")
+        
+        import re
         
         for item in insights:
-            ref_text = item.get("reference", "").strip()
-            if not ref_text:
-                continue
-
-            prompt = f"다음 설명에 해당하는 공식적인 원문 보고서, 기사, 발표 자료 등의 URL을 1개만 찾아주세요.\n설명: {ref_text}\nURL 주소만 정확하게 반환하고 다른 설명이나 마크다운은 절대 포함하지 마세요."
+            # 기존 레거시 호환 및 방어적 복사
+            raw_refs = item.get("references", [])
+            # 만약 이전 스키마(reference)로 왔을 경우 배열로 변환
+            if not raw_refs and item.get("reference"):
+                raw_refs = [r.strip() for r in item.get("reference").split(",") if r.strip()]
             
-            try:
-                # Grounding 호출은 JSON 모드 없이 텍스트 모드로 수행
-                response = self.client.models.generate_content(
-                    model=GEMINI_MODEL,
-                    contents=prompt,
-                    config=types.GenerateContentConfig(
-                        tools=[types.Tool(google_search=types.GoogleSearch())],
-                    )
-                )
+            enriched_refs = []
+            
+            for ref_text in raw_refs:
+                ref_text = str(ref_text).strip()
+                if not ref_text:
+                    continue
+
+                prompt = f"다음 설명에 해당하는 공식적인 원문 보고서, 기사, 발표 자료 등의 URL을 1개만 찾아주세요.\n설명: {ref_text}\nURL 주소만 정확하게 반환하고 다른 설명이나 마크다운은 절대 포함하지 마세요."
                 
-                url = response.text.strip()
-                # 마크다운 링크 형식 제거 (예: [링크](https://...))
-                import re
-                url_match = re.search(r'(https?://[^\s]+)', url)
-                if url_match:
-                    clean_url = url_match.group(1).rstrip(')"]')
-                    item["reference_url"] = clean_url
-                    logger.info(f"  - [{ref_text}] -> {clean_url}")
-                else:
-                    logger.warning(f"  - [{ref_text}] -> URL 검색 실패 (반환값: {url})")
-            except Exception as e:
-                logger.error(f"  - [{ref_text}] URL 검색 중 오류: {e}")
+                enriched_ref = {"name": ref_text, "url": ""}
+                try:
+                    # Grounding 호출은 JSON 모드 없이 텍스트 모드로 수행
+                    response = self.client.models.generate_content(
+                        model=GEMINI_MODEL,
+                        contents=prompt,
+                        config=types.GenerateContentConfig(
+                            tools=[types.Tool(google_search=types.GoogleSearch())],
+                        )
+                    )
+                    
+                    url = response.text.strip()
+                    url_match = re.search(r'(https?://[^\s"\'<>]+)', url)
+                    if url_match:
+                        clean_url = url_match.group(1).rstrip(')"]')
+                        enriched_ref["url"] = clean_url
+                        logger.info(f"  - [{ref_text}] -> {clean_url}")
+                    else:
+                        logger.warning(f"  - [{ref_text}] -> URL 검색 실패 (반환값: {url})")
+                except Exception as e:
+                    logger.error(f"  - [{ref_text}] URL 검색 중 오류: {e}")
+                
+                enriched_refs.append(enriched_ref)
+                
+            item["references"] = enriched_refs
 
         return insight_data

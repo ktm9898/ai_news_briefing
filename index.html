@@ -2304,10 +2304,24 @@
                             html += `<p><b>주요내용:</b> ${formatParagraphs(item.summary)}</p>`;
                             
                             let impText = formatParagraphs(item.implication);
-                            html += `<p style="margin-bottom: ${item.reference ? '15px' : '25px'};"><b>${insightLabel}:</b> ${impText}</p>`;
+                            let hasRefs = (item.references && item.references.length > 0) || (item.reference && item.reference.trim() !== '');
+                            html += `<p style="margin-bottom: ${hasRefs ? '15px' : '25px'};"><b>${insightLabel}:</b> ${impText}</p>`;
                             
-                            // reference_url이 있으면 해당 URL 사용, 없으면 구글 검색 링크로 fallback
-                            if (item.reference && item.reference.trim() !== '') {
+                            // 신규 배열 형식 (references)
+                            if (item.references && Array.isArray(item.references) && item.references.length > 0) {
+                                item.references.forEach((ref, idx) => {
+                                    const isLast = (idx === item.references.length - 1);
+                                    const mb = isLast ? '25px' : '5px';
+                                    if (ref.url && ref.url.trim() !== '') {
+                                        html += `<p style="margin-bottom: ${mb}; color: #2563eb;"><a href="${ref.url}" target="_blank" class="reference-link" style="text-decoration: underline; color: #2563eb;">[참고 출처: ${ref.name}]</a></p>`;
+                                    } else {
+                                        const q = encodeURIComponent(ref.name.replace(/"/g, ''));
+                                        html += `<p style="margin-bottom: ${mb}; color: #2563eb;"><a href="https://www.google.com/search?q=${q}" target="_blank" class="reference-link" style="text-decoration: underline; color: #2563eb;">[참고 출처: ${ref.name}]</a></p>`;
+                                    }
+                                });
+                            }
+                            // 기존 단일 문자열 형식 (하위 호환)
+                            else if (item.reference && item.reference.trim() !== '') {
                                 if (item.reference_url && item.reference_url.trim() !== '') {
                                     html += `<p style="margin-bottom: 25px; color: #2563eb;"><a href="${item.reference_url}" target="_blank" class="reference-link" style="text-decoration: underline; color: #2563eb;">[참고 출처: ${item.reference}]</a></p>`;
                                 } else {
