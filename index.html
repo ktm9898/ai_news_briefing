@@ -186,6 +186,9 @@
                 color: inherit !important;
                 pointer-events: none;
             }
+            .print-hide-ref {
+                display: none !important;
+            }
         }
 
         /* 모바일에서 이메일 뱃지 숨김 (줄바꿈 및 레이아웃 깨짐 방지) */
@@ -538,6 +541,26 @@
         </div>
     </div>
 
+    <!-- ═══════════ 관리자 비밀번호 모달 ═══════════ -->
+    <div id="adminPwModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[300] flex items-center justify-center hidden">
+        <div class="bg-white/90 backdrop-blur-xl border border-white/20 p-8 rounded-3xl shadow-2xl max-w-sm w-full mx-4 transition-all duration-300 transform scale-100">
+            <h2 class="text-2xl font-bold text-center mb-6">관리자 확인</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">비밀번호</label>
+                    <input type="password" id="loginAdminPw" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-accent focus:border-accent outline-none" placeholder="비밀번호를 입력하세요" onkeydown="if(event.key === 'Enter') confirmAdminPw()">
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="cancelAdminPw()" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors">취소</button>
+                    <button onclick="confirmAdminPw()" id="adminPwConfirmBtn" class="flex-1 py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors flex items-center justify-center">
+                        <span id="adminPwConfirmText">확인</span>
+                        <svg id="adminPwSpinner" class="hidden animate-spin ml-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ═══════════ 상세 모달 ═══════════ -->
     <div id="detailModal"
         class="modal-overlay fixed inset-0 bg-black/50 z-[100] hidden flex items-end sm:items-center justify-center"
@@ -762,9 +785,11 @@
             }
         }
 
+        let pendingLoginEmail = '';
+
         async function submitLogin() {
             const emailInput = document.getElementById('loginEmailInput');
-            const email = emailInput.value.trim();
+            const email = emailInput.value.trim().toLowerCase();
             if (!email) {
                 alert('이메일 주소를 입력해주세요.');
                 return;
@@ -776,6 +801,60 @@
                 return;
             }
             
+            if (email === 'ktm98@seoulshinbo.co.kr' || email === 'ktm9898@gmail.com') {
+                pendingLoginEmail = email;
+                document.getElementById('adminPwModal').classList.remove('hidden');
+                document.getElementById('loginAdminPw').value = '';
+                document.getElementById('loginAdminPw').focus();
+                return;
+            }
+
+            proceedLogin(email);
+        }
+
+        function cancelAdminPw() {
+            document.getElementById('adminPwModal').classList.add('hidden');
+            pendingLoginEmail = '';
+        }
+
+        async function confirmAdminPw() {
+            const pw = document.getElementById('loginAdminPw').value;
+            if (!pw) { alert('비밀번호를 입력하세요.'); return; }
+
+            const btn = document.getElementById('adminPwConfirmBtn');
+            const text = document.getElementById('adminPwConfirmText');
+            const spinner = document.getElementById('adminPwSpinner');
+
+            btn.disabled = true;
+            text.textContent = '확인 중...';
+            spinner.classList.remove('hidden');
+
+            try {
+                const adminRes = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({ action: 'adminLogin', pw: pw })
+                });
+                const adminData = await adminRes.json();
+                if (!adminData.success) {
+                    alert('비밀번호가 일치하지 않습니다.');
+                    return;
+                }
+                document.getElementById('adminPwModal').classList.add('hidden');
+                // 관리자는 무조건 승인 상태로 간주
+                localStorage.setItem('user_email', pendingLoginEmail);
+                localStorage.setItem('user_status', 'approved');
+                checkUserLogin();
+            } catch(e) {
+                alert('서버 연결에 실패했습니다.');
+            } finally {
+                btn.disabled = false;
+                text.textContent = '확인';
+                spinner.classList.add('hidden');
+            }
+        }
+
+        async function proceedLogin(email) {
             // 승인 상태 확인
             const btn = document.querySelector('#loginModal button.bg-accent');
             const originalText = btn.textContent;
@@ -796,12 +875,13 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    if (result.status === 'approved') {
-                        localStorage.setItem('user_email', email);
-                        checkUserLogin();
-                    } else {
-                        alert('계정이 아직 승인 대기 중입니다. 관리자 승인 후 이용 가능합니다.');
+                    localStorage.setItem('user_email', email);
+                    localStorage.setItem('user_status', result.status);
+                    
+                    if (result.status !== 'approved') {
+                        alert('계정이 아직 승인 대기 중입니다.\n뉴스는 조회 가능하나, 맞춤 주제 및 키워드 설정은 관리자 승인 후 가능합니다.');
                     }
+                    checkUserLogin();
                 } else {
                     alert('승인 확인 실패: ' + (result.error || '알 수 없는 오류'));
                 }
@@ -1467,7 +1547,16 @@
             }).join('');
         }
 
+        function checkSettingsPermission() {
+            if (localStorage.getItem('user_status') !== 'approved') {
+                alert('주제 및 키워드 설정은 관리자 승인 후 변경 가능합니다.\n현재 승인 대기 중입니다.');
+                return false;
+            }
+            return true;
+        }
+
         async function toggleMainNews(currentStatus) {
+            if (!checkSettingsPermission()) return;
             const nextStatus = !currentStatus;
             showSettingsLoading(true);
             try {
@@ -1490,6 +1579,7 @@
         }
 
         async function deleteTopic() {
+            if (!checkSettingsPermission()) return;
             const topic = document.getElementById('settingsTopicSelect').value;
             if (!topic) return;
 
@@ -1513,6 +1603,7 @@
         }
 
         async function addNewTopic() {
+            if (!checkSettingsPermission()) return;
             const name = document.getElementById('newTopicInput').value.trim();
             if (!name) return;
 
@@ -1540,6 +1631,7 @@
         }
 
         async function saveTopicCriteria() {
+            if (!checkSettingsPermission()) return;
             const topic = document.getElementById('settingsTopicSelect').value;
             const criteria = document.getElementById('topicCriteria').value.trim();
             if (!topic) return;
@@ -1569,6 +1661,7 @@
         }
 
         async function addKeyword() {
+            if (!checkSettingsPermission()) return;
             const topic = document.getElementById('settingsTopicSelect').value;
             const keyword = document.getElementById('newKeyword').value.trim();
             if (!topic || !keyword) { alert('주제와 키워드를 확인해주세요.'); return; }
@@ -1588,6 +1681,7 @@
         }
 
         async function deleteKeyword(topic, keyword) {
+            if (!checkSettingsPermission()) return;
             if (!confirm(`'${keyword}' 키워드를 삭제하시겠습니까?`)) return;
             try {
                 await fetch(SCRIPT_URL, {
@@ -1603,6 +1697,7 @@
         }
 
         async function toggleKeyword(topic, keyword) {
+            if (!checkSettingsPermission()) return;
             try {
                 await fetch(SCRIPT_URL, {
                     method: 'POST',
@@ -1972,6 +2067,13 @@
         // ══════════════════════════════════════════
         async function triggerCollection() {
             if (isCollecting) return; // 이미 수집 중이면 무시
+            
+            const email = localStorage.getItem('user_email');
+            if (email !== 'ktm98@seoulshinbo.co.kr' && email !== 'ktm9898@gmail.com') {
+                alert('뉴스 수동 수집은 관리자만 가능합니다.');
+                return;
+            }
+
             isCollecting = true;
 
             const url = SCRIPT_URL;
@@ -2283,7 +2385,7 @@
                     const isFoundation = currentReportTab === 'foundation';
                     const mainTitle = isFoundation ? '서울신용보증재단 인사이트 리포트' : '소기업·소상공인 주간 인사이트 리포트';
                     const insightTitle = isFoundation ? '2. 업무 인사이트' : '2. 인사이트';
-                    const insightLabel = isFoundation ? '시사점' : '인사이트';
+                    const insightLabel = '인사이트';
                     const footerText = isFoundation ? '본 리포트는 서울신용보증재단의 정책 결정 및 업무 지원을 위해 AI를 통해 분석된 결과입니다.' : '본 리포트는 서울시 소기업 및 소상공인의 사업운영을 지원하기 위해 AI를 통해 분석된 주간 경제 보고서입니다.';
                     
                     const displayDate = isFoundation ? report['날짜'] : String(report['날짜']).replace(/-/g, '.');
@@ -2313,20 +2415,20 @@
                                     const isLast = (idx === item.references.length - 1);
                                     const mb = isLast ? '25px' : '5px';
                                     if (ref.url && ref.url.trim() !== '') {
-                                        html += `<p style="margin-bottom: ${mb}; color: #2563eb;"><a href="${ref.url}" target="_blank" class="reference-link" style="text-decoration: underline; color: #2563eb;">[참고 출처: ${ref.name}]</a></p>`;
+                                        html += `<p class="print-hide-ref" style="margin-bottom: ${mb}; color: #2563eb;"><a href="${ref.url}" target="_blank" class="reference-link" style="text-decoration: underline; color: #2563eb;">[참고 출처: ${ref.name}]</a></p>`;
                                     } else {
                                         const q = encodeURIComponent(ref.name.replace(/"/g, ''));
-                                        html += `<p style="margin-bottom: ${mb}; color: #2563eb;"><a href="https://www.google.com/search?q=${q}" target="_blank" class="reference-link" style="text-decoration: underline; color: #2563eb;">[참고 출처: ${ref.name}]</a></p>`;
+                                        html += `<p class="print-hide-ref" style="margin-bottom: ${mb}; color: #2563eb;"><a href="https://www.google.com/search?q=${q}" target="_blank" class="reference-link" style="text-decoration: underline; color: #2563eb;">[참고 출처: ${ref.name}]</a></p>`;
                                     }
                                 });
                             }
                             // 기존 단일 문자열 형식 (하위 호환)
                             else if (item.reference && item.reference.trim() !== '') {
                                 if (item.reference_url && item.reference_url.trim() !== '') {
-                                    html += `<p style="margin-bottom: 25px; color: #2563eb;"><a href="${item.reference_url}" target="_blank" class="reference-link" style="text-decoration: underline; color: #2563eb;">[참고 출처: ${item.reference}]</a></p>`;
+                                    html += `<p class="print-hide-ref" style="margin-bottom: 25px; color: #2563eb;"><a href="${item.reference_url}" target="_blank" class="reference-link" style="text-decoration: underline; color: #2563eb;">[참고 출처: ${item.reference}]</a></p>`;
                                 } else {
                                     const q = encodeURIComponent(item.reference.replace(/"/g, ''));
-                                    html += `<p style="margin-bottom: 25px; color: #2563eb;"><a href="https://www.google.com/search?q=${q}" target="_blank" class="reference-link" style="text-decoration: underline; color: #2563eb;">[참고 출처: ${item.reference}]</a></p>`;
+                                    html += `<p class="print-hide-ref" style="margin-bottom: 25px; color: #2563eb;"><a href="https://www.google.com/search?q=${q}" target="_blank" class="reference-link" style="text-decoration: underline; color: #2563eb;">[참고 출처: ${item.reference}]</a></p>`;
                                 }
                             }
                         });

@@ -84,7 +84,7 @@ GOOGLE_TTS_VOICE = _get_config("GOOGLE_TTS_VOICE", "ko-KR-Neural2-A")
 AUDIO_RETENTION_DAYS = int(_get_config("AUDIO_RETENTION_DAYS", "10"))
 
 # ── 스케줄러 ───────────────────────────────────────────
-SCHEDULE_HOUR = 7   # 매일 실행 시각 (시)
+SCHEDULE_HOUR = 6   # 매일 실행 시각 (시)
 SCHEDULE_MINUTE = 0  # 매일 실행 시각 (분)
 
 # ── 구글 앱스 스크립트 웹앱 주소 ──

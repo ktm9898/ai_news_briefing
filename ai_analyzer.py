@@ -262,10 +262,10 @@ class AIAnalyzer:
 [작업 지침]
 1. 뉴스 전체를 관통하는 핵심적인 거시 경제 상황을 'economic_trend'에 500자 이내로 요약하십시오.
 2. 재단 업무와 직간접적으로 연계성이 가장 높고 시사하는 바가 큰 뉴스 **2~3개**를 신중하게 선정하여 'news_insights' 리스트에 담으십시오. 너무 많이 선정하지 말고 깊이 있는 분석에 집중하십시오.
-3. 각 인사이트 항목은 'title'(뉴스 제목, 원문 그대로 생략 없이 전체 작성), 'summary'(주요내용), 'implication'(시사점)으로 구성하십시오.
+3. 각 인사이트 항목은 'title'(뉴스 제목, 원문 그대로 생략 없이 전체 작성), 'summary'(주요내용), 'implication'(인사이트)으로 구성하십시오.
    - **summary 작성 가이드**: 단순 요약을 넘어 기사의 배경, 구체적인 수치, 핵심 쟁점 등을 상세하고 구체적으로 설명하십시오.
    - **implication 작성 가이드**: 단순히 표면적인 대응("지원해야 함", "모니터링해야 함")을 넘어, 해당 뉴스의 이면과 배경을 통찰하십시오. 타 지역 뉴스라면 서울시 환경에 비추어 유추하고, 국내외 거시 뉴스라면 국내 소상공인 생태계나 재단 정책에 미칠 파급 효과를 구체적으로 짚어주십시오. 억지로 연결할 필요는 없으나, 정책적으로 참고할 만한 밀도 높은 통찰을 제공해야 합니다. 특히, 실질적인 도움이 될 수 있도록 관련된 국내외 유사 사례나 성공/실패 레퍼런스를 1~2개 이상 구체적으로 포함하여 통찰을 제공하되, **[할루시네이션(거짓 정보) 엄격 금지]** 반드시 대중적으로 널리 알려지고 교차 검증된 실제 팩트(Fact) 사례만 인용하십시오. 만약 완전히 확신할 수 있는 실제 사례가 없다면, 억지로 꾸며내지 말고 논리적으로 예상되는 가상의 시나리오(예: "만약 이 제도가 도입된다면~") 형태로 명확히 구분하여 서술하십시오.
-   - **[외부 사례 출처 표기 (필수)]**: 시사점(implication)을 작성할 때 반드시 1~2개의 적절한 외부 유사 사례, 타 기관의 대응 사례, 관련 연구/보고서를 인용하여 구체성을 높이십시오. 인용한 외부 레퍼런스 각각의 정확한 명칭(예: 언론사명 기사제목, 기관명 보고서명 등)을 'references' 배열에 개별 항목으로 반드시 기재하십시오. 여러 출처를 하나의 문자열로 묶거나 쉼표로 연결하지 마십시오. 존재하지 않는 가상의 출처나 만료된 보고서를 지어내지 말고, 구글 검색을 통해 실제로 확인 가능한 정확한 명칭만 기재하십시오. 현재 요약 중인 원본 기사의 출처는 절대 적지 마십시오.
+   - **[외부 사례 출처 표기 (필수)]**: 인사이트(implication)를 작성할 때 반드시 1~2개의 적절한 외부 유사 사례, 타 기관의 대응 사례, 관련 연구/보고서를 인용하여 구체성을 높이십시오. 인용한 외부 레퍼런스 각각의 정확한 명칭(예: 언론사명 기사제목, 기관명 보고서명 등)을 'references' 배열에 개별 항목으로 반드시 기재하십시오. 여러 출처를 하나의 문자열로 묶거나 쉼표로 연결하지 마십시오. 존재하지 않는 가상의 출처나 만료된 보고서를 지어내지 말고, 구글 검색을 통해 실제로 확인 가능한 정확한 명칭만 기재하십시오. 현재 요약 중인 원본 기사의 출처는 절대 적지 마십시오.
    - 가독성을 극대화하기 위해 내용이 길어질 경우 논리적 흐름에 따라 2~3개의 문단으로 구분하고, 문단 사이에는 반드시 빈 줄(엔터 키 두 번, \n\n)을 삽입하십시오.
 4. 모든 내용은 정중하고 전문적인 문체로 작성하며, 이모지는 절대 사용하지 마십시오.
 
@@ -276,7 +276,7 @@ class AIAnalyzer:
       {{
         \"title\": \"기사 제목\",
         \"summary\": \"주요내용\",
-        \"implication\": \"시사점 및 깊이 있는 통찰\",
+        \"implication\": \"인사이트 및 깊이 있는 통찰\",
         \"references\": [
           \"첫 번째 외부 사례 출처의 정확한 명칭 (예: 한국은행 '2024 경제전망 보고서')\",
           \"두 번째 외부 사례 출처의 정확한 명칭 (있는 경우)\"
@@ -426,7 +426,7 @@ class AIAnalyzer:
 3. 각 인사이트 항목은 'title'(뉴스 제목, 원문 그대로 생략 없이 전체 작성), 'summary'(주요내용 요약), 'implication'(인사이트)으로 구성하십시오.
    - **summary 작성 가이드**: 단순 요약을 넘어 기사의 배경, 구체적인 수치, 핵심 쟁점 등을 기존보다 1~2줄 더 상세하고 구체적으로 설명하십시오.
    - **implication(인사이트) 작성 가이드**: 단순히 기사를 해설하는 것을 넘어, 소상공인 사장님이 실질적으로 어떻게 대비하거나 활용해야 하는지 구체적인 비즈니스 팁, 대응 방안, 아이디어를 제공해야 합니다. 가급적 국내외 유사 성공/실패 사례나 레퍼런스를 인용하여 구체성을 높이십시오.
-   - **[외부 사례 출처 표기 (필수)]**: 시사점(implication)을 작성할 때 반드시 1~2개의 적절한 외부 유사 사례, 타 기관의 대응 사례, 또는 관련 연구/보고서를 인용하여 구체성을 높이십시오. 인용한 외부 레퍼런스의 출처(예: 언론사명, 보고서명, 기관명 등)를 'reference' 필드에 반드시 기재해야 합니다. 현재 요약 중인 원본 기사의 출처는 절대 적지 마십시오. 빈 문자열("")로 비워두는 것은 허용되지 않습니다.
+   - **[외부 사례 출처 표기 (필수)]**: 인사이트(implication)를 작성할 때 반드시 1~2개의 적절한 외부 유사 사례, 타 기관의 대응 사례, 또는 관련 연구/보고서를 인용하여 구체성을 높이십시오. 인용한 외부 레퍼런스의 출처(예: 언론사명, 보고서명, 기관명 등)를 'reference' 필드에 반드시 기재해야 합니다. 현재 요약 중인 원본 기사의 출처는 절대 적지 마십시오. 빈 문자열("")로 비워두는 것은 허용되지 않습니다.
    - 가독성을 극대화하기 위해 내용이 길어질 경우 논리적 흐름에 따라 2~3개의 문단으로 구분하고, 문단 사이에는 반드시 빈 줄(\\n\\n)을 삽입하십시오.
 4. 모든 내용은 친절하고 전문적인 구어체 혹은 격식체 경어(예: "~시기 바랍니다", "~할 필요가 있습니다")로 작성하며, 이모지는 절대 사용하지 마십시오.
 
@@ -438,7 +438,7 @@ class AIAnalyzer:
     {{
       "title": "기사 제목",
       "summary": "주요내용 요약",
-      "implication": "사업운영을 위한 구체적인 시사점 및 대응 방향",
+      "implication": "사업운영을 위한 구체적인 인사이트 및 대응 방향",
       "reference": "필수로 인용한 외부 사례 출처 (예: 한국은행 보고서, 중소벤처기업부 발표 등)"
     }},
     ... (총 3개)
@@ -494,7 +494,7 @@ class AIAnalyzer:
     def enrich_references_with_urls(self, insight_data: dict) -> dict:
         """
         인사이트 리포트의 references 배열을 순회하며 Google Search Grounding을 통해 실제 URL로 보강합니다.
-        각 출처명에 대해 검색된 URL을 포함하는 딕셔너리 리스트로 변환합니다.
+        (할당량 최적화를 위해 모든 출처를 모아서 단 1회의 API만 호출하여 일괄 처리합니다.)
         """
         if not insight_data or "news_insights" not in insight_data:
             return insight_data
@@ -504,49 +504,106 @@ class AIAnalyzer:
             return insight_data
 
         logger.info(f"🔍 참고출처 URL 검색 (Grounding) 시작: 총 {len(insights)}개 기사")
-        
         import re
+        import json
         
+        # 1. 문서 전체의 고유한 출처(reference) 목록 추출
+        all_refs = []
         for item in insights:
-            # 기존 레거시 호환 및 방어적 복사
             raw_refs = item.get("references", [])
-            # 만약 이전 스키마(reference)로 왔을 경우 배열로 변환
+            if not raw_refs and item.get("reference"):
+                raw_refs = [r.strip() for r in item.get("reference").split(",") if r.strip()]
+            
+            for ref_text in raw_refs:
+                ref_text = str(ref_text).strip()
+                if ref_text and ref_text not in all_refs:
+                    all_refs.append(ref_text)
+                    
+        if not all_refs:
+            return insight_data
+            
+        logger.info(f"  - 검색 대상 고유 출처: 총 {len(all_refs)}개 (단 1회 일괄 호출 진행)")
+        
+        # 2. 한 번의 호출로 모든 URL 검색 수행
+        prompt = f"""다음 목록에 있는 각 출처(보고서, 기사, 발표자료 등)에 해당하는 공식적이고 정확한 원문 URL을 찾아주세요.
+목록:
+{chr(10).join(f'- {ref}' for ref in all_refs)}
+
+반드시 아래 JSON 형식으로만 응답하세요. 검색되지 않으면 빈 문자열("")을 넣으세요.
+{{
+  "urls": {{
+    "출처명1": "https://...",
+    "출처명2": "https://..."
+  }}
+}}"""
+        url_map = {}
+        try:
+            response = self.client.models.generate_content(
+                model=GEMINI_MODEL,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    tools=[types.Tool(google_search=types.GoogleSearch())],
+                )
+            )
+            text = response.text.strip()
+            if text.startswith("```json"): text = text[7:]
+            elif text.startswith("```"): text = text[3:]
+            if text.endswith("```"): text = text[:-3]
+            
+            result = json.loads(text.strip())
+            url_map = result.get("urls", {})
+            logger.info("  - 일괄 URL 검색(Grounding) API 호출 성공")
+        except Exception as e:
+            logger.error(f"  - 일괄 URL 검색 API 호출 중 오류 (스킵됨): {e}")
+
+        # 3. URL 유효성 검증 (HTTP HEAD 요청으로 실제 접근 가능한지 확인)
+        import requests as http_requests
+        validated_url_map = {}
+        for ref_name, raw_url in url_map.items():
+            clean_url = ""
+            if raw_url:
+                url_match = re.search(r'(https?://[^\s"\'<>]+)', str(raw_url))
+                if url_match:
+                    clean_url = url_match.group(1).rstrip(')"]')
+            
+            if clean_url:
+                try:
+                    resp = http_requests.head(clean_url, timeout=5, allow_redirects=True,
+                                              headers={"User-Agent": "Mozilla/5.0"})
+                    if resp.status_code < 400:
+                        validated_url_map[ref_name] = clean_url
+                        logger.info(f"  ✅ [{ref_name}] -> {clean_url} (HTTP {resp.status_code})")
+                    else:
+                        # HEAD가 실패하면 GET으로 한 번 더 시도 (일부 서버는 HEAD를 거부)
+                        resp2 = http_requests.get(clean_url, timeout=5, allow_redirects=True,
+                                                  headers={"User-Agent": "Mozilla/5.0"}, stream=True)
+                        resp2.close()
+                        if resp2.status_code < 400:
+                            validated_url_map[ref_name] = clean_url
+                            logger.info(f"  ✅ [{ref_name}] -> {clean_url} (GET 재시도 HTTP {resp2.status_code})")
+                        else:
+                            logger.warning(f"  ❌ [{ref_name}] -> {clean_url} (HTTP {resp.status_code}/{resp2.status_code}, 링크 제거)")
+                except Exception as ve:
+                    logger.warning(f"  ❌ [{ref_name}] -> {clean_url} (접속 불가: {ve}, 링크 제거)")
+            else:
+                logger.warning(f"  - [{ref_name}] -> URL 검색 실패")
+
+        # 4. 검증된 URL을 원본 구조에 매핑하여 반환
+        for item in insights:
+            raw_refs = item.get("references", [])
             if not raw_refs and item.get("reference"):
                 raw_refs = [r.strip() for r in item.get("reference").split(",") if r.strip()]
             
             enriched_refs = []
-            
             for ref_text in raw_refs:
                 ref_text = str(ref_text).strip()
                 if not ref_text:
                     continue
-
-                prompt = f"다음 설명에 해당하는 공식적인 원문 보고서, 기사, 발표 자료 등의 URL을 1개만 찾아주세요.\n설명: {ref_text}\nURL 주소만 정확하게 반환하고 다른 설명이나 마크다운은 절대 포함하지 마세요."
                 
-                enriched_ref = {"name": ref_text, "url": ""}
-                try:
-                    # Grounding 호출은 JSON 모드 없이 텍스트 모드로 수행
-                    response = self.client.models.generate_content(
-                        model=GEMINI_MODEL,
-                        contents=prompt,
-                        config=types.GenerateContentConfig(
-                            tools=[types.Tool(google_search=types.GoogleSearch())],
-                        )
-                    )
+                verified_url = validated_url_map.get(ref_text, "")
+                enriched_refs.append({"name": ref_text, "url": verified_url})
                     
-                    url = response.text.strip()
-                    url_match = re.search(r'(https?://[^\s"\'<>]+)', url)
-                    if url_match:
-                        clean_url = url_match.group(1).rstrip(')"]')
-                        enriched_ref["url"] = clean_url
-                        logger.info(f"  - [{ref_text}] -> {clean_url}")
-                    else:
-                        logger.warning(f"  - [{ref_text}] -> URL 검색 실패 (반환값: {url})")
-                except Exception as e:
-                    logger.error(f"  - [{ref_text}] URL 검색 중 오류: {e}")
-                
-                enriched_refs.append(enriched_ref)
-                
             item["references"] = enriched_refs
 
         return insight_data

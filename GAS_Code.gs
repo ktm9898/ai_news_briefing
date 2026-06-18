@@ -131,6 +131,12 @@ function doPost(e) {
 
   // ── 수동 수집 트리거 (GitHub Actions) ──
   if (action === 'triggerWorkflow') {
+    // 관리자 여부 확인
+    const targetEmail = String(email).trim().toLowerCase();
+    if (targetEmail !== 'ktm98@seoulshinbo.co.kr' && targetEmail !== 'ktm9898@gmail.com') {
+      return createResponse({ success: false, error: 'Unauthorized: Admin only' });
+    }
+
     const props = PropertiesService.getScriptProperties();
     const GITHUB_PAT = props.getProperty('GITHUB_PAT') || props.getProperty('GITHUB_TOKEN');
     
@@ -351,12 +357,14 @@ function doPost(e) {
 
   // 키워드 설정 (Settings 탭)
   if (action === 'addKeyword') {
+    if (!isUserApproved(ss, email)) return createResponse({ success: false, error: 'Unauthorized: Not approved' });
     const sheet = getOrCreateTab(ss, 'Settings', ['이메일', '주제', '키워드', '활성화']);
     sheet.appendRow([email, params.topic, params.keyword, 'TRUE']);
     return createResponse({ success: true });
   }
 
   if (action === 'deleteKeyword') {
+    if (!isUserApproved(ss, email)) return createResponse({ success: false, error: 'Unauthorized: Not approved' });
     const sheet = ss.getSheetByName('Settings');
     if (!sheet) return createResponse({ error: 'Settings tab not found' });
     const data = sheet.getDataRange().getValues();
@@ -381,6 +389,7 @@ function doPost(e) {
 
   // 주제 및 관련 키워드 전체 삭제 (Settings 및 Topic_Settings 탭)
   if (action === 'deleteTopic') {
+    if (!isUserApproved(ss, email)) return createResponse({ success: false, error: 'Unauthorized: Not approved' });
     const targetEmail = String(email).trim().toLowerCase();
 
     // 1. Topic_Settings 시트에서 해당 주제 삭제
@@ -422,6 +431,7 @@ function doPost(e) {
 
   // 주요뉴스 활성화 여부 토글 (Settings 탭)
   if (action === 'toggleMainNews') {
+    if (!isUserApproved(ss, email)) return createResponse({ success: false, error: 'Unauthorized: Not approved' });
     const sheet = getOrCreateTab(ss, 'Settings', ['이메일', '주제', '키워드', '활성화']);
     const data = sheet.getDataRange().getValues();
     const headers = data[0];
@@ -450,6 +460,7 @@ function doPost(e) {
 
   // 키워드 토글 (Settings 탭)
   if (action === 'toggleKeyword') {
+    if (!isUserApproved(ss, email)) return createResponse({ success: false, error: 'Unauthorized: Not approved' });
     const sheet = ss.getSheetByName('Settings');
     if (!sheet) return createResponse({ error: 'Settings tab not found' });
     const data = sheet.getDataRange().getValues();
@@ -477,6 +488,7 @@ function doPost(e) {
 
   // 주제별 AI 기준 설정 (Topic_Settings 탭)
   if (action === 'updateTopicCriteria') {
+    if (!isUserApproved(ss, email)) return createResponse({ success: false, error: 'Unauthorized: Not approved' });
     const sheet = getOrCreateTab(ss, 'Topic_Settings', ['이메일', 'Topic', 'Criteria']);
     const data = sheet.getDataRange().getValues();
     const headers = data[0];
@@ -505,6 +517,20 @@ function doPost(e) {
   }
 
   return createResponse({ error: 'Invalid action' });
+}
+
+function isUserApproved(ss, email) {
+  const targetEmail = String(email).trim().toLowerCase();
+  if (targetEmail === 'ktm98@seoulshinbo.co.kr' || targetEmail === 'ktm9898@gmail.com') return true;
+  const sheet = ss.getSheetByName('Approved_Users');
+  if (!sheet) return false;
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]).trim().toLowerCase() === targetEmail && data[i][1] === 'approved') {
+      return true;
+    }
+  }
+  return false;
 }
 
 function getOrCreateTab(ss, name, headers) {
@@ -605,14 +631,7 @@ function generateInsightReportPdf(date, insightReport) {
     insightReport.news_insights.forEach(function(item) {
       html += '<div class="news-title"><b>' + escapeHtml(item.title) + '</b></div>';
       html += '<p><b>주요내용:</b> ' + formatParagraphs(item.summary || '') + '</p>';
-      html += '<p style="margin-bottom: ' + (item.reference ? '15px' : '25px') + ';"><b>시사점:</b> ' + formatParagraphs(item.implication || '') + '</p>';
-      if (item.reference) {
-        if (item.reference_url) {
-          html += '<p style="margin-bottom: 25px; color: #2563eb;"><a href="' + item.reference_url + '" target="_blank" style="text-decoration: none; color: #2563eb;">[참고 출처: ' + escapeHtml(item.reference) + ']</a></p>';
-        } else {
-          html += '<p style="margin-bottom: 25px; color: #666;">[참고 출처: ' + escapeHtml(item.reference) + ']</p>';
-        }
-      }
+      html += '<p style="margin-bottom: 25px;"><b>인사이트:</b> ' + formatParagraphs(item.implication || '') + '</p>';
     });
   }
 
@@ -645,12 +664,30 @@ function sendDailyReportEmail(email, date, briefingScript, insightReport, newsLi
     insightReport.news_insights.forEach(function(item) {
       newsInsightsHtml += '<div style="font-size: 12pt; font-weight: bold; color: #000; margin-top: 25px; margin-bottom: 10px;"><b>' + escapeHtml(item.title) + '</b></div>';
       newsInsightsHtml += '<p style="font-size: 10.5pt; color: #333; margin-top: 0; margin-bottom: 10px; line-height: 1.7; text-align: justify; word-break: break-all;"><b>주요내용:</b> ' + formatParagraphs(item.summary || '') + '</p>';
-      newsInsightsHtml += '<p style="font-size: 10.5pt; color: #333; margin-top: 0; margin-bottom: ' + (item.reference ? '15px' : '25px') + '; line-height: 1.7; text-align: justify; word-break: break-all;"><b>시사점:</b> ' + formatParagraphs(item.implication || '') + '</p>';
-      if (item.reference) {
+      
+      // references 배열 존재 여부에 따라 하단 마진 조절
+      var hasRefs = (item.references && item.references.length > 0) || (item.reference && String(item.reference).trim() !== '');
+      newsInsightsHtml += '<p style="font-size: 10.5pt; color: #333; margin-top: 0; margin-bottom: ' + (hasRefs ? '15px' : '25px') + '; line-height: 1.7; text-align: justify; word-break: break-all;"><b>인사이트:</b> ' + formatParagraphs(item.implication || '') + '</p>';
+      
+      // 신규 배열 형식 (references)
+      if (item.references && Array.isArray(item.references) && item.references.length > 0) {
+        item.references.forEach(function(ref, idx) {
+          var isLast = (idx === item.references.length - 1);
+          var mb = isLast ? '25px' : '5px';
+          if (ref.url && String(ref.url).trim() !== '') {
+            newsInsightsHtml += '<p style="font-size: 10.5pt; color: #2563eb; margin-top: 0; margin-bottom: ' + mb + '; line-height: 1.7;"><a href="' + ref.url + '" target="_blank" style="text-decoration: underline; color: #2563eb;">[참고 출처: ' + escapeHtml(ref.name) + ']</a></p>';
+          } else {
+            var q = encodeURIComponent(String(ref.name).replace(/"/g, ''));
+            newsInsightsHtml += '<p style="font-size: 10.5pt; color: #2563eb; margin-top: 0; margin-bottom: ' + mb + '; line-height: 1.7;"><a href="https://www.google.com/search?q=' + q + '" target="_blank" style="text-decoration: underline; color: #2563eb;">[참고 출처: ' + escapeHtml(ref.name) + ']</a></p>';
+          }
+        });
+      }
+      // 기존 단일 문자열 형식 (하위 호환)
+      else if (item.reference && String(item.reference).trim() !== '') {
         if (item.reference_url) {
           newsInsightsHtml += '<p style="font-size: 10.5pt; color: #2563eb; margin-top: 0; margin-bottom: 25px; line-height: 1.7; text-align: justify; word-break: break-all;"><a href="' + item.reference_url + '" target="_blank" style="text-decoration: underline; color: #2563eb;">[참고 출처: ' + escapeHtml(item.reference) + ']</a></p>';
         } else {
-          const q = encodeURIComponent(item.reference.replace(/"/g, ''));
+          var q = encodeURIComponent(item.reference.replace(/"/g, ''));
           newsInsightsHtml += '<p style="font-size: 10.5pt; color: #2563eb; margin-top: 0; margin-bottom: 25px; line-height: 1.7; text-align: justify; word-break: break-all;"><a href="https://www.google.com/search?q=' + q + '" target="_blank" style="text-decoration: underline; color: #2563eb;">[참고 출처: ' + escapeHtml(item.reference) + ']</a></p>';
         }
       }
@@ -736,14 +773,7 @@ function generateWeeklyInsightReportPdf(dateRange, insightReport) {
     insightReport.news_insights.forEach(function(item) {
       html += '<div class="news-title"><b>' + escapeHtml(item.title) + '</b></div>';
       html += '<p><b>주요내용:</b> ' + formatParagraphs(item.summary || '') + '</p>';
-      html += '<p style="margin-bottom: ' + (item.reference ? '15px' : '25px') + ';"><b>인사이트:</b> ' + formatParagraphs(item.implication || '') + '</p>';
-      if (item.reference) {
-        if (item.reference_url) {
-          html += '<p style="margin-bottom: 25px; color: #2563eb;"><a href="' + item.reference_url + '" target="_blank" style="text-decoration: none; color: #2563eb;">[참고 출처: ' + escapeHtml(item.reference) + ']</a></p>';
-        } else {
-          html += '<p style="margin-bottom: 25px; color: #666;">[참고 출처: ' + escapeHtml(item.reference) + ']</p>';
-        }
-      }
+      html += '<p style="margin-bottom: 25px;"><b>인사이트:</b> ' + formatParagraphs(item.implication || '') + '</p>';
     });
   }
 
@@ -775,12 +805,30 @@ function sendWeeklyReportEmail(email, dateRange, insightReport) {
     insightReport.news_insights.forEach(function(item) {
       newsInsightsHtml += '<div style="font-size: 12pt; font-weight: bold; color: #000; margin-top: 25px; margin-bottom: 10px;"><b>' + escapeHtml(item.title) + '</b></div>';
       newsInsightsHtml += '<p style="font-size: 10.5pt; color: #333; margin-top: 0; margin-bottom: 10px; line-height: 1.7; text-align: justify; word-break: break-all;"><b>주요내용:</b> ' + formatParagraphs(item.summary || '') + '</p>';
-      newsInsightsHtml += '<p style="font-size: 10.5pt; color: #333; margin-top: 0; margin-bottom: ' + (item.reference ? '15px' : '25px') + '; line-height: 1.7; text-align: justify; word-break: break-all;"><b>인사이트:</b> ' + formatParagraphs(item.implication || '') + '</p>';
-      if (item.reference) {
+      
+      // references 배열 존재 여부에 따라 하단 마진 조절
+      var hasRefs = (item.references && item.references.length > 0) || (item.reference && String(item.reference).trim() !== '');
+      newsInsightsHtml += '<p style="font-size: 10.5pt; color: #333; margin-top: 0; margin-bottom: ' + (hasRefs ? '15px' : '25px') + '; line-height: 1.7; text-align: justify; word-break: break-all;"><b>인사이트:</b> ' + formatParagraphs(item.implication || '') + '</p>';
+      
+      // 신규 배열 형식 (references)
+      if (item.references && Array.isArray(item.references) && item.references.length > 0) {
+        item.references.forEach(function(ref, idx) {
+          var isLast = (idx === item.references.length - 1);
+          var mb = isLast ? '25px' : '5px';
+          if (ref.url && String(ref.url).trim() !== '') {
+            newsInsightsHtml += '<p style="font-size: 10.5pt; color: #2563eb; margin-top: 0; margin-bottom: ' + mb + '; line-height: 1.7;"><a href="' + ref.url + '" target="_blank" style="text-decoration: underline; color: #2563eb;">[참고 출처: ' + escapeHtml(ref.name) + ']</a></p>';
+          } else {
+            var q = encodeURIComponent(String(ref.name).replace(/"/g, ''));
+            newsInsightsHtml += '<p style="font-size: 10.5pt; color: #2563eb; margin-top: 0; margin-bottom: ' + mb + '; line-height: 1.7;"><a href="https://www.google.com/search?q=' + q + '" target="_blank" style="text-decoration: underline; color: #2563eb;">[참고 출처: ' + escapeHtml(ref.name) + ']</a></p>';
+          }
+        });
+      }
+      // 기존 단일 문자열 형식 (하위 호환)
+      else if (item.reference && String(item.reference).trim() !== '') {
         if (item.reference_url) {
           newsInsightsHtml += '<p style="font-size: 10.5pt; color: #2563eb; margin-top: 0; margin-bottom: 25px; line-height: 1.7; text-align: justify; word-break: break-all;"><a href="' + item.reference_url + '" target="_blank" style="text-decoration: underline; color: #2563eb;">[참고 출처: ' + escapeHtml(item.reference) + ']</a></p>';
         } else {
-          const q = encodeURIComponent(item.reference.replace(/"/g, ''));
+          var q = encodeURIComponent(item.reference.replace(/"/g, ''));
           newsInsightsHtml += '<p style="font-size: 10.5pt; color: #2563eb; margin-top: 0; margin-bottom: 25px; line-height: 1.7; text-align: justify; word-break: break-all;"><a href="https://www.google.com/search?q=' + q + '" target="_blank" style="text-decoration: underline; color: #2563eb;">[참고 출처: ' + escapeHtml(item.reference) + ']</a></p>';
         }
       }
