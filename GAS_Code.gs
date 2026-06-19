@@ -631,7 +631,23 @@ function generateInsightReportPdf(date, insightReport) {
     insightReport.news_insights.forEach(function(item) {
       html += '<div class="news-title"><b>' + escapeHtml(item.title) + '</b></div>';
       html += '<p><b>주요내용:</b> ' + formatParagraphs(item.summary || '') + '</p>';
-      html += '<p style="margin-bottom: 25px;"><b>인사이트:</b> ' + formatParagraphs(item.implication || '') + '</p>';
+      
+      var hasRefs = (item.references && item.references.length > 0) || (item.reference && String(item.reference).trim() !== '');
+      html += '<p style="margin-bottom: ' + (hasRefs ? '15px' : '25px') + ';"><b>인사이트:</b> ' + formatParagraphs(item.implication || '') + '</p>';
+      
+      if (item.references && Array.isArray(item.references) && item.references.length > 0) {
+        item.references.forEach(function(ref, idx) {
+          var isLast = (idx === item.references.length - 1);
+          var mb = isLast ? '25px' : '5px';
+          var refName = typeof ref === 'string' ? ref : ref.name;
+          var refUrl = typeof ref === 'string' ? '' : (ref.url || '');
+          if (refUrl) {
+            html += '<p style="font-size: 10.5pt; color: #2563eb; margin-top: 0; margin-bottom: ' + mb + ';"><a href="' + refUrl + '" style="color: #2563eb; text-decoration: underline;">[참고 출처: ' + escapeHtml(refName) + ']</a></p>';
+          } else {
+            html += '<p style="font-size: 10.5pt; color: #2563eb; margin-top: 0; margin-bottom: ' + mb + ';">[참고 출처: ' + escapeHtml(refName) + ']</p>';
+          }
+        });
+      }
     });
   }
 
@@ -773,7 +789,23 @@ function generateWeeklyInsightReportPdf(dateRange, insightReport) {
     insightReport.news_insights.forEach(function(item) {
       html += '<div class="news-title"><b>' + escapeHtml(item.title) + '</b></div>';
       html += '<p><b>주요내용:</b> ' + formatParagraphs(item.summary || '') + '</p>';
-      html += '<p style="margin-bottom: 25px;"><b>인사이트:</b> ' + formatParagraphs(item.implication || '') + '</p>';
+      
+      var hasRefs = (item.references && item.references.length > 0) || (item.reference && String(item.reference).trim() !== '');
+      html += '<p style="margin-bottom: ' + (hasRefs ? '15px' : '25px') + ';"><b>인사이트:</b> ' + formatParagraphs(item.implication || '') + '</p>';
+      
+      if (item.references && Array.isArray(item.references) && item.references.length > 0) {
+        item.references.forEach(function(ref, idx) {
+          var isLast = (idx === item.references.length - 1);
+          var mb = isLast ? '25px' : '5px';
+          var refName = typeof ref === 'string' ? ref : ref.name;
+          var refUrl = typeof ref === 'string' ? '' : (ref.url || '');
+          if (refUrl) {
+            html += '<p style="font-size: 10.5pt; color: #2563eb; margin-top: 0; margin-bottom: ' + mb + ';"><a href="' + refUrl + '" style="color: #2563eb; text-decoration: underline;">[참고 출처: ' + escapeHtml(refName) + ']</a></p>';
+          } else {
+            html += '<p style="font-size: 10.5pt; color: #2563eb; margin-top: 0; margin-bottom: ' + mb + ';">[참고 출처: ' + escapeHtml(refName) + ']</p>';
+          }
+        });
+      }
     });
   }
 

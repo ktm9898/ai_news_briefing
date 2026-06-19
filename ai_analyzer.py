@@ -233,7 +233,7 @@ class AIAnalyzer:
         [Stage 2] 통합 분석: 요약, 브리핑 대본, 재단 인사이트 리포트를 선택적으로 생성
         """
         if not news_list:
-            return {"summaries": [], "briefing_script": "", "insight_report": None}
+            return {"article_summaries": [], "briefing_script": "", "insight_report": None}
 
         news_texts = []
         for idx, news in enumerate(news_list):
@@ -266,7 +266,7 @@ class AIAnalyzer:
    - **summary 작성 가이드**: 단순 요약을 넘어 기사의 배경, 구체적인 수치, 핵심 쟁점 등을 상세하고 구체적으로 설명하십시오.
    - **implication 작성 가이드**: 단순히 표면적인 대응을 넘어, 해당 뉴스의 이면과 배경을 통찰하십시오. 타 지역 뉴스라면 서울시 환경에 비추어 유추하고, 파급 효과를 구체적으로 짚어주십시오. 관련된 국내외 유사 사례나 성공/실패 레퍼런스를 1~2개 이상 구체적으로 포함하여 통찰을 제공하되, **[할루시네이션(거짓 정보) 엄격 금지]** 반드시 대중적으로 널리 알려지고 교차 검증된 실제 팩트(Fact) 사례만 인용하십시오.
    - **[외부 사례 출처 표기 (필수)]**: 인사이트를 작성할 때 반드시 1~2개의 적절한 외부 유사 사례 등을 인용하십시오. 인용한 외부 레퍼런스의 정확한 명칭을 'references' 배열에 개별 항목으로 기재하십시오. 현재 요약 중인 기사의 출처는 적지 마십시오.
-   - **[JSON 구조 경고 (매우 중요)]**: 'references' 배열은 절대로 작업 1의 'summaries' 배열 내부에 넣으면 안 됩니다! 반드시 작업 3의 결과물인 'insight_report'의 'news_insights' 내부 각 항목에만 포함시키십시오.
+
    - 가독성을 극대화하기 위해 내용이 길어질 경우 논리적 흐름에 따라 2~3개의 문단으로 구분하고, 문단 사이에는 반드시 빈 줄(엔터 키 두 번, \n\n)을 삽입하십시오.
 4. 모든 내용은 정중하고 전문적인 문체로 작성하며, 이모지는 절대 사용하지 마십시오.
 
@@ -293,7 +293,7 @@ class AIAnalyzer:
 {context_info}
 
 [작업 1: 뉴스 요약 (에디터)]
-- 각 뉴스의 핵심 내용을 2~3문장으로 한국어 요약 (JSON의 'summaries' 필드)
+- 각 뉴스의 핵심 내용을 2~3문장으로 한국어 요약 (JSON의 'article_summaries' 필드)
 - **[매우 중요]**: 힌트로 제공된 [대본 필수 포함] 여부나 중요도에 절대 관계없이, 아래 [뉴스 목록]에 있는 **모든 개별 기사(총 {len(news_list)}건)에 대해 단 하나도 빠짐없이** 요약을 생성해야 합니다.
 
 [작업 2: 라디오 브리핑 대본 (진행자)]
@@ -313,8 +313,8 @@ class AIAnalyzer:
 반드시 아래 JSON 형식을 엄수하여 응답하십시오:
 (주의: JSON 문자열 내부에 큰따옴표(")를 사용할 경우 반드시 백슬래시(\\)로 이스케이프 처리하세요.)
 {{
-  "summaries": [
-    {{"index": 1, "summary": "요약 내용..."}},
+  "article_summaries": [
+    {{"index": 1, "article_summary": "요약 내용..."}},
     ...
   ],
   "briefing_script": "라디오 대본 전문...",
@@ -361,7 +361,7 @@ class AIAnalyzer:
                         raise e2
                 
                 # 요약 매칭 및 누락 방지
-                summary_map = {item.get('index'): item.get('summary') for item in result.get('summaries', [])}
+                summary_map = {item.get('index'): item.get('article_summary') for item in result.get('article_summaries', [])}
                 for i, news in enumerate(news_list):
                     news['AI 요약'] = summary_map.get(i + 1, "(요약 누락)")
                 
