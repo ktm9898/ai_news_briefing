@@ -244,6 +244,8 @@ class AIAnalyzer:
             
             news_texts.append(
                 f"[뉴스 {idx + 1}] {relevance}\n"
+                f"날짜: {news.get('날짜', '')}\n"
+                f"언론사: {news.get('언론사', '')}\n"
                 f"주제: {news.get('주제', '기타')}\n"
                 f"제목: {news.get('제목', '')}\n"
                 f"네이버 요약: {naver_desc}\n"
@@ -276,6 +278,8 @@ class AIAnalyzer:
     \"news_insights\": [
       {{
         \"title\": \"기사 제목\",
+        \"date\": \"해당 기사가 나온 날짜\",
+        \"publisher\": \"해당 기사의 언론사\",
         \"summary\": \"주요내용\",
         \"implication\": \"인사이트 및 깊이 있는 통찰\",
         \"references\": [
@@ -411,6 +415,7 @@ class AIAnalyzer:
             news_texts.append(
                 f"[뉴스 {idx + 1}]\n"
                 f"날짜: {news.get('날짜', '')}\n"
+                f"언론사: {news.get('언론사', '')}\n"
                 f"주제: {news.get('주제', '기타')}\n"
                 f"제목: {news.get('제목', '')}\n"
                 f"요약: {naver_desc}\n"
@@ -438,6 +443,8 @@ class AIAnalyzer:
   "news_insights": [
     {{
       "title": "기사 제목",
+      "date": "해당 기사가 나온 날짜",
+      "publisher": "해당 기사의 언론사",
       "summary": "주요내용 요약",
       "implication": "사업운영을 위한 구체적인 인사이트 및 대응 방향",
       "reference": "필수로 인용한 외부 사례 출처 (예: 한국은행 보고서, 중소벤처기업부 발표 등)"

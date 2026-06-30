@@ -629,7 +629,8 @@ function generateInsightReportPdf(date, insightReport) {
   html += '<div class="section-header">2. 업무 인사이트</div>';
   if (insightReport.news_insights && Array.isArray(insightReport.news_insights)) {
     insightReport.news_insights.forEach(function(item) {
-      html += '<div class="news-title"><b>' + escapeHtml(item.title) + '</b></div>';
+      var publisherDate = (item.publisher || item.date) ? ' <span style="font-size:10pt; color:#666; font-weight:normal;">(' + escapeHtml(item.publisher || '') + (item.publisher && item.date ? ', ' : '') + escapeHtml(item.date || '') + ')</span>' : '';
+      html += '<div class="news-title"><b>' + escapeHtml(item.title) + '</b>' + publisherDate + '</div>';
       html += '<p><b>주요내용:</b> ' + formatParagraphs(item.summary || '') + '</p>';
       
       var hasRefs = (item.references && item.references.length > 0) || (item.reference && String(item.reference).trim() !== '');
@@ -678,7 +679,8 @@ function sendDailyReportEmail(email, date, briefingScript, insightReport, newsLi
   let newsInsightsHtml = "";
   if (insightReport.news_insights && Array.isArray(insightReport.news_insights)) {
     insightReport.news_insights.forEach(function(item) {
-      newsInsightsHtml += '<div style="font-size: 12pt; font-weight: bold; color: #000; margin-top: 25px; margin-bottom: 10px;"><b>' + escapeHtml(item.title) + '</b></div>';
+      var publisherDate = (item.publisher || item.date) ? ' <span style="font-size:10pt; color:#666; font-weight:normal;">(' + escapeHtml(item.publisher || '') + (item.publisher && item.date ? ', ' : '') + escapeHtml(item.date || '') + ')</span>' : '';
+      newsInsightsHtml += '<div style="font-size: 12pt; font-weight: bold; color: #000; margin-top: 25px; margin-bottom: 10px;"><b>' + escapeHtml(item.title) + '</b>' + publisherDate + '</div>';
       newsInsightsHtml += '<p style="font-size: 10.5pt; color: #333; margin-top: 0; margin-bottom: 10px; line-height: 1.7; text-align: justify; word-break: break-all;"><b>주요내용:</b> ' + formatParagraphs(item.summary || '') + '</p>';
       
       // references 배열 존재 여부에 따라 하단 마진 조절
@@ -746,7 +748,7 @@ function sendDailyReportEmail(email, date, briefingScript, insightReport, newsLi
   // 3. 메일 발송
   MailApp.sendEmail({
     to: email,
-    subject: `📰 [AI News Briefing] ${date} 데일리 맞춤 보고서`,
+    subject: `📰 [AI News Briefing] ${date} 데일리 인사이트 보고서`,
     htmlBody: htmlBody,
     attachments: [pdfBlob]
   });
@@ -787,7 +789,8 @@ function generateWeeklyInsightReportPdf(dateRange, insightReport) {
   html += '<div class="section-header">2. 인사이트</div>';
   if (insightReport.news_insights && Array.isArray(insightReport.news_insights)) {
     insightReport.news_insights.forEach(function(item) {
-      html += '<div class="news-title"><b>' + escapeHtml(item.title) + '</b></div>';
+      var publisherDate = (item.publisher || item.date) ? ' <span style="font-size:10pt; color:#666; font-weight:normal;">(' + escapeHtml(item.publisher || '') + (item.publisher && item.date ? ', ' : '') + escapeHtml(item.date || '') + ')</span>' : '';
+      html += '<div class="news-title"><b>' + escapeHtml(item.title) + '</b>' + publisherDate + '</div>';
       html += '<p><b>주요내용:</b> ' + formatParagraphs(item.summary || '') + '</p>';
       
       var hasRefs = (item.references && item.references.length > 0) || (item.reference && String(item.reference).trim() !== '');

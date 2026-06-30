@@ -2348,8 +2348,8 @@
         function formatParagraphs(text) {
             if (!text) return "";
             text = String(text).trim();
-            if (text.indexOf('\\n') !== -1) {
-                return text.replace(/\\n/g, '<br>');
+            if (text.indexOf('\\n') !== -1 || text.indexOf('\n') !== -1) {
+                return text.replace(/\\n/g, '<br>').replace(/\n/g, '<br>');
             }
             const sentences = text.split(/(?<=\\.|\\!|\\?)\\s+/);
             let formatted = "";
@@ -2402,7 +2402,8 @@
                     html += `<div class="section-header">${insightTitle}</div>`;
                     if (data.news_insights && Array.isArray(data.news_insights)) {
                         data.news_insights.forEach((item) => {
-                            html += `<div class="news-title"><b>${item.title}</b></div>`;
+                            let publisherDate = (item.publisher || item.date) ? ` <span style="font-size:10pt; color:#666; font-weight:normal;">(${item.publisher || ''}${(item.publisher && item.date) ? ', ' : ''}${item.date || ''})</span>` : '';
+                            html += `<div class="news-title"><b>${item.title}</b>${publisherDate}</div>`;
                             html += `<p><b>주요내용:</b> ${formatParagraphs(item.summary)}</p>`;
                             
                             let impText = formatParagraphs(item.implication);
