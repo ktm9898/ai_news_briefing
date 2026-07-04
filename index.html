@@ -2104,12 +2104,11 @@
                     }
                 } catch (e) { console.error("Failed to fetch initial run status", e) }
 
-                await fetch(url, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify({ action: 'triggerWorkflow' }),
-                });
+                const triggerRes = await fetch(SCRIPT_URL + '?action=triggerWorkflow');
+                const triggerResult = await triggerRes.json();
+                if (!triggerResult.ok) {
+                    throw new Error(triggerResult.error || 'GitHub Actions 트리거 실패');
+                }
 
                 // GitHub Actions 상태 확인 (10초마다 폴링)
                 let pollCount = 0;
