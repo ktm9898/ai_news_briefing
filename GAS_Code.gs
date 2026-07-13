@@ -692,21 +692,25 @@ function sendDailyReportEmail(email, date, briefingScript, insightReport, newsLi
         item.references.forEach(function(ref, idx) {
           var isLast = (idx === item.references.length - 1);
           var mb = isLast ? '25px' : '5px';
-          if (ref.url && String(ref.url).trim() !== '') {
-            newsInsightsHtml += '<p style="font-size: 10.5pt; color: #2563eb; margin-top: 0; margin-bottom: ' + mb + '; line-height: 1.7;"><a href="' + ref.url + '" target="_blank" style="text-decoration: underline; color: #2563eb;">[참고 출처: ' + escapeHtml(ref.name) + ']</a></p>';
+          var refName = typeof ref === 'string' ? ref : (ref.name || '');
+          var refUrl = typeof ref === 'string' ? '' : (ref.url || '');
+          if (refUrl && String(refUrl).trim() !== '') {
+            var safeUrl = String(refUrl).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+            newsInsightsHtml += '<p style="font-size: 10.5pt; margin-top: 0; margin-bottom: ' + mb + '; line-height: 1.7;"><a href="' + safeUrl + '" target="_blank" style="text-decoration: underline; color: #2563eb;">[참고 출처: ' + escapeHtml(refName) + ']</a></p>';
           } else {
-            var q = encodeURIComponent(String(ref.name).replace(/"/g, ''));
-            newsInsightsHtml += '<p style="font-size: 10.5pt; color: #2563eb; margin-top: 0; margin-bottom: ' + mb + '; line-height: 1.7;"><a href="https://www.google.com/search?q=' + q + '" target="_blank" style="text-decoration: underline; color: #2563eb;">[참고 출처: ' + escapeHtml(ref.name) + ']</a></p>';
+            var q = encodeURIComponent(String(refName).replace(/"/g, ''));
+            newsInsightsHtml += '<p style="font-size: 10.5pt; margin-top: 0; margin-bottom: ' + mb + '; line-height: 1.7;"><a href="https://www.google.com/search?q=' + q + '" target="_blank" style="text-decoration: underline; color: #2563eb;">[참고 출처: ' + escapeHtml(refName) + ']</a></p>';
           }
         });
       }
       // 기존 단일 문자열 형식 (하위 호환)
       else if (item.reference && String(item.reference).trim() !== '') {
         if (item.reference_url) {
-          newsInsightsHtml += '<p style="font-size: 10.5pt; color: #2563eb; margin-top: 0; margin-bottom: 25px; line-height: 1.7; text-align: justify; word-break: break-all;"><a href="' + item.reference_url + '" target="_blank" style="text-decoration: underline; color: #2563eb;">[참고 출처: ' + escapeHtml(item.reference) + ']</a></p>';
+          var safeRefUrl = String(item.reference_url).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+          newsInsightsHtml += '<p style="font-size: 10.5pt; margin-top: 0; margin-bottom: 25px; line-height: 1.7; text-align: justify; word-break: break-all;"><a href="' + safeRefUrl + '" target="_blank" style="text-decoration: underline; color: #2563eb;">[참고 출처: ' + escapeHtml(item.reference) + ']</a></p>';
         } else {
           var q = encodeURIComponent(item.reference.replace(/"/g, ''));
-          newsInsightsHtml += '<p style="font-size: 10.5pt; color: #2563eb; margin-top: 0; margin-bottom: 25px; line-height: 1.7; text-align: justify; word-break: break-all;"><a href="https://www.google.com/search?q=' + q + '" target="_blank" style="text-decoration: underline; color: #2563eb;">[참고 출처: ' + escapeHtml(item.reference) + ']</a></p>';
+          newsInsightsHtml += '<p style="font-size: 10.5pt; margin-top: 0; margin-bottom: 25px; line-height: 1.7; text-align: justify; word-break: break-all;"><a href="https://www.google.com/search?q=' + q + '" target="_blank" style="text-decoration: underline; color: #2563eb;">[참고 출처: ' + escapeHtml(item.reference) + ']</a></p>';
         }
       }
     });
@@ -838,7 +842,8 @@ function sendWeeklyReportEmail(email, dateRange, insightReport) {
   let newsInsightsHtml = "";
   if (insightReport.news_insights && Array.isArray(insightReport.news_insights)) {
     insightReport.news_insights.forEach(function(item) {
-      newsInsightsHtml += '<div style="font-size: 12pt; font-weight: bold; color: #000; margin-top: 25px; margin-bottom: 10px;"><b>' + escapeHtml(item.title) + '</b></div>';
+      var publisherDate = (item.publisher || item.date) ? ' <span style="font-size:10pt; color:#666; font-weight:normal;">(' + escapeHtml(item.publisher || '') + (item.publisher && item.date ? ', ' : '') + escapeHtml(item.date || '') + ')</span>' : '';
+      newsInsightsHtml += '<div style="font-size: 12pt; font-weight: bold; color: #000; margin-top: 25px; margin-bottom: 10px;"><b>' + escapeHtml(item.title) + '</b>' + publisherDate + '</div>';
       newsInsightsHtml += '<p style="font-size: 10.5pt; color: #333; margin-top: 0; margin-bottom: 10px; line-height: 1.7; text-align: justify; word-break: break-all;"><b>주요내용:</b> ' + formatParagraphs(item.summary || '') + '</p>';
       
       // references 배열 존재 여부에 따라 하단 마진 조절
@@ -850,21 +855,25 @@ function sendWeeklyReportEmail(email, dateRange, insightReport) {
         item.references.forEach(function(ref, idx) {
           var isLast = (idx === item.references.length - 1);
           var mb = isLast ? '25px' : '5px';
-          if (ref.url && String(ref.url).trim() !== '') {
-            newsInsightsHtml += '<p style="font-size: 10.5pt; color: #2563eb; margin-top: 0; margin-bottom: ' + mb + '; line-height: 1.7;"><a href="' + ref.url + '" target="_blank" style="text-decoration: underline; color: #2563eb;">[참고 출처: ' + escapeHtml(ref.name) + ']</a></p>';
+          var refName = typeof ref === 'string' ? ref : (ref.name || '');
+          var refUrl = typeof ref === 'string' ? '' : (ref.url || '');
+          if (refUrl && String(refUrl).trim() !== '') {
+            var safeUrl = String(refUrl).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+            newsInsightsHtml += '<p style="font-size: 10.5pt; margin-top: 0; margin-bottom: ' + mb + '; line-height: 1.7;"><a href="' + safeUrl + '" target="_blank" style="text-decoration: underline; color: #2563eb;">[참고 출처: ' + escapeHtml(refName) + ']</a></p>';
           } else {
-            var q = encodeURIComponent(String(ref.name).replace(/"/g, ''));
-            newsInsightsHtml += '<p style="font-size: 10.5pt; color: #2563eb; margin-top: 0; margin-bottom: ' + mb + '; line-height: 1.7;"><a href="https://www.google.com/search?q=' + q + '" target="_blank" style="text-decoration: underline; color: #2563eb;">[참고 출처: ' + escapeHtml(ref.name) + ']</a></p>';
+            var q = encodeURIComponent(String(refName).replace(/"/g, ''));
+            newsInsightsHtml += '<p style="font-size: 10.5pt; margin-top: 0; margin-bottom: ' + mb + '; line-height: 1.7;"><a href="https://www.google.com/search?q=' + q + '" target="_blank" style="text-decoration: underline; color: #2563eb;">[참고 출처: ' + escapeHtml(refName) + ']</a></p>';
           }
         });
       }
       // 기존 단일 문자열 형식 (하위 호환)
       else if (item.reference && String(item.reference).trim() !== '') {
         if (item.reference_url) {
-          newsInsightsHtml += '<p style="font-size: 10.5pt; color: #2563eb; margin-top: 0; margin-bottom: 25px; line-height: 1.7; text-align: justify; word-break: break-all;"><a href="' + item.reference_url + '" target="_blank" style="text-decoration: underline; color: #2563eb;">[참고 출처: ' + escapeHtml(item.reference) + ']</a></p>';
+          var safeRefUrl = String(item.reference_url).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+          newsInsightsHtml += '<p style="font-size: 10.5pt; margin-top: 0; margin-bottom: 25px; line-height: 1.7; text-align: justify; word-break: break-all;"><a href="' + safeRefUrl + '" target="_blank" style="text-decoration: underline; color: #2563eb;">[참고 출처: ' + escapeHtml(item.reference) + ']</a></p>';
         } else {
           var q = encodeURIComponent(item.reference.replace(/"/g, ''));
-          newsInsightsHtml += '<p style="font-size: 10.5pt; color: #2563eb; margin-top: 0; margin-bottom: 25px; line-height: 1.7; text-align: justify; word-break: break-all;"><a href="https://www.google.com/search?q=' + q + '" target="_blank" style="text-decoration: underline; color: #2563eb;">[참고 출처: ' + escapeHtml(item.reference) + ']</a></p>';
+          newsInsightsHtml += '<p style="font-size: 10.5pt; margin-top: 0; margin-bottom: 25px; line-height: 1.7; text-align: justify; word-break: break-all;"><a href="https://www.google.com/search?q=' + q + '" target="_blank" style="text-decoration: underline; color: #2563eb;">[참고 출처: ' + escapeHtml(item.reference) + ']</a></p>';
         }
       }
     });
