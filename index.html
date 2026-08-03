@@ -1412,16 +1412,34 @@
             spinner.classList.remove('hidden');
 
             try {
-                const adminRes = await fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify({ action: 'adminLogin', pw: pw })
-                });
-                const adminData = await adminRes.json();
-                if (!adminData.success) {
-                    alert('비밀번호가 일치하지 않습니다.');
+                let success = false;
+                let errorMsg = '비밀번호가 일치하지 않습니다.';
+
+                // 1차 POST 시도
+                try {
+                    const adminRes = await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({ action: 'adminLogin', pw: pw })
+                    });
+                    const adminData = await adminRes.json();
+                    if (adminData.success) success = true;
+                    else if (adminData.error) errorMsg = adminData.error;
+                } catch(postErr) {
+                    console.warn('POST 인증 실패, GET 방식으로 2차 재시도:', postErr);
+                    // 2차 GET 폴백 시도 (302 리다이렉트 지연 우회)
+                    const getUrl = SCRIPT_URL + '?action=adminLogin&pw=' + encodeURIComponent(pw) + '&t=' + Date.now();
+                    const getRes = await fetch(getUrl);
+                    const getData = await getRes.json();
+                    if (getData.success) success = true;
+                    else if (getData.error) errorMsg = getData.error;
+                }
+
+                if (!success) {
+                    alert(errorMsg);
                     return;
                 }
+                
                 sessionStorage.setItem('admin_pw', pw);
                 closeModalElement(document.getElementById('adminPwModal'));
                 if (pendingSettingsOpen) {
@@ -1429,7 +1447,8 @@
                     doOpenSettingsModal();
                 }
             } catch(e) {
-                alert('서버 연결에 실패했습니다.');
+                console.error('Password verify error:', e);
+                alert('서버 연결에 실패했습니다. 잠시 후 다시 시도해 주세요.');
             } finally {
                 btn.disabled = false;
                 text.textContent = '확인';

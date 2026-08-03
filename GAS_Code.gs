@@ -16,9 +16,18 @@ function doGet(e) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const tab = e.parameter.tab || 'News_Data';
   const dateStr = e.parameter.date; // YYYY-MM-DD
-  const topic = e.parameter.topic; // 주제 필터
-  const action = e.parameter.action;
-  const email = e.parameter.email; // 사용자 식별 이메일
+  const action = e.parameter ? e.parameter.action : null;
+  const email = e.parameter ? e.parameter.email : null; // 사용자 식별 이메일
+
+  // ── 비밀번호 확인 API (GET 대응) ──
+  if (action === 'adminLogin') {
+    const ADMIN_PW = PropertiesService.getScriptProperties().getProperty('ADMIN_PW');
+    if (e.parameter.pw === ADMIN_PW) {
+      return createResponse({ success: true });
+    } else {
+      return createResponse({ success: false, error: '비밀번호가 일치하지 않습니다.' });
+    }
+  }
 
   // ── 수동 수집 트리거 (GitHub Actions) ──
   if (action === 'triggerWorkflow') {
