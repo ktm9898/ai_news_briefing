@@ -1297,6 +1297,9 @@
             if (activeModals.length > 0) {
                 const topModal = activeModals.pop();
                 topModal.classList.add('hidden');
+                if (topModal.id === 'ttsProgressContainer' && isSpeaking) {
+                    stopTTS();
+                }
                 if (activeModals.length === 0) {
                     document.body.style.overflow = '';
                 }
@@ -1968,8 +1971,11 @@
         }
 
         function showTTSProgress(show) {
-            document.getElementById('ttsProgressContainer').classList.toggle('hidden', !show);
-            if (!show) {
+            const container = document.getElementById('ttsProgressContainer');
+            if (show) {
+                openModalElement(container);
+            } else {
+                closeModalElement(container);
                 const bar = document.getElementById('ttsProgressBar');
                 bar.style.transition = 'none';
                 bar.style.width = '0%';
