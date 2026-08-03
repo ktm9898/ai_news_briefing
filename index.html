@@ -1847,8 +1847,14 @@
                 if (!isSpeaking) return;
 
                 if (candidateIndex >= candidateUrls.length) {
-                    console.log('MP3 오디오 파일 없음 → Web Speech Synthesis (음성 읽기) 폴백 시작');
-                    startSpeechSynthesisFallback();
+                    document.getElementById('ttsStatus').textContent = '⚠️ 해당 날짜의 브리핑 파일이 존재하지 않습니다.';
+                    document.getElementById('ttsStatus').classList.add('text-rose-500');
+                    setTimeout(() => {
+                        if (isSpeaking) {
+                            document.getElementById('ttsStatus').classList.remove('text-rose-500');
+                            stopTTS();
+                        }
+                    }, 3000);
                     return;
                 }
 
