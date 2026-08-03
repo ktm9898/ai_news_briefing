@@ -76,17 +76,6 @@ function doGet(e) {
     return obj;
   });
 
-  // ── 이메일 필터링 적용 (headers에 이메일이 존재하는 탭의 경우) ──
-  const emailIdx = headers.indexOf('이메일') !== -1 ? headers.indexOf('이메일') : headers.indexOf('Email');
-  if (email && emailIdx !== -1) {
-    const targetEmail = String(email).trim().toLowerCase();
-    result = result.filter(item => {
-      const itemEmail = String(item['이메일'] || item['Email'] || '').trim().toLowerCase();
-      // 레거시 데이터 호환: 이메일이 지정되지 않은 데이터는 모두 접근 가능하도록 허용
-      return itemEmail === '' || itemEmail === targetEmail;
-    });
-  }
-
   // News_Data 탭의 경우 날짜 및 주제 필터 적용
   if (tab === 'News_Data') {
     if (dateStr) {
@@ -127,14 +116,12 @@ function doPost(e) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const params = JSON.parse(e.postData.contents);
   const action = params.action;
-  const email = params.email || '';
+  const ADMIN_PW = PropertiesService.getScriptProperties().getProperty('ADMIN_PW');
 
   // ── 수동 수집 트리거 (GitHub Actions) ──
   if (action === 'triggerWorkflow') {
-    // 관리자 여부 확인
-    const targetEmail = String(email).trim().toLowerCase();
-    if (targetEmail !== 'ktm98@seoulshinbo.co.kr' && targetEmail !== 'ktm9898@gmail.com') {
-      return createResponse({ success: false, error: 'Unauthorized: Admin only' });
+    if (params.pw !== ADMIN_PW) {
+      return createResponse({ success: false, error: '비밀번호가 일치하지 않습니다.' });
     }
 
     const props = PropertiesService.getScriptProperties();
@@ -520,17 +507,7 @@ function doPost(e) {
 }
 
 function isUserApproved(ss, email) {
-  const targetEmail = String(email).trim().toLowerCase();
-  if (targetEmail === 'ktm98@seoulshinbo.co.kr' || targetEmail === 'ktm9898@gmail.com') return true;
-  const sheet = ss.getSheetByName('Approved_Users');
-  if (!sheet) return false;
-  const data = sheet.getDataRange().getValues();
-  for (let i = 1; i < data.length; i++) {
-    if (String(data[i][0]).trim().toLowerCase() === targetEmail && data[i][1] === 'approved') {
-      return true;
-    }
-  }
-  return false;
+  return true;
 }
 
 function getOrCreateTab(ss, name, headers) {

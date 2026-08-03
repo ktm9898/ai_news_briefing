@@ -179,47 +179,7 @@ class AIAnalyzer:
                 for item in importance_list:
                     idx = item.get("index", 1) - 1
                     if 0 <= idx < len(final_list_for_ai):
-                        final_list_for_ai[idx]["중요도"] = item.get("importance", "하")
-
-                # 2. 주제별 선정 마킹 (핵심 추가)
-                topic_tops = result.get("topic_tops", {})
-                for topic, indices in topic_tops.items():
-                    logger.info(f"[{topic}] AI가 직접 {len(indices)}건 선정 완료")
-                    for idx_val in indices:
-                        idx = idx_val - 1
-                        if 0 <= idx < len(final_list_for_ai):
-                            # AI가 선정한 기사임을 표시하는 플래그
-                            final_list_for_ai[idx]["ai_selected"] = True
-
-                # 3. Top6 결과 구성
-                top6_list = result.get("top6", [])
-                top6_results = []
-                for item in top6_list:
-                    idx = item.get("index", 1) - 1
-                    if 0 <= idx < len(final_list_for_ai):
-                        news_item = final_list_for_ai[idx].copy()
-                        news_item["summary"] = item.get("summary", "")
-                        news_item["region"] = item.get("region", "국내")
-                        top6_results.append(news_item)
-
-                return final_list_for_ai, top6_results
-
-            except Exception as e:
-                logger.error(f"AI 1차 선별 실패 (시도 {attempt + 1}/{max_retries}): {e}")
-                if attempt == max_retries - 1:
-                    raise e
-                else:
-                    if '429' in str(e):
-                        wait_sec = self._extract_retry_delay(e)
-                    else:
-                        wait_sec = 10 * (attempt + 1)
-                    logger.info(f"⏳ {wait_sec:.1f}초 대기 후 재시도...")
-                    time.sleep(wait_sec)
-
-        return news_list, []
-
-
-    # ═══════════════════════════════════════════════════
+            # ═══════════════════════════════════════════════════
     # Stage 2: 요약 + 브리핑 대본 + 인사이트 리포트 동시 생성
     # ═══════════════════════════════════════════════════
 
@@ -241,6 +201,73 @@ class AIAnalyzer:
             body_preview = (news.get("본문 전문", "") or "")[:1500]
             is_essential = news.get("is_essential", False)
             relevance = "[대본 필수 포함]" if is_essential else "[대본 제외/참고용]"
+            
+            news_texts.append(
+                f"[뉴스 {idx + 1}] {relevance}\n"
+                f"날짜: {news.get('날짜', '')}\n"
+                f"언론사: {news.get('언론사', '')}\n"
+                f"주제: {news.get('주제', '기타')}\n"
+                f"제목: {news.get('제목', '')}\n"
+                f"네이버 요약: {naver_desc}\n"
+                f"본문(일부): {body_preview}\n"
+            )
+
+        insight_instruction = ""
+        insight_schema = '"insight_report": null'
+        
+        if generate_insight:
+            insight_instruction = """
+[작업 3: 재단 업무 인사이트 리포트 (정책 분석가)]
+당신은 공공기관(서울신용보증재단)의 전문 정책 분석가입니다.
+오늘의 주요 뉴스들을 분석하여 재단 업무(소상공인 지원, 보증, 컨설팅, 상권활성화 등)에 깊이 있는 통찰을 제공할 핵심 데이터를 추출해 주세요.
+
+[작업 지침]
+1. 뉴스 전체를 관통하는 핵심적인 거시 경제 상황을 'economic_trend'에 500자 이내로 요약하십시오.
+2. 재단 업무와 직간접적으로 연계성이 가장 높고 시사하는 바가 큰 뉴스 **2~3개**를 신중하게 선정하여 'news_insights' 리스트에 담으십시오. 너무 많이 선정하지 말고 깊이 있는 분석에 집중하십시오.
+3. 각 인사이트 항목은 'title'(뉴스 제목), 'summary'(주요내용), 'implication'(인사이트), 'references'(외부 출처 배열)로 구성하십시오.
+   - **summary 작성 가이드**: 단순 요약을 넘어 기사의 배경, 구체적인 수치, 핵심 쟁점 등을 상세하고 구체적으로 설명하십시오.
+   - **implication 작성 가이드**: 단순히 표면적인 대응을 넘어, 해당 뉴스의 이면과 배경을 통찰하십시오. 타 지역 뉴스라면 서울시 환경에 비추어 유추하고, 파급 효과를 구체적으로 짚어주십시오.
+   - **[할루시네이션(거짓 정보) 방지 원칙 (엄수)]**: 
+     1. 외부 보고서나 연구기관명(예: 중소기업연구원 등) 및 사례를 인용할 때는 **반드시 실제 명확히 입증되거나 제공된 기사 본문에 명시된 팩트(Fact) 정보만 언급**하십시오.
+     2. 확실하지 않거나 직접 제공되지 않은 외부 연구보고서 제목이나 기관명을 추측하여 지어내지 마십시오.
+   - **[외부 사례 출처 표기 (references)]**: 제공된 뉴스 본문이나 대중적으로 확실히 확인되는 법정/공식 통계·발표 자료 등 명확한 출처가 있는 경우에만 'references' 배열에 기재하십시오. 명확하지 않다면 비워두거나(`[]`) 생략하십시오. 존재하지 않는 기관명이나 보고서 제목을 생성하지 마십시오.
+
+    - 가독성을 극대화하기 위해 내용이 길어질 경우 논리적 흐름에 따라 2~3개의 문단으로 구분하고, 문단 사이에는 반드시 빈 줄(엔터 키 두 번, \n\n)을 삽입하십시오.
+4. 모든 내용은 정중하고 전문적인 문체로 작성하며, 이모지는 절대 사용하지 마십시오.
+
+"""
+            insight_schema = """\"insight_report\": {{
+    \"economic_trend\": \"거시 경제 흐름 요약 내용 (500자 이내)\",
+    \"news_insights\": [
+      {{
+        \"title\": \"기사 제목\",
+        \"date\": \"해당 기사가 나온 날짜\",
+        \"publisher\": \"해당 기사의 언론사\",
+        \"summary\": \"주요내용\",
+        \"implication\": \"인사이트 및 깊이 있는 통찰\",
+        \"references\": [
+          \"명확히 검증된 출처 또는 명칭 (불확실하거나 없으면 빈 배열 [])\"
+        ]
+      }}
+    ]
+  }}"""��체로 작성하며, 이모지는 절대 사용하지 마십시오.
+
+"""
+            insight_schema = """\"insight_report\": {{
+    \"economic_trend\": \"거시 경제 흐름 요약 내용 (500자 이내)\",
+    \"news_insights\": [
+      {{
+        \"title\": \"기사 제목\",
+        \"date\": \"해당 기사가 나온 날짜\",
+        \"publisher\": \"해당 기사의 언론사\",
+        \"summary\": \"주요내용\",
+        \"implication\": \"인사이트 및 깊이 있는 통찰\",
+        \"references\": [
+          \"명확히 검증된 출처 또는 명칭 (불확실하거나 없으면 빈 배열 [])\"
+        ]
+      }}
+    ]
+  }}"""essential else "[대본 제외/참고용]"
             
             news_texts.append(
                 f"[뉴스 {idx + 1}] {relevance}\n"

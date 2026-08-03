@@ -169,7 +169,7 @@ def run_pipeline():
                 weather_str = get_weather_info()
 
                 context_info = f"현재 일시: {date_str} {weekday_str}\n날씨 정보: {weather_str}"
-                generate_insight = (email.strip().lower() == "ktm98@seoulshinbo.co.kr")
+                generate_insight = True
                 analysis_result = analyzer.analyze_all_in_one(
                     selected_for_crawl, 
                     context_info=context_info, 

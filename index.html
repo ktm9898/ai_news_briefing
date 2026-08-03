@@ -216,25 +216,7 @@
             </div>
             <div class="flex items-center gap-2">
                 <span id="lastUpdate" class="text-xs text-muted hidden sm:inline"></span>
-                <!-- 이메일 표시 배지 -->
-                <div id="userEmailBadge" class="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700">
-                    <span id="userEmailText" class="truncate max-w-[150px]"></span>
-                    <button onclick="handleLogout()" class="text-slate-400 hover:text-rose-500 transition-colors" title="로그아웃">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-                        </svg>
-                    </button>
-                </div>
                 <div class="hidden sm:flex items-center gap-2">
-                    <button onclick="triggerCollection()" id="collectBtn"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded-lg hover:bg-emerald-700 transition-colors"
-                        title="GitHub Actions를 통해 최신 뉴스를 수집합니다">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                        </svg>
-                        수집
-                    </button>
                     <button onclick="loadData()" id="refreshBtn"
                         class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -477,17 +459,9 @@
         </div>
     </main>
 
-    <!-- ═══════════ 모바일 하단 네비게이션 ═══════════ -->
+    <!-- ═══════════ 모바일 하단 네비게이션 (3개) ═══════════ -->
     <nav
         class="fixed bottom-0 w-full bg-white/90 backdrop-blur-md border-t border-border flex justify-around items-center px-1 py-1 pb-safe z-50 sm:hidden shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-        <button onclick="triggerCollection()" id="bottomCollectBtn"
-            class="flex flex-col items-center p-2 text-muted hover:text-emerald-600 transition-colors">
-            <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            <span class="text-[10px] font-bold">수집</span>
-        </button>
         <button onclick="forceReload()"
             class="flex flex-col items-center p-2 text-muted hover:text-blue-500 transition-colors">
             <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -513,33 +487,6 @@
             <span class="text-[10px] font-bold">리포트</span>
         </button>
     </nav>
-
-    <!-- ═══════════ 이메일 로그인 모달 (최초 진입용) ═══════════ -->
-    <div id="loginModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[200] flex items-center justify-center hidden">
-        <div class="bg-white/90 backdrop-blur-xl border border-white/20 p-8 rounded-3xl shadow-2xl max-w-md w-full mx-4 transition-all duration-300 transform scale-100">
-            <div class="flex flex-col items-center text-center space-y-4">
-                <div class="w-16 h-16 bg-blue-500/10 text-blue-600 rounded-2xl flex items-center justify-center mb-2 animate-pulse">
-                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                    </svg>
-                </div>
-                <h2 class="text-2xl font-bold tracking-tight text-slate-900">AI 뉴스 비서 로그인</h2>
-                <p class="text-sm text-slate-500">본인의 이메일 주소를 입력해 주세요.<br>사용자 별 맞춤 브리핑 및 일일 보고서가 발송됩니다.</p>
-                <div class="w-full space-y-3 pt-4">
-                    <input type="email" id="loginEmailInput" placeholder="example@email.com" 
-                        class="w-full text-base border border-slate-200 rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-accent focus:border-accent outline-none bg-white/70"
-                        onkeydown="if(event.key === 'Enter') submitLogin()">
-                    <button onclick="submitLogin()" 
-                        class="w-full py-4 bg-accent hover:bg-blue-700 text-white font-bold rounded-xl transition-all duration-200 shadow-lg shadow-accent/20 flex items-center justify-center gap-2">
-                        <span>시작하기</span>
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
-                        </svg>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- ═══════════ 관리자 비밀번호 모달 ═══════════ -->
     <div id="adminPwModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[300] flex items-center justify-center hidden">
@@ -691,15 +638,18 @@
                         </div>
                     </div>
 
-                    <!-- 계정 정보 및 시스템 관리 -->
+                    <!-- 시스템 관리 & 수동 수집 -->
                     <div class="mt-6 pt-4 border-t border-gray-100">
-                        <label class="text-[10px] font-bold text-muted uppercase block mb-2">계정 정보</label>
-                        <div class="flex items-center justify-between px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl mb-4 text-xs">
-                            <span id="settingsUserEmail" class="font-bold text-gray-700"></span>
-                            <button onclick="handleLogout(); closeSettingsModal();" class="text-rose-600 hover:text-rose-700 font-bold transition-colors">로그아웃</button>
-                        </div>
-                        <label class="text-[10px] font-bold text-muted uppercase block mb-3">시스템 관리</label>
+                        <label class="text-[10px] font-bold text-muted uppercase block mb-3">수집 및 시스템 관리</label>
                         <div class="flex flex-col gap-2">
+                            <button onclick="triggerCollection()" id="settingsCollectBtn"
+                                class="w-full py-3 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 shadow-sm">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                                최신 뉴스 수집 즉시 실행 (GitHub Actions)
+                            </button>
                             <button id="pwaInstallBtn" onclick="installPWA()"
                                 class="hidden w-full py-3.5 bg-blue-600 text-white text-[14px] font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-200 animate-bounce flex items-center justify-center gap-2 mb-2">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1042,8 +992,8 @@
             if (document.getElementById('filterDateMobile')) document.getElementById('filterDateMobile').value = targetDate;
             updateDayOfWeek();
 
-            // 이메일 로그인 여부 확인 및 데이터 로드 시작
-            checkUserLogin();
+            // 바로 데이터 로드 시작
+            loadData();
         });
 
         // ── 요일 및 날짜 텍스트 업데이트 ──
@@ -1070,19 +1020,12 @@
 
         // ── 데이터 로드 ──
         async function loadData() {
-            const email = localStorage.getItem('user_email');
-            if (!email) {
-                checkUserLogin();
-                return;
-            }
-
             const dateVal = getVisibleValue('filterDateDesktop', 'filterDateMobile');
             const topicVal = getVisibleValue('filterCategoryDesktop', 'filterCategoryMobile');
 
-            // 날짜 및 이메일 필터를 GAS에 파라미터로 전달
+            // 날짜 필터를 GAS에 파라미터로 전달
             let fetchUrl = SCRIPT_URL;
             const params = [];
-            params.push(`email=${encodeURIComponent(email)}`);
             if (dateVal) params.push(`date=${encodeURIComponent(dateVal)}`);
             // 캐시 방지를 위해 타임스탬프 추가
             params.push(`t=${Date.now()}`);
@@ -1322,17 +1265,62 @@
             </div>` : ''}
         `;
 
-            document.getElementById('detailModal').classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
+            openModalElement(document.getElementById('detailModal'));
         }
 
+        // ── 모달 open/close 및 히스토리 관리 (뒤로가기 시 모달 닫기) ──
+        const activeModals = [];
+
+        function openModalElement(el) {
+            if (!el) return;
+            if (el.classList.contains('hidden')) {
+                el.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+                activeModals.push(el);
+                history.pushState({ modalId: el.id }, '');
+            }
+        }
+
+        function closeModalElement(el) {
+            if (!el) return;
+            if (!el.classList.contains('hidden')) {
+                el.classList.add('hidden');
+                const idx = activeModals.indexOf(el);
+                if (idx !== -1) activeModals.splice(idx, 1);
+                if (activeModals.length === 0) {
+                    document.body.style.overflow = '';
+                }
+            }
+        }
+
+        window.addEventListener('popstate', (e) => {
+            if (activeModals.length > 0) {
+                const topModal = activeModals.pop();
+                topModal.classList.add('hidden');
+                if (activeModals.length === 0) {
+                    document.body.style.overflow = '';
+                }
+            }
+        });
+
         function closeModal() {
-            document.getElementById('detailModal').classList.add('hidden');
-            document.body.style.overflow = '';
+            closeModalElement(document.getElementById('detailModal'));
+        }
+
+        function closeFilterModal() {
+            closeModalElement(document.getElementById('filterModal'));
+        }
+
+        function openFilterModal() {
+            openModalElement(document.getElementById('filterModal'));
         }
 
         // ESC로 모달 닫기
-        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && activeModals.length > 0) {
+                history.back();
+            }
+        });
 
         // 현재 필터/정렬된 데이터 가져오기 (매칭용 핵심 함수)
         function getCurrentFiltered() {
@@ -1393,29 +1381,84 @@
             // 하드코딩 방식으로 변경되어 사용하지 않음
         }
 
-        // ── 키워드 및 주제 설정 관리 ──
+        // ── 비밀번호 확인 모달 및 설정 접근 ──
+        let pendingSettingsOpen = false;
+
         function openSettingsModal() {
-            document.getElementById('settingsModal').classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
+            const savedPw = sessionStorage.getItem('admin_pw');
+            if (savedPw) {
+                // 이미 인증된 경우 설정 바로 오픈
+                doOpenSettingsModal();
+            } else {
+                // 비밀번호 확인 모달 노출
+                pendingSettingsOpen = true;
+                openModalElement(document.getElementById('adminPwModal'));
+                document.getElementById('loginAdminPw').value = '';
+                document.getElementById('loginAdminPw').focus();
+            }
+        }
+
+        function cancelAdminPw() {
+            closeModalElement(document.getElementById('adminPwModal'));
+            pendingSettingsOpen = false;
+        }
+
+        async function confirmAdminPw() {
+            const pw = document.getElementById('loginAdminPw').value;
+            if (!pw) { alert('비밀번호를 입력하세요.'); return; }
+
+            const btn = document.getElementById('adminPwConfirmBtn');
+            const text = document.getElementById('adminPwConfirmText');
+            const spinner = document.getElementById('adminPwSpinner');
+
+            btn.disabled = true;
+            text.textContent = '확인 중...';
+            spinner.classList.remove('hidden');
+
+            try {
+                const adminRes = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({ action: 'adminLogin', pw: pw })
+                });
+                const adminData = await adminRes.json();
+                if (!adminData.success) {
+                    alert('비밀번호가 일치하지 않습니다.');
+                    return;
+                }
+                sessionStorage.setItem('admin_pw', pw);
+                closeModalElement(document.getElementById('adminPwModal'));
+                if (pendingSettingsOpen) {
+                    pendingSettingsOpen = false;
+                    doOpenSettingsModal();
+                }
+            } catch(e) {
+                alert('서버 연결에 실패했습니다.');
+            } finally {
+                btn.disabled = false;
+                text.textContent = '확인';
+                spinner.classList.add('hidden');
+            }
+        }
+
+        function doOpenSettingsModal() {
+            openModalElement(document.getElementById('settingsModal'));
             loadSettings();
         }
 
         function closeSettingsModal() {
-            document.getElementById('settingsModal').classList.add('hidden');
-            document.body.style.overflow = '';
+            closeModalElement(document.getElementById('settingsModal'));
         }
 
         async function loadSettings() {
-            const email = localStorage.getItem('user_email');
-            if (!email) return;
             const url = SCRIPT_URL;
             showSettingsLoading(true);
 
             try {
                 // 키워드와 주제별 기준을 동시에 로드
                 const [settingsResp, criteriaResp] = await Promise.all([
-                    fetch(url + '?tab=Settings&email=' + encodeURIComponent(email) + '&t=' + Date.now()),
-                    fetch(url + '?tab=Topic_Settings&email=' + encodeURIComponent(email) + '&t=' + Date.now())
+                    fetch(url + '?tab=Settings&t=' + Date.now()),
+                    fetch(url + '?tab=Topic_Settings&t=' + Date.now())
                 ]);
 
                 let sData = await settingsResp.json();
@@ -2068,29 +2111,21 @@
         async function triggerCollection() {
             if (isCollecting) return; // 이미 수집 중이면 무시
             
-            const email = localStorage.getItem('user_email');
-            if (email !== 'ktm98@seoulshinbo.co.kr' && email !== 'ktm9898@gmail.com') {
-                alert('뉴스 수동 수집은 관리자만 가능합니다.');
+            const adminPw = sessionStorage.getItem('admin_pw');
+            if (!adminPw) {
+                alert('관리자 인증이 필요합니다.');
                 return;
             }
 
             isCollecting = true;
 
-            const url = SCRIPT_URL;
-            const btn = document.getElementById('collectBtn');
-            const btnMobile = document.getElementById('bottomCollectBtn');
-            const originalHTML = btn.innerHTML;
+            const btn = document.getElementById('settingsCollectBtn');
+            const originalHTML = btn ? btn.innerHTML : '';
 
-            // 버튼 비활성화 (데스크톱)
-            btn.disabled = true;
-            btn.innerHTML = `<svg class="w-3.5 h-3.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> 수집 중...`;
-            btn.classList.add('opacity-70', 'cursor-not-allowed');
-
-            // 버튼 비활성화 (모바일)
-            if (btnMobile) {
-                btnMobile.style.pointerEvents = 'none'; // 클릭 방지
-                btnMobile.classList.add('text-emerald-500', 'animate-pulse');
-                btnMobile.classList.remove('text-muted');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = `<svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> 수집 요청 및 진행 중...`;
+                btn.classList.add('opacity-70', 'cursor-not-allowed');
             }
 
             try {
@@ -2104,11 +2139,17 @@
                     }
                 } catch (e) { console.error("Failed to fetch initial run status", e) }
 
-                const triggerRes = await fetch(SCRIPT_URL + '?action=triggerWorkflow');
+                const triggerRes = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({ action: 'triggerWorkflow', pw: adminPw })
+                });
                 const triggerResult = await triggerRes.json();
-                if (!triggerResult.ok) {
+                if (!triggerResult.ok && !triggerResult.success) {
                     throw new Error(triggerResult.error || 'GitHub Actions 트리거 실패');
                 }
+
+                alert('뉴스 수집 요청이 접수되었습니다. 완료까지 약 2~3분이 소요됩니다.');
 
                 // GitHub Actions 상태 확인 (10초마다 폴링)
                 let pollCount = 0;
@@ -2122,17 +2163,13 @@
                             // 새로운 실행이 시작되었고, 완료되었을 경우
                             if (latestRun.id !== lastRunId && latestRun.status === 'completed') {
                                 clearInterval(checkInterval);
-                                // 데이터 시트에 반영될 시간 약간(2초) 대기 후 리로드
                                 setTimeout(async () => {
                                     await loadData();
                                     isCollecting = false;
-                                    btn.innerHTML = originalHTML;
-                                    btn.disabled = false;
-                                    btn.classList.remove('opacity-70', 'cursor-not-allowed');
-                                    if (btnMobile) {
-                                        btnMobile.style.pointerEvents = 'auto';
-                                        btnMobile.classList.remove('text-emerald-500', 'animate-pulse');
-                                        btnMobile.classList.add('text-muted');
+                                    if (btn) {
+                                        btn.innerHTML = originalHTML;
+                                        btn.disabled = false;
+                                        btn.classList.remove('opacity-70', 'cursor-not-allowed');
                                     }
                                 }, 2000);
                                 return;
@@ -2145,13 +2182,10 @@
                         clearInterval(checkInterval);
                         await loadData();
                         isCollecting = false;
-                        btn.innerHTML = originalHTML;
-                        btn.disabled = false;
-                        btn.classList.remove('opacity-70', 'cursor-not-allowed');
-                        if (btnMobile) {
-                            btnMobile.style.pointerEvents = 'auto';
-                            btnMobile.classList.remove('text-emerald-500', 'animate-pulse');
-                            btnMobile.classList.add('text-muted');
+                        if (btn) {
+                            btn.innerHTML = originalHTML;
+                            btn.disabled = false;
+                            btn.classList.remove('opacity-70', 'cursor-not-allowed');
                         }
                     }
                 }, 10000);
@@ -2159,11 +2193,10 @@
             } catch (err) {
                 alert('뉴스 수집 요청 실패: ' + err.message);
                 isCollecting = false;
-                btn.innerHTML = originalHTML;
-                btn.disabled = false;
-                btn.classList.remove('opacity-70', 'cursor-not-allowed');
-                if (btnMobile) {
-                    btnMobile.style.pointerEvents = 'auto';
+                if (btn) {
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-70', 'cursor-not-allowed');
                 }
             }
         }
@@ -2274,14 +2307,12 @@
         }
 
         function openReportsModal() {
-            document.getElementById('reportsModal').classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
+            openModalElement(document.getElementById('reportsModal'));
             switchReportTab('foundation');
         }
 
         function closeReportsModal() {
-            document.getElementById('reportsModal').classList.add('hidden');
-            document.body.style.overflow = '';
+            closeModalElement(document.getElementById('reportsModal'));
         }
 
         function showReportList() {
@@ -2294,8 +2325,6 @@
         }
 
         async function loadReports() {
-            const email = localStorage.getItem('user_email');
-            if (!email) return;
             const container = document.getElementById('reportListContent');
             const loading = document.getElementById('reportListLoading');
             container.innerHTML = '';
@@ -2303,7 +2332,7 @@
 
             try {
                 const sheetTab = currentReportTab === 'foundation' ? 'Briefing_Docs' : 'Weekly_Briefing_Docs';
-                const url = SCRIPT_URL + '?tab=' + sheetTab + '&email=' + encodeURIComponent(email) + '&t=' + Date.now();
+                const url = SCRIPT_URL + '?tab=' + sheetTab + '&t=' + Date.now();
                 const resp = await fetch(url);
                 if (!resp.ok) throw new Error('HTTP ' + resp.status);
                 let data = await resp.json();
