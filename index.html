@@ -1828,63 +1828,69 @@
             const now = new Date();
             const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
             
-            const email = localStorage.getItem('user_email');
-            const emailSuffix = email ? email.replace(/[^a-zA-Z0-9]/g, '_') : 'default';
-
-            let audioUrl;
+            // 오디오 파일 시도 목록 (기존 이메일 접미사 및 기본 파일명 모두 대응)
+            const yyyymmdd = dateVal.replace(/-/g, '');
+            const candidateUrls = [];
+            
             if (dateVal === today) {
-                // 오늘 날짜면 최신 파일 시도
-                audioUrl = `audio/briefing_latest_${emailSuffix}.mp3?t=${Date.now()}`;
-            } else {
-                // 특정 날짜면 해당 날짜 파일 시도 (YYYYMMDD 형식)
-                const yyyymmdd = dateVal.replace(/-/g, '');
-                audioUrl = `audio/briefing_${emailSuffix}_${yyyymmdd}.mp3`;
+                candidateUrls.push(`audio/briefing_latest.mp3?t=${Date.now()}`);
+                candidateUrls.push(`audio/briefing_ktm98_seoulshinbo_co_kr_latest.mp3?t=${Date.now()}`);
+                if (emailSuffix) candidateUrls.push(`audio/briefing_latest_${emailSuffix}.mp3?t=${Date.now()}`);
+            }
+            candidateUrls.push(`audio/briefing_${yyyymmdd}.mp3`);
+            candidateUrls.push(`audio/briefing_ktm98_seoulshinbo_co_kr_${yyyymmdd}.mp3`);
+            if (emailSuffix) candidateUrls.push(`audio/briefing_${emailSuffix}_${yyyymmdd}.mp3`);
+
+            let candidateIndex = 0;
+
+            function tryNextAudio() {
+                if (!isSpeaking) return;
+
+                if (candidateIndex >= candidateUrls.length) {
+                    console.log('MP3 오디오 파일 없음 → Web Speech Synthesis (음성 읽기) 폴백 시작');
+                    startSpeechSynthesisFallback();
+                    return;
+                }
+
+                const currentUrl = candidateUrls[candidateIndex++];
+                briefingAudio = new Audio(currentUrl);
+
+                briefingAudio.addEventListener('canplaythrough', () => {
+                    if (!isSpeaking) return;
+                    document.getElementById('ttsStatus').textContent = '🎧 브리핑 재생 중...';
+                    updateTTSBtnPlaying();
+                    briefingAudio.play().catch(e => {
+                        console.error('Audio play error:', e);
+                        tryNextAudio();
+                    });
+                }, { once: true });
+
+                briefingAudio.addEventListener('timeupdate', () => {
+                    if (!briefingAudio || !briefingAudio.duration) return;
+                    const percent = (briefingAudio.currentTime / briefingAudio.duration) * 100;
+
+                    requestAnimationFrame(() => {
+                        document.getElementById('ttsProgressBar').style.width = percent + '%';
+                        document.getElementById('ttsPercent').textContent = Math.round(percent) + '%';
+
+                        const cur = formatTime(briefingAudio.currentTime);
+                        const total = formatTime(briefingAudio.duration);
+                        document.getElementById('ttsCurrentTime').textContent = cur;
+                        document.getElementById('ttsTotalTime').textContent = total;
+                    });
+                });
+
+                briefingAudio.addEventListener('ended', () => {
+                    stopTTS();
+                });
+
+                briefingAudio.addEventListener('error', () => {
+                    console.log('음성 후보 시도 실패:', currentUrl);
+                    tryNextAudio();
+                });
             }
 
-            briefingAudio = new Audio(audioUrl);
-
-            briefingAudio.addEventListener('canplaythrough', () => {
-                if (!isSpeaking) return;
-                document.getElementById('ttsStatus').textContent = '🎧 브리핑 재생 중...';
-                updateTTSBtnPlaying();
-                briefingAudio.play();
-            }, { once: true });
-
-            briefingAudio.addEventListener('timeupdate', () => {
-                if (!briefingAudio || !briefingAudio.duration) return;
-                const percent = (briefingAudio.currentTime / briefingAudio.duration) * 100;
-
-                // 부드러운 애니메이션을 위해 requestAnimationFrame 사용
-                requestAnimationFrame(() => {
-                    document.getElementById('ttsProgressBar').style.width = percent + '%';
-                    document.getElementById('ttsPercent').textContent = Math.round(percent) + '%';
-
-                    const cur = formatTime(briefingAudio.currentTime);
-                    const total = formatTime(briefingAudio.duration);
-                    document.getElementById('ttsCurrentTime').textContent = cur;
-                    document.getElementById('ttsTotalTime').textContent = total;
-                });
-            });
-
-            briefingAudio.addEventListener('ended', () => {
-                stopTTS();
-            });
-
-            briefingAudio.addEventListener('error', () => {
-                console.log('음성 파일 로드 실패:', audioUrl);
-                
-                // 안내 메시지 표시
-                document.getElementById('ttsStatus').textContent = '⚠️ 해당 날짜의 브리핑 파일이 존재하지 않습니다.';
-                document.getElementById('ttsStatus').classList.add('text-rose-500');
-                
-                // 3초 후 플레이어 닫기
-                setTimeout(() => {
-                    if (isSpeaking) {
-                        document.getElementById('ttsStatus').classList.remove('text-rose-500');
-                        stopTTS();
-                    }
-                }, 3000);
-            });
+            tryNextAudio();
         }
 
         function pauseTTS() {
