@@ -1,9 +1,5 @@
 /**
- * Google Apps Script for AI News Briefing (v4 - 이메일 기반 다중 사용자 구분 및 일일 리포트 자동 발송)
- * 
- * Features:
- * - doGet: 이메일(email) 필터링이 추가된 데이터 조회
- * - doPost: 이메일별 키워드 및 AI 기준 CRUD 및 HTML 이메일 자동 발송 액션 추가
+ * Google Apps Script for AI News Briefing (비밀번호 인증 및 데이터 조회/관리)
  */
 
 function doGet(e) {
@@ -17,7 +13,6 @@ function doGet(e) {
   const tab = e.parameter.tab || 'News_Data';
   const dateStr = e.parameter.date; // YYYY-MM-DD
   const action = e.parameter ? e.parameter.action : null;
-  const email = e.parameter ? e.parameter.email : null; // 사용자 식별 이메일
 
   // ── 비밀번호 확인 API (GET 대응) ──
   if (action === 'adminLogin') {
@@ -261,7 +256,7 @@ function doPost(e) {
     }
   }
 
-  // ── 관리자 및 승인 API ──
+  // ── 관리자 인증 API ──
   if (action === 'adminLogin') {
     if (params.pw === ADMIN_PW) {
       return createResponse({ success: true });
@@ -269,85 +264,6 @@ function doPost(e) {
       return createResponse({ success: false, error: '비밀번호가 일치하지 않습니다.' });
     }
   }
-
-  if (action === 'checkApproval') {
-    const sheet = getOrCreateTab(ss, 'Approved_Users', ['이메일', '상태', '등록일', '승인일']);
-    const data = sheet.getDataRange().getValues();
-    const targetEmail = String(email).trim().toLowerCase();
-    
-    // 기본 관리자 자동 승인 (초기화용)
-    if (targetEmail === 'ktm98@seoulshinbo.co.kr' || targetEmail === 'ktm9898@gmail.com') {
-      let found = false;
-      for (let i = 1; i < data.length; i++) {
-        if (String(data[i][0]).trim().toLowerCase() === targetEmail) {
-          found = true;
-          if (data[i][1] !== 'approved') {
-            sheet.getRange(i + 1, 2).setValue('approved');
-            sheet.getRange(i + 1, 4).setValue(new Date());
-          }
-          break;
-        }
-      }
-      if (!found) {
-        sheet.appendRow([targetEmail, 'approved', new Date(), new Date()]);
-      }
-      return createResponse({ success: true, status: 'approved' });
-    }
-
-    for (let i = 1; i < data.length; i++) {
-      if (String(data[i][0]).trim().toLowerCase() === targetEmail) {
-        return createResponse({ success: true, status: data[i][1] });
-      }
-    }
-    
-    // 없으면 pending 등록
-    sheet.appendRow([targetEmail, 'pending', new Date(), '']);
-    return createResponse({ success: true, status: 'pending' });
-  }
-
-  if (action === 'getUsers') {
-    if (params.pw !== ADMIN_PW) return createResponse({ success: false, error: 'Unauthorized' });
-    const sheet = getOrCreateTab(ss, 'Approved_Users', ['이메일', '상태', '등록일', '승인일']);
-    const data = sheet.getDataRange().getValues();
-    const users = [];
-    for (let i = 1; i < data.length; i++) {
-      users.push({
-        email: data[i][0],
-        status: data[i][1],
-        regDate: data[i][2],
-        appDate: data[i][3]
-      });
-    }
-    return createResponse({ success: true, users: users });
-  }
-
-  if (action === 'approveUser') {
-    if (params.pw !== ADMIN_PW) return createResponse({ success: false, error: 'Unauthorized' });
-    const sheet = ss.getSheetByName('Approved_Users');
-    if (!sheet) return createResponse({ success: false, error: 'Sheet not found' });
-    const data = sheet.getDataRange().getValues();
-    const targetEmail = String(params.targetEmail).trim().toLowerCase();
-    
-    for (let i = 1; i < data.length; i++) {
-      if (String(data[i][0]).trim().toLowerCase() === targetEmail) {
-        sheet.getRange(i + 1, 2).setValue('approved');
-        sheet.getRange(i + 1, 4).setValue(new Date());
-        return createResponse({ success: true });
-      }
-    }
-    return createResponse({ success: false, error: 'User not found' });
-  }
-
-  if (action === 'rejectUser') {
-    if (params.pw !== ADMIN_PW) return createResponse({ success: false, error: 'Unauthorized' });
-    const sheet = ss.getSheetByName('Approved_Users');
-    if (!sheet) return createResponse({ success: false, error: 'Sheet not found' });
-    const data = sheet.getDataRange().getValues();
-    const targetEmail = String(params.targetEmail).trim().toLowerCase();
-    
-    for (let i = 1; i < data.length; i++) {
-      if (String(data[i][0]).trim().toLowerCase() === targetEmail) {
-        sheet.deleteRow(i + 1);
         return createResponse({ success: true });
       }
     }
