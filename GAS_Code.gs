@@ -248,8 +248,6 @@ function doPost(e) {
   }
 
   // ── 관리자 및 승인 API ──
-  const ADMIN_PW = PropertiesService.getScriptProperties().getProperty('ADMIN_PW');
-
   if (action === 'adminLogin') {
     if (params.pw === ADMIN_PW) {
       return createResponse({ success: true });
