@@ -69,12 +69,12 @@ GWS_DRIVE_FOLDER_ID = _get_config("GWS_DRIVE_FOLDER_ID", "10943q-ULxI18680w_82UV
 
 
 # Settings 탭 헤더
-SETTINGS_HEADERS = ["이메일", "주제", "키워드", "활성화"]
-TOPIC_SETTINGS_HEADERS = ["이메일", "Topic", "Criteria"]
+SETTINGS_HEADERS = ["주제", "키워드", "활성화"]
+TOPIC_SETTINGS_HEADERS = ["Topic", "Criteria"]
 
 # News_Data 탭 헤더
 NEWS_DATA_HEADERS = [
-    "이메일", "날짜", "주제", "언론사", "제목", "네이버 요약",
+    "날짜", "주제", "언론사", "제목", "네이버 요약",
     "본문 전문", "링크", "AI 요약", "중요도"
 ]
 

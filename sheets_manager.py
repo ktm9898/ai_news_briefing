@@ -100,7 +100,7 @@ class SheetsManager:
             logger.warning(f"'{tab_name}' 시트 이메일 컬럼 검사 중 오류 (무시 가능): {e}")
 
     def _ensure_tabs(self):
-        """Settings / News_Data / Topic_Settings / Briefing / Briefing_Docs 탭이 없으면 자동 생성 및 이메일 컬럼 추가 검사"""
+        """Settings / News_Data / Topic_Settings / Briefing / Briefing_Docs 탭이 없으면 자동 생성"""
         existing = [ws.title for ws in self.spreadsheet.worksheets()]
 
         # TOPIC_SETTINGS
@@ -109,8 +109,6 @@ class SheetsManager:
                 title=TOPIC_SETTINGS_TAB, rows=100, cols=len(TOPIC_SETTINGS_HEADERS)
             )
             ws.append_row(TOPIC_SETTINGS_HEADERS)
-        else:
-            self._ensure_email_column(TOPIC_SETTINGS_TAB, TOPIC_SETTINGS_HEADERS)
 
         # NEWS_DATA
         if NEWS_DATA_TAB not in existing:
@@ -118,30 +116,20 @@ class SheetsManager:
                 title=NEWS_DATA_TAB, rows=1000, cols=len(NEWS_DATA_HEADERS)
             )
             ws.append_row(NEWS_DATA_HEADERS)
-        else:
-            self._ensure_email_column(NEWS_DATA_TAB, NEWS_DATA_HEADERS)
 
         # Briefing
         if "Briefing" not in existing:
             ws = self.spreadsheet.add_worksheet(
-                title="Briefing", rows=100, cols=3
+                title="Briefing", rows=100, cols=2
             )
-            ws.append_row(["이메일", "날짜", "대본"])
-        else:
-            self._ensure_email_column("Briefing", ["이메일", "날짜", "대본"])
+            ws.append_row(["날짜", "대본"])
 
         # Briefing_Docs
         if "Briefing_Docs" not in existing:
             ws = self.spreadsheet.add_worksheet(
-                title="Briefing_Docs", rows=100, cols=4
+                title="Briefing_Docs", rows=100, cols=3
             )
-            ws.append_row(["이메일", "날짜", "제목", "내용"])
-        else:
-            self._ensure_email_column("Briefing_Docs", ["이메일", "날짜", "제목", "내용"])
-
-        # Settings
-        if SETTINGS_TAB in existing:
-            self._ensure_email_column(SETTINGS_TAB, SETTINGS_HEADERS)
+            ws.append_row(["날짜", "제목", "내용"])
 
         # Approved_Users
         if "Approved_Users" not in existing:
