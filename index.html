@@ -874,6 +874,7 @@
 
             // ── 서비스 워커 등록 ──
             const registerSW = async () => {
+                const swStatus = document.getElementById('swStatus');
                 try {
                     // 버전 스트링 제거하고 단순하게 등록
                     const reg = await navigator.serviceWorker.register('./sw.js');

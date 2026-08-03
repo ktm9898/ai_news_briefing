@@ -12,6 +12,7 @@ function doGet(e) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const tab = e.parameter.tab || 'News_Data';
   const dateStr = e.parameter.date; // YYYY-MM-DD
+  const topic = e.parameter.topic; // 주제 필터
   const action = e.parameter ? e.parameter.action : null;
 
   // ── 비밀번호 확인 API (GET 대응) ──
