@@ -1828,18 +1828,16 @@
             const now = new Date();
             const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
             
-            // 오디오 파일 시도 목록 (기존 이메일 접미사 및 기본 파일명 모두 대응)
+            // 오디오 파일 시도 목록 (모든 이전 파일 패턴 호환)
             const yyyymmdd = dateVal.replace(/-/g, '');
             const candidateUrls = [];
             
             if (dateVal === today) {
+                candidateUrls.push(`audio/briefing_latest_ktm98_seoulshinbo_co_kr.mp3?t=${Date.now()}`);
                 candidateUrls.push(`audio/briefing_latest.mp3?t=${Date.now()}`);
-                candidateUrls.push(`audio/briefing_ktm98_seoulshinbo_co_kr_latest.mp3?t=${Date.now()}`);
-                if (emailSuffix) candidateUrls.push(`audio/briefing_latest_${emailSuffix}.mp3?t=${Date.now()}`);
             }
-            candidateUrls.push(`audio/briefing_${yyyymmdd}.mp3`);
             candidateUrls.push(`audio/briefing_ktm98_seoulshinbo_co_kr_${yyyymmdd}.mp3`);
-            if (emailSuffix) candidateUrls.push(`audio/briefing_${emailSuffix}_${yyyymmdd}.mp3`);
+            candidateUrls.push(`audio/briefing_${yyyymmdd}.mp3`);
 
             let candidateIndex = 0;
 
