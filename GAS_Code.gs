@@ -267,29 +267,21 @@ function doPost(e) {
 
   // 키워드 설정 (Settings 탭)
   if (action === 'addKeyword') {
-    if (!isUserApproved(ss, email)) return createResponse({ success: false, error: 'Unauthorized: Not approved' });
-    const sheet = getOrCreateTab(ss, 'Settings', ['이메일', '주제', '키워드', '활성화']);
-    sheet.appendRow([email, params.topic, params.keyword, 'TRUE']);
+    const sheet = getOrCreateTab(ss, 'Settings', ['주제', '키워드', '활성화']);
+    sheet.appendRow([params.topic, params.keyword, 'TRUE']);
     return createResponse({ success: true });
   }
 
   if (action === 'deleteKeyword') {
-    if (!isUserApproved(ss, email)) return createResponse({ success: false, error: 'Unauthorized: Not approved' });
     const sheet = ss.getSheetByName('Settings');
     if (!sheet) return createResponse({ error: 'Settings tab not found' });
     const data = sheet.getDataRange().getValues();
     const headers = data[0];
-    const emailIdx = headers.indexOf('이메일') !== -1 ? headers.indexOf('이메일') : headers.indexOf('Email');
     const topicIdx = headers.indexOf('주제') !== -1 ? headers.indexOf('주제') : headers.indexOf('카테고리');
     const keyIdx = headers.indexOf('키워드');
     
-    const targetEmail = String(email).trim().toLowerCase();
-
     for (let i = 1; i < data.length; i++) {
-      const rowEmail = emailIdx !== -1 ? String(data[i][emailIdx] || '').trim().toLowerCase() : '';
-      const matchEmail = (emailIdx === -1) || (rowEmail === targetEmail) || (rowEmail === '');
-      
-      if (matchEmail && data[i][topicIdx] === params.topic && data[i][keyIdx] === params.keyword) {
+      if (data[i][topicIdx] === params.topic && data[i][keyIdx] === params.keyword) {
         sheet.deleteRow(i + 1);
         return createResponse({ success: true });
       }
@@ -299,21 +291,15 @@ function doPost(e) {
 
   // 주제 및 관련 키워드 전체 삭제 (Settings 및 Topic_Settings 탭)
   if (action === 'deleteTopic') {
-    if (!isUserApproved(ss, email)) return createResponse({ success: false, error: 'Unauthorized: Not approved' });
-    const targetEmail = String(email).trim().toLowerCase();
-
     // 1. Topic_Settings 시트에서 해당 주제 삭제
     const topicSheet = ss.getSheetByName('Topic_Settings');
     if (topicSheet) {
       const data = topicSheet.getDataRange().getValues();
       const headers = data[0];
-      const emailIdx = headers.indexOf('이메일') !== -1 ? headers.indexOf('이메일') : headers.indexOf('Email');
       const topicIdx = headers.indexOf('Topic') !== -1 ? headers.indexOf('Topic') : (headers.indexOf('주제') !== -1 ? headers.indexOf('주제') : 0);
       
       for (let i = data.length - 1; i >= 1; i--) {
-        const rowEmail = emailIdx !== -1 ? String(data[i][emailIdx] || '').trim().toLowerCase() : '';
-        const matchEmail = (emailIdx === -1) || (rowEmail === targetEmail) || (rowEmail === '');
-        if (matchEmail && data[i][topicIdx] === params.topic) {
+        if (data[i][topicIdx] === params.topic) {
           topicSheet.deleteRow(i + 1);
         }
       }
@@ -324,13 +310,10 @@ function doPost(e) {
     if (settingsSheet) {
       const data = settingsSheet.getDataRange().getValues();
       const headers = data[0];
-      const emailIdx = headers.indexOf('이메일') !== -1 ? headers.indexOf('이메일') : headers.indexOf('Email');
       const topicIdx = headers.indexOf('주제') !== -1 ? headers.indexOf('주제') : headers.indexOf('카테고리');
       
       for (let i = data.length - 1; i >= 1; i--) {
-        const rowEmail = emailIdx !== -1 ? String(data[i][emailIdx] || '').trim().toLowerCase() : '';
-        const matchEmail = (emailIdx === -1) || (rowEmail === targetEmail) || (rowEmail === '');
-        if (matchEmail && data[i][topicIdx] === params.topic) {
+        if (data[i][topicIdx] === params.topic) {
           settingsSheet.deleteRow(i + 1);
         }
       }
@@ -341,52 +324,40 @@ function doPost(e) {
 
   // 주요뉴스 활성화 여부 토글 (Settings 탭)
   if (action === 'toggleMainNews') {
-    if (!isUserApproved(ss, email)) return createResponse({ success: false, error: 'Unauthorized: Not approved' });
-    const sheet = getOrCreateTab(ss, 'Settings', ['이메일', '주제', '키워드', '활성화']);
+    const sheet = getOrCreateTab(ss, 'Settings', ['주제', '키워드', '활성화']);
     const data = sheet.getDataRange().getValues();
     const headers = data[0];
-    const emailIdx = headers.indexOf('이메일') !== -1 ? headers.indexOf('이메일') : headers.indexOf('Email');
     const topicIdx = headers.indexOf('주제') !== -1 ? headers.indexOf('주제') : headers.indexOf('카테고리');
-    const keyIdx = headers.indexOf('키워드');
     const activeIdx = headers.indexOf('활성화');
     
-    const targetEmail = String(email).trim().toLowerCase();
     const isEnabledStr = params.enabled ? 'TRUE' : 'FALSE';
 
     // 기존 주요뉴스 행이 있으면 업데이트
     for (let i = 1; i < data.length; i++) {
-      const rowEmail = emailIdx !== -1 ? String(data[i][emailIdx] || '').trim().toLowerCase() : '';
       const rowTopic = topicIdx !== -1 ? String(data[i][topicIdx] || '').trim() : '';
-      if (rowEmail === targetEmail && (rowTopic === '주요뉴스' || rowTopic === '경제헤드라인')) {
+      if (rowTopic === '주요뉴스' || rowTopic === '경제헤드라인') {
         sheet.getRange(i + 1, activeIdx + 1).setValue(isEnabledStr);
         return createResponse({ success: true });
       }
     }
     
     // 없으면 새로 추가
-    sheet.appendRow([email, '주요뉴스', '전체', isEnabledStr]);
+    sheet.appendRow(['주요뉴스', '전체', isEnabledStr]);
     return createResponse({ success: true });
   }
 
   // 키워드 토글 (Settings 탭)
   if (action === 'toggleKeyword') {
-    if (!isUserApproved(ss, email)) return createResponse({ success: false, error: 'Unauthorized: Not approved' });
     const sheet = ss.getSheetByName('Settings');
     if (!sheet) return createResponse({ error: 'Settings tab not found' });
     const data = sheet.getDataRange().getValues();
     const headers = data[0];
-    const emailIdx = headers.indexOf('이메일') !== -1 ? headers.indexOf('이메일') : headers.indexOf('Email');
     const topicIdx = headers.indexOf('주제') !== -1 ? headers.indexOf('주제') : headers.indexOf('카테고리');
     const keyIdx = headers.indexOf('키워드');
     const activeIdx = headers.indexOf('활성화');
     
-    const targetEmail = String(email).trim().toLowerCase();
-
     for (let i = 1; i < data.length; i++) {
-      const rowEmail = emailIdx !== -1 ? String(data[i][emailIdx] || '').trim().toLowerCase() : '';
-      const matchEmail = (emailIdx === -1) || (rowEmail === targetEmail) || (rowEmail === '');
-
-      if (matchEmail && data[i][topicIdx] === params.topic && data[i][keyIdx] === params.keyword) {
+      if (data[i][topicIdx] === params.topic && data[i][keyIdx] === params.keyword) {
         let currentValue = data[i][activeIdx];
         let newValue = (String(currentValue).toUpperCase() === 'TRUE') ? 'FALSE' : 'TRUE';
         sheet.getRange(i + 1, activeIdx + 1).setValue(newValue);
@@ -398,23 +369,17 @@ function doPost(e) {
 
   // 주제별 AI 기준 설정 (Topic_Settings 탭)
   if (action === 'updateTopicCriteria') {
-    if (!isUserApproved(ss, email)) return createResponse({ success: false, error: 'Unauthorized: Not approved' });
-    const sheet = getOrCreateTab(ss, 'Topic_Settings', ['이메일', 'Topic', 'Criteria']);
+    const sheet = getOrCreateTab(ss, 'Topic_Settings', ['Topic', 'Criteria']);
     const data = sheet.getDataRange().getValues();
     const headers = data[0];
-    const emailIdx = headers.indexOf('이메일') !== -1 ? headers.indexOf('이메일') : headers.indexOf('Email');
     const topicIdx = headers.indexOf('Topic') !== -1 ? headers.indexOf('Topic') : (headers.indexOf('주제') !== -1 ? headers.indexOf('주제') : 0);
     const criteriaIdx = headers.indexOf('Criteria') !== -1 ? headers.indexOf('Criteria') : (headers.indexOf('기준') !== -1 ? headers.indexOf('기준') : 1);
     
-    const targetEmail = String(email).trim().toLowerCase();
     let found = false;
 
     for (let i = 1; i < data.length; i++) {
-      const rowEmail = emailIdx !== -1 ? String(data[i][emailIdx] || '').trim().toLowerCase() : '';
-      const matchEmail = (emailIdx === -1) || (rowEmail === targetEmail) || (rowEmail === '');
       const rowTopic = data[i][topicIdx];
-
-      if (matchEmail && rowTopic === params.topic) {
+      if (rowTopic === params.topic) {
         sheet.getRange(i + 1, criteriaIdx + 1).setValue(params.criteria);
         found = true;
         break;
