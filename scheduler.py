@@ -323,7 +323,7 @@ def run_pipeline():
                                 weekly_insight_data = analyzer.enrich_references_with_urls(weekly_insight_data)
                             
                             # Weekly_Briefing_Docs 시트에 저장
-                            weekly_title = f"AI News Weekly Insight Report - {weekly_date_range}"
+                            weekly_title = f"소기업·소상공인 주간 인사이트 리포트 ({weekly_date_range})"
                             sheets.save_weekly_briefing_doc(
                                 weekly_title, 
                                 json.dumps(weekly_insight_data, ensure_ascii=False), 

@@ -2378,24 +2378,17 @@
                     container.innerHTML = '<p class="text-sm text-center text-muted py-8">저장된 리포트가 없습니다.</p>';
                 } else {
                     const isFoundation = currentReportTab === 'foundation';
-                    const defaultTitle = isFoundation ? '서울신용보증재단 인사이트 리포트' : '소기업·소상공인 주간 인사이트 리포트';
+                    const fallbackTitle = isFoundation ? '서울신용보증재단 인사이트 리포트' : '소기업·소상공인 주간 인사이트 리포트';
                     
-                    container.innerHTML = targetArray.map((r, i) => {
-                        let displayTitle = r['제목'] || defaultTitle;
-                        // 영어로 저장된 제목("Daily Insight Report...", "Weekly Insight Report...")인 경우 한글 제목으로 변경
-                        if (!displayTitle || displayTitle.includes('Daily Insight Report') || displayTitle.includes('Weekly Insight Report')) {
-                            displayTitle = defaultTitle;
-                        }
-                        return `
+                    container.innerHTML = targetArray.map((r, i) => `
                         <div class="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 border border-border rounded-xl cursor-pointer transition-colors" onclick="viewReport(${i})">
                             <div>
-                                <h3 class="text-sm font-bold text-gray-900">${displayTitle}</h3>
+                                <h3 class="text-sm font-bold text-gray-900">${r['제목'] || fallbackTitle}</h3>
                                 <p class="text-xs text-muted mt-1">${r['날짜']}</p>
                             </div>
                             <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                         </div>
-                    `;
-                    }).join('');
+                    `).join('');
                 }
             } catch (err) {
                 console.error('loadReports error:', err);
