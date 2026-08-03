@@ -76,6 +76,11 @@ function doGet(e) {
     return obj;
   });
 
+  // Briefing_Docs 및 Weekly_Briefing_Docs의 경우 최신 10건으로 제한 (타임아웃 방지)
+  if (tab === 'Briefing_Docs' || tab === 'Weekly_Briefing_Docs') {
+    result = result.slice(-10);
+  }
+
   // News_Data 탭의 경우 날짜 및 주제 필터 적용
   if (tab === 'News_Data') {
     if (dateStr) {
