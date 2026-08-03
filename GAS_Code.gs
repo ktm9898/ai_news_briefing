@@ -61,8 +61,8 @@ function doGet(e) {
   const headers = data[0];
   let rows = data.slice(1);
 
-  // 빈 행 제거
-  rows = rows.filter(row => row[0]);
+  // 빈 행 제거 (어느 열이든 값이 존재하는 행만 유지)
+  rows = rows.filter(row => row.some(cell => String(cell).trim() !== ''));
 
   let result = rows.map(row => {
     let obj = {};
