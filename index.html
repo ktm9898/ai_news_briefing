@@ -257,12 +257,12 @@
             </div>
         </div>
 
-        <!-- 음성 브리핑 플레이어 -->
+        <!-- 음성 브리핑 플로팅 모달 플레이어 -->
         <div id="ttsProgressContainer"
-            class="hidden mt-3 p-4 bg-white border border-violet-100 rounded-2xl max-w-lg ml-auto shadow-xl ring-1 ring-violet-500/10">
+            class="hidden fixed top-16 right-4 sm:right-6 z-[60] w-[calc(100%-2rem)] sm:w-96 p-4 bg-white/95 backdrop-blur-md border border-violet-100 rounded-2xl shadow-2xl ring-1 ring-violet-500/10 animate-in slide-in-from-top-2 duration-200">
             <div class="flex items-center justify-between mb-3">
                 <div class="flex items-center gap-2">
-                    <div class="w-2 h-2 rounded-full bg-violet-500 animate-pulse"></div>
+                    <div class="w-2.5 h-2.5 rounded-full bg-violet-500 animate-pulse"></div>
                     <span id="ttsStatus" class="text-xs font-bold text-violet-700">브리핑 재생 중...</span>
                 </div>
                 <div class="flex items-center gap-3">
@@ -304,7 +304,6 @@
                 </div>
             </div>
             <p class="text-[9px] text-violet-400 mt-3 text-right font-medium">* 바를 클릭하면 해당 위치부터 다시 읽어줍니다.</p>
-        </div>
         </div>
     </header>
 
@@ -2339,17 +2338,27 @@
         async function loadReports() {
             const container = document.getElementById('reportListContent');
             const loading = document.getElementById('reportListLoading');
+
+            const isFoundation = currentReportTab === 'foundation';
+            const cachedArray = isFoundation ? allFoundationReports : allBusinessReports;
+            
+            // 이미 불러온 캐시가 존재하면 0.01초 만에 즉시 화면 렌더링
+            if (cachedArray && cachedArray.length > 0) {
+                loading.classList.add('hidden');
+                renderReportList(cachedArray);
+                return;
+            }
+
             container.innerHTML = '';
             loading.classList.remove('hidden');
 
             try {
-                const sheetTab = currentReportTab === 'foundation' ? 'Briefing_Docs' : 'Weekly_Briefing_Docs';
+                const sheetTab = isFoundation ? 'Briefing_Docs' : 'Weekly_Briefing_Docs';
                 const url = SCRIPT_URL + '?tab=' + sheetTab + '&t=' + Date.now();
                 
                 let resp = await fetch(url);
                 if (!resp.ok) {
-                    // Apps Script Cold Start 대비 1.5초 후 1회 재시도
-                    await new Promise(r => setTimeout(r, 1500));
+                    await new Promise(r => setTimeout(r, 1000));
                     resp = await fetch(url);
                     if (!resp.ok) throw new Error('HTTP ' + resp.status);
                 }
@@ -2364,37 +2373,41 @@
                     });
                     targetArray = data;
                 } else if (data && data.error === 'Tab not found') {
-                    // 탭이 아직 생성되지 않은 경우
                     targetArray = [];
                 }
                 
-                if (currentReportTab === 'foundation') {
+                if (isFoundation) {
                     allFoundationReports = targetArray;
                 } else {
                     allBusinessReports = targetArray;
                 }
 
-                if (targetArray.length === 0) {
-                    container.innerHTML = '<p class="text-sm text-center text-muted py-8">저장된 리포트가 없습니다.</p>';
-                } else {
-                    const isFoundation = currentReportTab === 'foundation';
-                    const fallbackTitle = isFoundation ? '서울신용보증재단 인사이트 리포트' : '소기업·소상공인 주간 인사이트 리포트';
-                    
-                    container.innerHTML = targetArray.map((r, i) => `
-                        <div class="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 border border-border rounded-xl cursor-pointer transition-colors" onclick="viewReport(${i})">
-                            <div>
-                                <h3 class="text-sm font-bold text-gray-900">${r['제목'] || fallbackTitle}</h3>
-                                <p class="text-xs text-muted mt-1">${r['날짜']}</p>
-                            </div>
-                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                        </div>
-                    `).join('');
-                }
+                renderReportList(targetArray);
             } catch (err) {
                 console.error('loadReports error:', err);
                 container.innerHTML = '<p class="text-sm text-center text-rose-500 py-8">리포트를 불러올 수 없습니다.<br><button onclick="loadReports()" class="mt-2 text-xs font-bold text-blue-600 underline">다시 시도</button></p>';
             } finally {
                 loading.classList.add('hidden');
+            }
+        }
+
+        function renderReportList(targetArray) {
+            const container = document.getElementById('reportListContent');
+            if (targetArray.length === 0) {
+                container.innerHTML = '<p class="text-sm text-center text-muted py-8">저장된 리포트가 없습니다.</p>';
+            } else {
+                const isFoundation = currentReportTab === 'foundation';
+                const fallbackTitle = isFoundation ? '서울신용보증재단 인사이트 리포트' : '소기업·소상공인 주간 인사이트 리포트';
+                
+                container.innerHTML = targetArray.map((r, i) => `
+                    <div class="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 border border-border rounded-xl cursor-pointer transition-colors" onclick="viewReport(${i})">
+                        <div>
+                            <h3 class="text-sm font-bold text-gray-900">${r['제목'] || fallbackTitle}</h3>
+                            <p class="text-xs text-muted mt-1">${r['날짜']}</p>
+                        </div>
+                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </div>
+                `).join('');
             }
         }
 
