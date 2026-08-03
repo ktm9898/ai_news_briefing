@@ -264,7 +264,7 @@ def run_pipeline():
                 # ── 7단계: AI 인사이트 리포트 저장 및 이메일 전송 ──
                 logger.info(f"[{email}] STEP 7/7: 인사이트 리포트 저장 및 이메일 발송")
                 today_str = datetime.now(KST).strftime("%Y-%m-%d")
-                doc_title = f"AI News Insight Report - {date_str}"
+                doc_title = f"서울신용보증재단 인사이트 리포트 ({today_str})"
                 
                 import json
                 if insight_data:
