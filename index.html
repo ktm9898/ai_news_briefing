@@ -2333,8 +2333,14 @@
             try {
                 const sheetTab = currentReportTab === 'foundation' ? 'Briefing_Docs' : 'Weekly_Briefing_Docs';
                 const url = SCRIPT_URL + '?tab=' + sheetTab + '&t=' + Date.now();
-                const resp = await fetch(url);
-                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                
+                let resp = await fetch(url);
+                if (!resp.ok) {
+                    // Apps Script Cold Start 대비 1.5초 후 1회 재시도
+                    await new Promise(r => setTimeout(r, 1500));
+                    resp = await fetch(url);
+                    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                }
                 let data = await resp.json();
                 
                 let targetArray = [];
@@ -2345,6 +2351,9 @@
                         return dateB - dateA;
                     });
                     targetArray = data;
+                } else if (data && data.error === 'Tab not found') {
+                    // 탭이 아직 생성되지 않은 경우
+                    targetArray = [];
                 }
                 
                 if (currentReportTab === 'foundation') {
@@ -2367,7 +2376,8 @@
                     `).join('');
                 }
             } catch (err) {
-                container.innerHTML = '<p class="text-sm text-center text-rose-500 py-8">리포트를 불러올 수 없습니다.</p>';
+                console.error('loadReports error:', err);
+                container.innerHTML = '<p class="text-sm text-center text-rose-500 py-8">리포트를 불러올 수 없습니다.<br><button onclick="loadReports()" class="mt-2 text-xs font-bold text-blue-600 underline">다시 시도</button></p>';
             } finally {
                 loading.classList.add('hidden');
             }
