@@ -264,11 +264,6 @@ function doPost(e) {
       return createResponse({ success: false, error: '비밀번호가 일치하지 않습니다.' });
     }
   }
-        return createResponse({ success: true });
-      }
-    }
-    return createResponse({ success: false, error: 'User not found' });
-  }
 
   // 키워드 설정 (Settings 탭)
   if (action === 'addKeyword') {
