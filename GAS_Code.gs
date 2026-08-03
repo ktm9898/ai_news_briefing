@@ -53,7 +53,7 @@ function doGet(e) {
   }
 
   const sheet = ss.getSheetByName(tab);
-  if (!sheet) return createResponse({ error: 'Tab not found' });
+  if (!sheet) return createResponse([]);
 
   const data = sheet.getDataRange().getValues();
   if (data.length <= 1) return createResponse([]);
