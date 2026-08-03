@@ -1385,17 +1385,11 @@
         let pendingSettingsOpen = false;
 
         function openSettingsModal() {
-            const savedPw = sessionStorage.getItem('admin_pw');
-            if (savedPw) {
-                // 이미 인증된 경우 설정 바로 오픈
-                doOpenSettingsModal();
-            } else {
-                // 비밀번호 확인 모달 노출
-                pendingSettingsOpen = true;
-                openModalElement(document.getElementById('adminPwModal'));
-                document.getElementById('loginAdminPw').value = '';
-                document.getElementById('loginAdminPw').focus();
-            }
+            // 항상 비밀번호 확인 모달 노출
+            pendingSettingsOpen = true;
+            openModalElement(document.getElementById('adminPwModal'));
+            document.getElementById('loginAdminPw').value = '';
+            document.getElementById('loginAdminPw').focus();
         }
 
         function cancelAdminPw() {
