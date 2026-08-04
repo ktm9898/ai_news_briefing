@@ -230,7 +230,7 @@ def run_pipeline():
         # ── 7단계: AI 인사이트 리포트 저장 ──
         logger.info("STEP 7/7: 인사이트 리포트 저장")
         today_str = datetime.now(KST).strftime("%Y-%m-%d")
-        doc_title = f"AI News Insight Report - {date_str}"
+        doc_title = f"서울신용보증재단 인사이트 리포트 ({today_str})"
         
         import json
         if insight_data:
@@ -253,7 +253,7 @@ def run_pipeline():
                     weekly_insight_data = analyzer.analyze_weekly_insight(weekly_news, weekly_date_range)
                     if weekly_insight_data:
                         weekly_insight_data = analyzer.enrich_references_with_urls(weekly_insight_data)
-                        weekly_title = f"AI News Weekly Insight Report - {weekly_date_range}"
+                        weekly_title = f"소기업·소상공인 주간 인사이트 리포트 ({weekly_date_range})"
                         sheets.save_weekly_briefing_doc(
                             weekly_title, 
                             json.dumps(weekly_insight_data, ensure_ascii=False), 
