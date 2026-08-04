@@ -140,84 +140,39 @@ class SheetsManager:
 
     # ── Settings 탭 ──────────────────────────────────
 
-    def get_settings(self, email: str | None = None) -> list[dict]:
-        """
-        Settings 탭에서 활성화된 키워드-주제 목록 반환.
-        """
-        ws = self.spreadsheet.worksheet(SETTINGS_TAB)
-        records = ws.get_all_records()
-        if email:
-            target = email.strip().lower()
-            return [r for r in records if str(r.get("이메일", "")).strip().lower() == target]
-        return records
+    # ── Settings 탭 ──────────────────────────────────
 
-    def get_active_settings(self, email: str | None = None) -> list[dict]:
+    def get_settings(self) -> list[dict]:
+        """Settings 탭에서 키워드-주제 목록 반환"""
+        ws = self.spreadsheet.worksheet(SETTINGS_TAB)
+        return ws.get_all_records()
+
+    def get_active_settings(self) -> list[dict]:
         """활성화(TRUE)된 설정만 반환"""
         return [
-            s for s in self.get_settings(email)
+            s for s in self.get_settings()
             if str(s.get("활성화", "")).upper() == "TRUE"
         ]
 
-    def get_approved_emails(self) -> set[str]:
-        """Approved_Users 탭에서 승인된 이메일 목록 반환"""
-        try:
-            ws = self.spreadsheet.worksheet("Approved_Users")
-            records = ws.get_all_records()
-            return set(
-                str(r.get("이메일", "")).strip().lower() 
-                for r in records 
-                if str(r.get("상태", "")).strip().lower() == "approved" and str(r.get("이메일", "")).strip()
-            )
-        except Exception as e:
-            logger.error(f"Approved_Users 시트 조회 실패 (기본값 빈 셋 반환): {e}")
-            return set()
-
-    def update_settings(self, data: list[dict], email: str | None = None):
-        """
-        Settings 탭을 업데이트. 만약 email이 주어지면 해당 email의 데이터만 교체하고
-        나머지 이메일의 데이터는 그대로 둡니다. email이 없으면 전체 교체.
-        """
+    def update_settings(self, data: list[dict]):
+        """Settings 탭을 전체 업데이트"""
         ws = self.spreadsheet.worksheet(SETTINGS_TAB)
-        if email:
-            target = email.strip().lower()
-            all_data = self.get_settings()
-            # 해당 이메일이 아닌 데이터만 보존
-            preserved = [r for r in all_data if str(r.get("이메일", "")).strip().lower() != target]
-            # 새 데이터 추가
-            for row in data:
-                row["이메일"] = email
-                preserved.append(row)
-            
-            ws.clear()
-            ws.append_row(SETTINGS_HEADERS)
-            rows_to_append = []
-            for row in preserved:
-                rows_to_append.append([
-                    row.get("이메일", ""),
-                    row.get("주제", ""),
-                    row.get("키워드", ""),
-                    row.get("활성화", "TRUE")
-                ])
-            if rows_to_append:
-                ws.append_rows(rows_to_append)
-        else:
-            ws.clear()
-            ws.append_row(SETTINGS_HEADERS)
-            rows_to_append = []
-            for row in data:
-                rows_to_append.append([
-                    row.get("이메일", ""),
-                    row.get("주제", ""),
-                    row.get("키워드", ""),
-                    row.get("활성화", "TRUE"),
-                ])
-            if rows_to_append:
-                ws.append_rows(rows_to_append)
+        ws.clear()
+        ws.append_row(SETTINGS_HEADERS)
+        rows_to_append = []
+        for row in data:
+            rows_to_append.append([
+                row.get("주제", ""),
+                row.get("키워드", ""),
+                row.get("활성화", "TRUE"),
+            ])
+        if rows_to_append:
+            ws.append_rows(rows_to_append)
 
-    def add_setting(self, topic: str, keyword: str, active: str = "TRUE", email: str = ""):
+    def add_setting(self, topic: str, keyword: str, active: str = "TRUE"):
         """Settings 탭에 새 항목 추가"""
         ws = self.spreadsheet.worksheet(SETTINGS_TAB)
-        ws.append_row([email, topic, keyword, active])
+        ws.append_row([topic, keyword, active])
 
     def delete_setting(self, row_index: int):
         """Settings 탭에서 특정 행 삭제 (1-indexed, 헤더 = 1)"""
@@ -226,35 +181,30 @@ class SheetsManager:
 
     # ── Topic_Settings 탭 ─────────────────────────────
 
-    def get_all_topic_criteria(self, email: str | None = None) -> dict[str, str]:
+    def get_all_topic_criteria(self) -> dict[str, str]:
         """주제별 AI 중요도 기준 맵 반환"""
         try:
             ws = self.spreadsheet.worksheet(TOPIC_SETTINGS_TAB)
             records = ws.get_all_records()
-            if email:
-                target = email.strip().lower()
-                records = [r for r in records if str(r.get("이메일", "")).strip().lower() == target]
             return {r["Topic"]: r["Criteria"] for r in records if r.get("Topic") and r.get("Criteria")}
         except Exception:
             return {}
 
-    def update_topic_criteria(self, topic: str, criteria: str, email: str = ""):
+    def update_topic_criteria(self, topic: str, criteria: str):
         """특정 주제의 AI 중요도 기준 업데이트"""
         ws = self.spreadsheet.worksheet(TOPIC_SETTINGS_TAB)
         data = ws.get_all_records()
         
-        target_email = email.strip().lower()
         found_row = -1
         for idx, row in enumerate(data):
-            row_email = str(row.get("이메일", "")).strip().lower()
-            if row.get("Topic") == topic and row_email == target_email:
+            if row.get("Topic") == topic:
                 found_row = idx + 2
                 break
         
         if found_row != -1:
-            ws.update_cell(found_row, 3, criteria)
+            ws.update_cell(found_row, 2, criteria)
         else:
-            ws.append_row([email, topic, criteria])
+            ws.append_row([topic, criteria])
 
     # ── News_Data 탭 ─────────────────────────────────
 
@@ -268,7 +218,7 @@ class SheetsManager:
         except Exception:
             return set()
 
-    def append_news(self, news_list: list[dict], email: str = ""):
+    def append_news(self, news_list: list[dict]):
         """
         뉴스 데이터를 News_Data 탭에 추가.
         Args:
@@ -281,7 +231,6 @@ class SheetsManager:
         rows = []
         for news in news_list:
             rows.append([
-                email,
                 news.get("날짜", ""),
                 news.get("주제", ""),
                 news.get("언론사", ""),
@@ -296,36 +245,26 @@ class SheetsManager:
         # 배치 추가 (API 호출 절약)
         ws.append_rows(rows, value_input_option="USER_ENTERED")
 
-    def get_news_by_date(self, date_str: str, email: str | None = None) -> list[dict]:
+    def get_news_by_date(self, date_str: str) -> list[dict]:
         """특정 날짜의 뉴스 반환"""
         ws = self.spreadsheet.worksheet(NEWS_DATA_TAB)
         records = ws.get_all_records()
-        if email:
-            target = email.strip().lower()
-            records = [r for r in records if str(r.get("이메일", "")).strip().lower() == target]
         return [r for r in records if r.get("날짜", "") == date_str]
 
-    def get_news_by_topic(self, topic: str, email: str | None = None) -> list[dict]:
+    def get_news_by_topic(self, topic: str) -> list[dict]:
         """특정 주제의 뉴스 반환"""
         ws = self.spreadsheet.worksheet(NEWS_DATA_TAB)
         records = ws.get_all_records()
-        if email:
-            target = email.strip().lower()
-            records = [r for r in records if str(r.get("이메일", "")).strip().lower() == target]
         return [r for r in records if r.get("주제", "") == topic]
 
-    def get_all_news(self, email: str | None = None) -> list[dict]:
+    def get_all_news(self) -> list[dict]:
         """모든 뉴스 반환"""
         ws = self.spreadsheet.worksheet(NEWS_DATA_TAB)
-        records = ws.get_all_records()
-        if email:
-            target = email.strip().lower()
-            return [r for r in records if str(r.get("이메일", "")).strip().lower() == target]
-        return records
+        return ws.get_all_records()
 
-    def get_recent_news(self, limit: int = 50, email: str | None = None) -> list[dict]:
+    def get_recent_news(self, limit: int = 50) -> list[dict]:
         """최근 뉴스 반환 (최신순)"""
-        all_news = self.get_all_news(email)
+        all_news = self.get_all_news()
         return sorted(
             all_news,
             key=lambda x: x.get("날짜", ""),
@@ -340,17 +279,14 @@ class SheetsManager:
         ws.update_cell(row_index, summary_col, summary)
         ws.update_cell(row_index, importance_col, importance)
 
-    def save_briefing(self, script: str, email: str = ""):
-        """
-        AI 브리핑 대본을 Briefing 탭에 저장.
-        매번 최신 대본으로 덮어씁니다.
-        """
+    def save_briefing(self, script: str):
+        """AI 브리핑 대본을 Briefing 탭에 저장 (날짜별 덮어쓰기)"""
         tab_name = "Briefing"
         existing = [ws.title for ws in self.spreadsheet.worksheets()]
 
         if tab_name not in existing:
-            ws = self.spreadsheet.add_worksheet(title=tab_name, rows=100, cols=3)
-            ws.append_row(["이메일", "날짜", "대본"])
+            ws = self.spreadsheet.add_worksheet(title=tab_name, rows=100, cols=2)
+            ws.append_row(["날짜", "대본"])
         else:
             ws = self.spreadsheet.worksheet(tab_name)
 
@@ -358,67 +294,50 @@ class SheetsManager:
         KST = timezone(timedelta(hours=9))
         today = datetime.now(KST).strftime("%Y-%m-%d")
 
-        target_email = email.strip().lower()
-
-        # 기존 데이터 확인 → 이메일과 오늘 날짜 행이 있으면 업데이트, 없으면 추가
-        data = ws.get_all_values()
-        updated = False
-        for idx, row in enumerate(data):
-            if idx == 0:
-                continue  # 헤더 건너뛰기
-            row_email = str(row[0]).strip().lower()
-            row_date = str(row[1]).strip()
-            if row_email == target_email and row_date == today:
-                ws.update_cell(idx + 1, 3, script)
-                updated = True
-                break
-
-        if not updated:
-            ws.append_row([email, today, script])
-
-    def save_briefing_doc(self, title: str, content: str, email: str = ""):
-        """
-        AI 브리핑 리포트(문서용)를 Briefing_Docs 탭에 저장.
-        """
-        tab_name = "Briefing_Docs"
-        existing = [ws.title for ws in self.spreadsheet.worksheets()]
-
-        if tab_name not in existing:
-            ws = self.spreadsheet.add_worksheet(title=tab_name, rows=100, cols=4)
-            ws.append_row(["이메일", "날짜", "제목", "내용"])
-        else:
-            ws = self.spreadsheet.worksheet(tab_name)
-
-        from datetime import datetime, timedelta, timezone
-        KST = timezone(timedelta(hours=9))
-        today = datetime.now(KST).strftime("%Y-%m-%d")
-
-        target_email = email.strip().lower()
-
-        # 기존 데이터 확인 → 이메일과 오늘 날짜 행이 있으면 업데이트, 없으면 추가
         data = ws.get_all_values()
         updated = False
         for idx, row in enumerate(data):
             if idx == 0:
                 continue
-            row_email = str(row[0]).strip().lower()
-            row_date = str(row[1]).strip()
-            if row_email == target_email and row_date == today:
-                ws.update_cell(idx + 1, 3, title)
-                ws.update_cell(idx + 1, 4, content)
+            row_date = str(row[0]).strip()
+            if row_date == today:
+                ws.update_cell(idx + 1, 2, script)
                 updated = True
                 break
 
         if not updated:
-            ws.append_row([email, today, title, content])
+            ws.append_row([today, script])
 
-    def get_news_by_date_range(self, start_date: str, end_date: str, email: str | None = None) -> list[dict]:
+    def save_briefing_doc(self, date_str: str, title: str, content: str):
+        """AI 브리핑 리포트를 Briefing_Docs 탭에 저장"""
+        tab_name = "Briefing_Docs"
+        existing = [ws.title for ws in self.spreadsheet.worksheets()]
+
+        if tab_name not in existing:
+            ws = self.spreadsheet.add_worksheet(title=tab_name, rows=100, cols=3)
+            ws.append_row(["날짜", "제목", "내용"])
+        else:
+            ws = self.spreadsheet.worksheet(tab_name)
+
+        data = ws.get_all_values()
+        updated = False
+        for idx, row in enumerate(data):
+            if idx == 0:
+                continue
+            row_date = str(row[0]).strip()
+            if row_date == date_str:
+                ws.update_cell(idx + 1, 2, title)
+                ws.update_cell(idx + 1, 3, content)
+                updated = True
+                break
+
+        if not updated:
+            ws.append_row([date_str, title, content])
+
+    def get_news_by_date_range(self, start_date: str, end_date: str) -> list[dict]:
         """시작 날짜와 종료 날짜 사이(포함)의 뉴스 반환"""
         ws = self.spreadsheet.worksheet(NEWS_DATA_TAB)
         records = ws.get_all_records()
-        if email:
-            target = email.strip().lower()
-            records = [r for r in records if str(r.get("이메일", "")).strip().lower() == target]
         
         import datetime
         try:
@@ -456,33 +375,28 @@ class SheetsManager:
         except Exception:
             return date_str
 
-    def save_weekly_briefing_doc(self, title: str, content: str, date_range_str: str, email: str = ""):
-        """
-        AI 주간 브리핑 리포트를 Weekly_Briefing_Docs 탭에 저장.
-        """
+    def save_weekly_briefing_doc(self, title: str, content: str, date_range_str: str):
+        """AI 주간 브리핑 리포트를 Weekly_Briefing_Docs 탭에 저장"""
         tab_name = "Weekly_Briefing_Docs"
         existing = [ws.title for ws in self.spreadsheet.worksheets()]
 
         if tab_name not in existing:
-            ws = self.spreadsheet.add_worksheet(title=tab_name, rows=100, cols=4)
-            ws.append_row(["이메일", "날짜", "제목", "내용"])
+            ws = self.spreadsheet.add_worksheet(title=tab_name, rows=100, cols=3)
+            ws.append_row(["날짜", "제목", "내용"])
         else:
             ws = self.spreadsheet.worksheet(tab_name)
-
-        target_email = email.strip().lower()
 
         data = ws.get_all_values()
         updated = False
         for idx, row in enumerate(data):
             if idx == 0:
                 continue
-            row_email = str(row[0]).strip().lower()
-            row_date = str(row[1]).strip()
-            if row_email == target_email and row_date == date_range_str:
-                ws.update_cell(idx + 1, 3, title)
-                ws.update_cell(idx + 1, 4, content)
+            row_date = str(row[0]).strip()
+            if row_date == date_range_str:
+                ws.update_cell(idx + 1, 2, title)
+                ws.update_cell(idx + 1, 3, content)
                 updated = True
                 break
 
         if not updated:
-            ws.append_row([email, date_range_str, title, content])
+            ws.append_row([date_range_str, title, content])

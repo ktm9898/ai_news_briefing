@@ -453,14 +453,14 @@ class NewsCollector:
         
         return unique_news
 
-    def collect_all(self, email: str | None = None) -> list[dict]:
+    def collect_all(self) -> list[dict]:
         """
         1. 주요 경제지 헤드라인 수집 (활성화되어 있는 경우만)
         2. Settings에 등록된 모든 활성 키워드 수집
         3. 전체 기사 전역 중복 제거 적용
         """
-        settings = self.sheets.get_active_settings(email)
-        all_settings = self.sheets.get_settings(email)
+        settings = self.sheets.get_active_settings()
+        all_settings = self.sheets.get_settings()
         existing_links = self.sheets.get_existing_links()
         
         # 주요뉴스(경제헤드라인) 활성화 여부 판단 (기본값 True)
@@ -477,7 +477,7 @@ class NewsCollector:
             # ── 1단계: 주요 경제 매체 헤드라인 수집 (Top 5 후보군 확보) ──
             headline_news = self.collect_headlines(existing_links)
         else:
-            logger.info(f"[{email}] 주요뉴스(경제헤드라인)가 비활성화되어 수집을 생략합니다.")
+            logger.info("주요뉴스(경제헤드라인)가 비활성화되어 수집을 생략합니다.")
         
         # ── 2단계: 주제별 키워드 수집 ──
         topic_news: dict[str, list[dict]] = {}

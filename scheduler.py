@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 
 def run_pipeline():
-    """2단계 AI 파이프라인 실행 (사용자별 루프)"""
+    """2단계 AI 파이프라인 실행"""
     start_time = datetime.now(KST)
     logger.info(f"=== 파이프라인 실행 시작: {start_time.strftime('%Y-%m-%d %H:%M:%S')} (KST) ===")
 
@@ -45,295 +45,227 @@ def run_pipeline():
 
     try:
         sheets = SheetsManager()
-        # 단일 사용자 모드 (ktm9898@gmail.com 사용)
-        valid_emails = {"ktm9898@gmail.com"}
-        logger.info(f"뉴스 수집 진행 대상 사용자: {list(valid_emails)}")
-
         collector = NewsCollector(sheets)
         analyzer = AIAnalyzer()
 
-        for email in valid_emails:
-            logger.info(f"--- 사용자 브리핑 생성 시작: {email} ---")
-            try:
-                # ── 1단계: 네이버 API 검색 (크롤링 없음, 빠름) ──
-                logger.info(f"[{email}] STEP 1/7: 네이버 API 뉴스 검색")
-                all_collected = collector.collect_all(email)
-                result["collected"] += len(all_collected)
+        logger.info("--- 뉴스 브리핑 생성 시작 ---")
+        # ── 1단계: 네이버 API 검색 (크롤링 없음, 빠름) ──
+        logger.info("STEP 1/7: 네이버 API 뉴스 검색")
+        all_collected = collector.collect_all()
+        result["collected"] += len(all_collected)
 
-                if not all_collected:
-                    logger.info(f"[{email}] 수집된 새로운 뉴스가 없습니다.")
-                    continue
-
-                # ── 2단계: AI 1차 선별 (중요도 판별 + Top6 선정) ──
-                logger.info(f"[{email}] STEP 2/7: AI 중요도 선별 + 주요뉴스 Top6 선정")
-                topic_criteria = sheets.get_all_topic_criteria(email)
-                user_active_settings = sheets.get_active_settings(email)
-                exclusion_keywords = list(set(s.get("키워드", "") for s in user_active_settings if s.get("키워드")))
-
-                all_collected, top6_results = analyzer.screen_importance(
-                    all_collected,
-                    topic_criteria,
-                    exclusion_keywords=exclusion_keywords
-                )
-
-                # Top6 주요뉴스 링크 추출
-                top6_links = set()
-                if top6_results:
-                    for item in top6_results:
-                        link = item.get("original_link") or item.get("링크", "")
-                        if link:
-                            top6_links.add(link)
-                    logger.info(f"[{email}] Top6 주요뉴스 {len(top6_links)}건 선정 완료")
-
-                # 주제별 그룹화 및 중요도 순 정렬
-                topic_groups = {}
-                for news in all_collected:
-                    t = news.get("주제", "기타")
-                    if t == "경제헤드라인":
-                        continue
-                    topic_groups.setdefault(t, []).append(news)
-
-                importance_map = {"상": 0, "중": 1, "하": 2, "": 3}
-                final_selection_for_save = []
-
-                for topic, group in topic_groups.items():
-                    selected = [item for item in group if item.get("ai_selected") is True]
-
-                    if not selected:
-                        sorted_group = sorted(group, key=lambda x: importance_map.get(x.get("중요도", ""), 3))
-                        filtered_group = [item for item in sorted_group if item.get("링크", "") not in top6_links]
-                        selected = filtered_group[:MAX_DISPLAY_PER_TOPIC]
-                        logger.info(f"[{email}][{topic}] AI 직접 선정 결과 없음 -> 중요도 순 {len(selected)}건 자동 선정")
-                    else:
-                        selected = [item for item in selected if item.get("링크", "") not in top6_links]
-
-                    final_selection_for_save.extend(selected)
-
-                # ── 3단계: 기사 본문 크롤링 ──
-                logger.info(f"[{email}] STEP 3/7: 주요 기사 본문 크롤링")
-                top6_source_news = [n for n in all_collected if n.get("링크") in top6_links]
-                selected_for_crawl = top6_source_news + final_selection_for_save
-
-                for n in selected_for_crawl:
-                    n["is_essential"] = True
-
-                seen_links = set()
-                unique_crawl_list = []
-                for n in selected_for_crawl:
-                    link = n.get("링크")
-                    if link not in seen_links:
-                        unique_crawl_list.append(n)
-                        seen_links.add(link)
-
-                if not unique_crawl_list:
-                    logger.info(f"[{email}] 분석할 기사가 없습니다.")
-                    continue
-
-                selected_for_crawl = collector.crawl_selected_articles(unique_crawl_list)
-                result["analyzed"] += len(selected_for_crawl)
-
-                # ── 4단계: AI 통합 분석 (요약 + 대본 + 인사이트 리포트) ──
-                logger.info(f"[{email}] STEP 4/7: AI 통합 분석 수행")
-                days = ["월요일", "화요일", "수요일", "목요일", "금요일", "토요일", "일요일"]
-                now = datetime.now(KST)
-                weekday_str = days[now.weekday()]
-                date_str = now.strftime("%Y년 %m월 %d일")
-                weather_str = get_weather_info()
-
-                context_info = f"현재 일시: {date_str} {weekday_str}\n날씨 정보: {weather_str}"
-                generate_insight = (email.strip().lower() == "ktm98@seoulshinbo.co.kr")
-                analysis_result = analyzer.analyze_all_in_one(
-                    selected_for_crawl, 
-                    context_info=context_info, 
-                    generate_insight=generate_insight
-                )
-
-                briefing_script = analysis_result.get("briefing_script", "")
-                insight_data = analysis_result.get("insight_report")
-                
-                # 인사이트 리포트 참고출처 URL 보강 (Google Search Grounding)
-                if insight_data:
-                    insight_data = analyzer.enrich_references_with_urls(insight_data)
-
-
-                # ── 5단계: 시트 저장 ──
-                logger.info(f"[{email}] STEP 5/7: 데이터 시트 저장")
-                top6_news = []
-                if top6_results:
-                    today_str = datetime.now(KST).strftime("%Y-%m-%d")
-                    crawled_lookup = {}
-                    for n in selected_for_crawl:
-                        key = n.get("original_link") or n.get("링크")
-                        if key:
-                            crawled_lookup[key] = n
-                        if n.get("네이버링크"):
-                            crawled_lookup.setdefault(n["네이버링크"], n)
-
-                    for item in top6_results:
-                        link = item.get("original_link") or item.get("링크", "")
-                        article_info = crawled_lookup.get(link)
-                        if not article_info:
-                            for n in selected_for_crawl:
-                                if n.get("original_link") == link or n.get("링크") == link or n.get("네이버링크") == link:
-                                    article_info = n
-                                    break
-
-                        region_label = "국내" if item.get("region") == "국내" else "해외"
-                        final_body = article_info.get("본문 전문", "") if article_info else item.get("본문 전문", "")
-                        final_summary = (article_info.get("AI 요약") if article_info else "") or item.get("summary", "")
-
-                        top6_news.append({
-                            "날짜": today_str,
-                            "주제": f"📌 주요뉴스({region_label})",
-                            "언론사": item.get("언론사", ""),
-                            "제목": article_info.get("제목", item.get("제목", "")) if article_info else item.get("제목", ""),
-                            "네이버 요약": item.get("네이버 요약", ""),
-                            "본문 전문": final_body,
-                            "링크": item.get("링크", ""),
-                            "AI 요약": final_summary,
-                            "중요도": "상",
-                        })
-
-                    top6_news.sort(key=lambda x: 0 if "해외" in x.get("주제", "") else 1)
-
-                import copy
-                topic_counts = {}
-                regular_news = []
-
-                for n in selected_for_crawl:
-                    link = n.get("링크", "")
-                    topic = n.get("주제", "기타")
-                    if link in top6_links:
-                        continue
-                    if topic in ["경제헤드라인", "기타(세부관심사)", "기타"]:
-                        continue
-                    if topic_counts.get(topic, 0) >= MAX_DISPLAY_PER_TOPIC:
-                        continue
-                    regular_news.append(n)
-                    topic_counts[topic] = topic_counts.get(topic, 0) + 1
-
-                save_list = copy.deepcopy(regular_news)
-                for news in save_list:
-                    news.pop("네이버링크", None)
-
-                final_save = top6_news + save_list
-                sheets.append_news(final_save, email)
-
-                sheets.save_briefing(briefing_script, email)
-
-                # ── 6단계: TTS 음성 생성 (이메일별 파일 구분) ──
-                logger.info(f"[{email}] STEP 6/7: TTS 음성 생성")
-                email_suffix = re.sub(r'[^a-zA-Z0-9]', '_', email)
-                try:
-                    from tts_engine import TTSEngine
-                    tts = TTSEngine()
-                    audio_path = tts.generate(briefing_script, prefix=f"briefing_{email_suffix}", suffix=email_suffix)
-                    if audio_path:
-                        logger.info(f"[{email}] 음성 파일 생성 완료: {audio_path}")
-                except Exception as e:
-                    logger.error(f"[{email}] TTS 생성 오류 (무시): {e}")
-
-                # ── 7단계: AI 인사이트 리포트 저장 및 이메일 전송 ──
-                logger.info(f"[{email}] STEP 7/7: 인사이트 리포트 저장 및 이메일 발송")
-                today_str = datetime.now(KST).strftime("%Y-%m-%d")
-                doc_title = f"AI News Insight Report - {date_str}"
-                
-                import json
-                if insight_data:
-                    doc_content = json.dumps(insight_data, ensure_ascii=False)
-                    sheets.save_briefing_doc(doc_title, doc_content, email)
-                
-                # GAS 이메일 발송 API 호출
-                if GAS_SCRIPT_URL and generate_insight:
-                    try:
-                        slim_news_list = []
-                        for n in final_save:
-                            slim_news_list.append({
-                                "주제": n.get("주제", ""),
-                                "언론사": n.get("언론사", ""),
-                                "제목": n.get("제목", ""),
-                                "링크": n.get("링크", ""),
-                                "AI요약": n.get("AI 요약", ""),
-                                "중요도": n.get("중요도", "")
-                            })
-
-                        payload = {
-                            "action": "sendDailyReport",
-                            "email": email,
-                            "date": today_str,
-                            "briefingScript": briefing_script,
-                            "insightReport": insight_data,
-                            "newsList": slim_news_list
-                        }
-                        resp = requests.post(GAS_SCRIPT_URL, json=payload, timeout=20)
-                        if resp.status_code == 200:
-                            logger.info(f"[{email}] 데일리 이메일 발송 API 호출 성공: {resp.text}")
-                        else:
-                            logger.error(f"[{email}] 데일리 이메일 발송 API 호출 실패: {resp.status_code} - {resp.text}")
-                    except Exception as e:
-                        logger.error(f"[{email}] 데일리 이메일 발송 중 오류: {e}")
-
-                # ── (신규) 일요일인 경우 주간 소기업·소상공인 인사이트 리포트 생성 ──
-                if generate_insight and now.weekday() == 6:  # 6=일요일에만 주간 리포트 생성
-                    logger.info(f"[{email}] 📅 일요일 주간 소상공인 인사이트 리포트 생성 프로세스 시작")
-                    try:
-                        # 오늘(일요일)부터 6일 전(월요일)까지의 기사를 시트에서 읽어옴
-                        end_date_str = now.strftime("%Y-%m-%d")
-                        start_date_str = (now - timedelta(days=6)).strftime("%Y-%m-%d")
-                        weekly_date_range = f"{start_date_str} ~ {end_date_str}"
-                        
-                        logger.info(f"[{email}] 주간 날짜 범위: {weekly_date_range}")
-                        weekly_news = sheets.get_news_by_date_range(start_date_str, end_date_str, email)
-                        logger.info(f"[{email}] 지난 7일간 뉴스 수집 건수: {len(weekly_news)}건")
-                        
-                        if weekly_news:
-                            # 주간 리포트 분석
-                            weekly_insight_data = analyzer.analyze_weekly_insight(weekly_news, weekly_date_range)
-                            
-                            # 인사이트 리포트 참고출처 URL 보강 (Google Search Grounding)
-                            if weekly_insight_data:
-                                weekly_insight_data = analyzer.enrich_references_with_urls(weekly_insight_data)
-                            
-                            # Weekly_Briefing_Docs 시트에 저장
-                            weekly_title = f"AI News Weekly Insight Report - {weekly_date_range}"
-                            sheets.save_weekly_briefing_doc(
-                                weekly_title, 
-                                json.dumps(weekly_insight_data, ensure_ascii=False), 
-                                weekly_date_range, 
-                                email
-                            )
-                            logger.info(f"[{email}] Weekly_Briefing_Docs 저장 성공")
-                            
-                            # GAS 주간 보고서 이메일 발송 API 호출
-                            if GAS_SCRIPT_URL:
-                                payload = {
-                                    "action": "sendWeeklyReport",
-                                    "email": email,
-                                    "dateRange": weekly_date_range,
-                                    "insightReport": weekly_insight_data
-                                }
-                                resp = requests.post(GAS_SCRIPT_URL, json=payload, timeout=20)
-                                if resp.status_code == 200:
-                                    logger.info(f"[{email}] 주간 이메일 발송 API 호출 성공: {resp.text}")
-                                else:
-                                    logger.error(f"[{email}] 주간 이메일 발송 API 호출 실패: {resp.status_code} - {resp.text}")
-                        else:
-                            logger.warning(f"[{email}] 지난 7일간 기사 데이터가 존재하지 않아 주간 리포트를 생성할 수 없습니다.")
-                    except Exception as weekly_err:
-                        logger.error(f"[{email}] 주간 리포트 생성 중 오류 발생: {weekly_err}", exc_info=True)
-
-                result["processed_users"].append(email)
-                logger.info(f"--- 사용자 브리핑 생성 완료: {email} ---")
-
-            except Exception as user_err:
-                logger.error(f"[{email}] 처리 중 오류 발생: {user_err}", exc_info=True)
-                result["errors"][email] = str(user_err)
-
-        if result["errors"]:
-            result["status"] = "오류"
-            result["error"] = ", ".join(f"{email}: {err}" for email, err in result["errors"].items())
-        else:
+        if not all_collected:
+            logger.info("수집된 새로운 뉴스가 없습니다.")
             result["status"] = "완료"
+            return result
+
+        # ── 2단계: AI 1차 선별 (중요도 판별 + Top6 선정) ──
+        logger.info("STEP 2/7: AI 중요도 선별 + 주요뉴스 Top6 선정")
+        topic_criteria = sheets.get_all_topic_criteria()
+        user_active_settings = sheets.get_active_settings()
+        exclusion_keywords = list(set(s.get("키워드", "") for s in user_active_settings if s.get("키워드")))
+
+        all_collected, top6_results = analyzer.screen_importance(
+            all_collected,
+            topic_criteria,
+            exclusion_keywords=exclusion_keywords
+        )
+
+        # Top6 주요뉴스 링크 추출
+        top6_links = set()
+        if top6_results:
+            for item in top6_results:
+                link = item.get("original_link") or item.get("링크", "")
+                if link:
+                    top6_links.add(link)
+            logger.info(f"Top6 주요뉴스 {len(top6_links)}건 선정 완료")
+
+        # 주제별 그룹화 및 중요도 순 정렬
+        topic_groups = {}
+        for news in all_collected:
+            t = news.get("주제", "기타")
+            if t == "경제헤드라인":
+                continue
+            topic_groups.setdefault(t, []).append(news)
+
+        importance_map = {"상": 0, "중": 1, "하": 2, "": 3}
+        final_selection_for_save = []
+
+        for topic, group in topic_groups.items():
+            selected = [item for item in group if item.get("ai_selected") is True]
+
+            if not selected:
+                sorted_group = sorted(group, key=lambda x: importance_map.get(x.get("중요도", ""), 3))
+                filtered_group = [item for item in sorted_group if item.get("링크", "") not in top6_links]
+                selected = filtered_group[:MAX_DISPLAY_PER_TOPIC]
+                logger.info(f"[{topic}] AI 직접 선정 결과 없음 -> 중요도 순 {len(selected)}건 자동 선정")
+            else:
+                selected = [item for item in selected if item.get("링크", "") not in top6_links]
+
+            final_selection_for_save.extend(selected)
+
+        # ── 3단계: 기사 본문 크롤링 ──
+        logger.info("STEP 3/7: 주요 기사 본문 크롤링")
+        top6_source_news = [n for n in all_collected if n.get("링크") in top6_links]
+        selected_for_crawl = top6_source_news + final_selection_for_save
+
+        for n in selected_for_crawl:
+            n["is_essential"] = True
+
+        seen_links = set()
+        unique_crawl_list = []
+        for n in selected_for_crawl:
+            link = n.get("링크")
+            if link not in seen_links:
+                unique_crawl_list.append(n)
+                seen_links.add(link)
+
+        if not unique_crawl_list:
+            logger.info("분석할 기사가 없습니다.")
+            result["status"] = "완료"
+            return result
+
+        selected_for_crawl = collector.crawl_selected_articles(unique_crawl_list)
+        result["analyzed"] += len(selected_for_crawl)
+
+        # ── 4단계: AI 통합 분석 (요약 + 대본 + 인사이트 리포트) ──
+        logger.info("STEP 4/7: AI 통합 분석 수행")
+        days = ["월요일", "화요일", "수요일", "목요일", "금요일", "토요일", "일요일"]
+        now = datetime.now(KST)
+        weekday_str = days[now.weekday()]
+        date_str = now.strftime("%Y년 %m월 %d일")
+        weather_str = get_weather_info()
+
+        context_info = f"현재 일시: {date_str} {weekday_str}\n날씨 정보: {weather_str}"
+        analysis_result = analyzer.analyze_all_in_one(
+            selected_for_crawl, 
+            context_info=context_info, 
+            generate_insight=True
+        )
+
+        briefing_script = analysis_result.get("briefing_script", "")
+        insight_data = analysis_result.get("insight_report")
+        
+        # 인사이트 리포트 참고출처 URL 보강 (Google Search Grounding)
+        if insight_data:
+            insight_data = analyzer.enrich_references_with_urls(insight_data)
+
+        # ── 5단계: 시트 저장 ──
+        logger.info("STEP 5/7: 데이터 시트 저장")
+        top6_news = []
+        if top6_results:
+            today_str = datetime.now(KST).strftime("%Y-%m-%d")
+            crawled_lookup = {}
+            for n in selected_for_crawl:
+                key = n.get("original_link") or n.get("링크")
+                if key:
+                    crawled_lookup[key] = n
+                if n.get("네이버링크"):
+                    crawled_lookup.setdefault(n["네이버링크"], n)
+
+            for item in top6_results:
+                link = item.get("original_link") or item.get("링크", "")
+                article_info = crawled_lookup.get(link)
+                if not article_info:
+                    for n in selected_for_crawl:
+                        if n.get("original_link") == link or n.get("링크") == link or n.get("네이버링크") == link:
+                            article_info = n
+                            break
+
+                region_label = "국내" if item.get("region") == "국내" else "해외"
+                final_body = article_info.get("본문 전문", "") if article_info else item.get("본문 전문", "")
+                final_summary = (article_info.get("AI 요약") if article_info else "") or item.get("summary", "")
+
+                top6_news.append({
+                    "날짜": today_str,
+                    "주제": f"📌 주요뉴스({region_label})",
+                    "언론사": item.get("언론사", ""),
+                    "제목": article_info.get("제목", item.get("제목", "")) if article_info else item.get("제목", ""),
+                    "네이버 요약": item.get("네이버 요약", ""),
+                    "본문 전문": final_body,
+                    "링크": item.get("링크", ""),
+                    "AI 요약": final_summary,
+                    "중요도": "상",
+                })
+
+            top6_news.sort(key=lambda x: 0 if "해외" in x.get("주제", "") else 1)
+
+        import copy
+        topic_counts = {}
+        regular_news = []
+
+        for n in selected_for_crawl:
+            link = n.get("링크", "")
+            topic = n.get("주제", "기타")
+            if link in top6_links:
+                continue
+            if topic in ["경제헤드라인", "기타(세부관심사)", "기타"]:
+                continue
+            if topic_counts.get(topic, 0) >= MAX_DISPLAY_PER_TOPIC:
+                continue
+            regular_news.append(n)
+            topic_counts[topic] = topic_counts.get(topic, 0) + 1
+
+        save_list = copy.deepcopy(regular_news)
+        for news in save_list:
+            news.pop("네이버링크", None)
+
+        final_save = top6_news + save_list
+        sheets.append_news(final_save)
+
+        if briefing_script:
+            sheets.save_briefing(briefing_script)
+
+        # ── 6단계: TTS 음성 생성 ──
+        logger.info("STEP 6/7: TTS 음성 생성")
+        try:
+            from tts_engine import TTSEngine
+            tts = TTSEngine()
+            audio_path = tts.generate(briefing_script, prefix="briefing_daily")
+            if audio_path:
+                logger.info(f"음성 파일 생성 완료: {audio_path}")
+        except Exception as e:
+            logger.error(f"TTS 생성 오류 (무시): {e}")
+
+        # ── 7단계: AI 인사이트 리포트 저장 ──
+        logger.info("STEP 7/7: 인사이트 리포트 저장")
+        today_str = datetime.now(KST).strftime("%Y-%m-%d")
+        doc_title = f"AI News Insight Report - {date_str}"
+        
+        import json
+        if insight_data:
+            doc_content = json.dumps(insight_data, ensure_ascii=False)
+            sheets.save_briefing_doc(today_str, doc_title, doc_content)
+
+        # ── 일요일인 경우 주간 소기업·소상공인 인사이트 리포트 생성 ──
+        if now.weekday() == 6:  # 6=일요일
+            logger.info("📅 일요일 주간 소상공인 인사이트 리포트 생성 프로세스 시작")
+            try:
+                end_date_str = now.strftime("%Y-%m-%d")
+                start_date_str = (now - timedelta(days=6)).strftime("%Y-%m-%d")
+                weekly_date_range = f"{start_date_str} ~ {end_date_str}"
+                
+                logger.info(f"주간 날짜 범위: {weekly_date_range}")
+                weekly_news = sheets.get_news_by_date_range(start_date_str, end_date_str)
+                logger.info(f"지난 7일간 뉴스 수집 건수: {len(weekly_news)}건")
+                
+                if weekly_news:
+                    weekly_insight_data = analyzer.analyze_weekly_insight(weekly_news, weekly_date_range)
+                    if weekly_insight_data:
+                        weekly_insight_data = analyzer.enrich_references_with_urls(weekly_insight_data)
+                        weekly_title = f"AI News Weekly Insight Report - {weekly_date_range}"
+                        sheets.save_weekly_briefing_doc(
+                            weekly_title, 
+                            json.dumps(weekly_insight_data, ensure_ascii=False), 
+                            weekly_date_range
+                        )
+                        logger.info("Weekly_Briefing_Docs 저장 성공")
+                else:
+                    logger.warning("지난 7일간 기사 데이터가 존재하지 않아 주간 리포트를 생성할 수 없습니다.")
+            except Exception as weekly_err:
+                logger.error(f"주간 리포트 생성 중 오류 발생: {weekly_err}", exc_info=True)
+
+        result["status"] = "완료"
         elapsed = (datetime.now(KST) - start_time).total_seconds()
         logger.info(f"=== 파이프라인 전체 완료 ({elapsed:.1f}초) ===")
 
