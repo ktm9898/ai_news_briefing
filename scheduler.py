@@ -45,12 +45,16 @@ def run_pipeline():
 
     try:
         sheets = SheetsManager()
+        # 단일 사용자 모드 (ktm9898@gmail.com 사용)
+        valid_emails = {"ktm9898@gmail.com"}
+        logger.info(f"뉴스 수집 진행 대상 사용자: {list(valid_emails)}")
+
         collector = NewsCollector(sheets)
         analyzer = AIAnalyzer()
-        
-        email = "ktm9898@gmail.com"
-        logger.info(f"--- 뉴스 브리핑 파이프라인 수집 시작 ---")
-        try:
+
+        for email in valid_emails:
+            logger.info(f"--- 사용자 브리핑 생성 시작: {email} ---")
+            try:
                 # ── 1단계: 네이버 API 검색 (크롤링 없음, 빠름) ──
                 logger.info(f"[{email}] STEP 1/7: 네이버 API 뉴스 검색")
                 all_collected = collector.collect_all(email)
@@ -137,7 +141,7 @@ def run_pipeline():
                 weather_str = get_weather_info()
 
                 context_info = f"현재 일시: {date_str} {weekday_str}\n날씨 정보: {weather_str}"
-                generate_insight = True
+                generate_insight = (email.strip().lower() == "ktm98@seoulshinbo.co.kr")
                 analysis_result = analyzer.analyze_all_in_one(
                     selected_for_crawl, 
                     context_info=context_info, 
@@ -232,7 +236,7 @@ def run_pipeline():
                 # ── 7단계: AI 인사이트 리포트 저장 및 이메일 전송 ──
                 logger.info(f"[{email}] STEP 7/7: 인사이트 리포트 저장 및 이메일 발송")
                 today_str = datetime.now(KST).strftime("%Y-%m-%d")
-                doc_title = f"서울신용보증재단 인사이트 리포트 ({today_str})"
+                doc_title = f"AI News Insight Report - {date_str}"
                 
                 import json
                 if insight_data:
@@ -291,7 +295,7 @@ def run_pipeline():
                                 weekly_insight_data = analyzer.enrich_references_with_urls(weekly_insight_data)
                             
                             # Weekly_Briefing_Docs 시트에 저장
-                            weekly_title = f"소기업·소상공인 주간 인사이트 리포트 ({weekly_date_range})"
+                            weekly_title = f"AI News Weekly Insight Report - {weekly_date_range}"
                             sheets.save_weekly_briefing_doc(
                                 weekly_title, 
                                 json.dumps(weekly_insight_data, ensure_ascii=False), 
