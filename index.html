@@ -1847,17 +1847,20 @@
             const now = new Date();
             const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
             
-            // 선택된 날짜 기반 오디오 파일 시도 목록
+            // 선택된 날짜 기반 오디오 파일 시도 목록 (단일 사용자 및 레거시 파일 지원)
             const yyyymmdd = dateVal.replace(/-/g, '');
             const candidateUrls = [
-                `audio/briefing_ktm98_seoulshinbo_co_kr_${yyyymmdd}.mp3`,
-                `audio/briefing_${yyyymmdd}.mp3`
+                `audio/briefing_daily_${yyyymmdd}.mp3?t=${Date.now()}`,
+                `audio/briefing_${yyyymmdd}.mp3?t=${Date.now()}`,
+                `audio/briefing_ktm9898_gmail_com_${yyyymmdd}.mp3?t=${Date.now()}`,
+                `audio/briefing_ktm98_seoulshinbo_co_kr_${yyyymmdd}.mp3?t=${Date.now()}`
             ];
             
             // 오늘 날짜 선택 시 latest 파일도 폴백으로 추가
             if (dateVal === today) {
-                candidateUrls.push(`audio/briefing_latest_ktm98_seoulshinbo_co_kr.mp3?t=${Date.now()}`);
                 candidateUrls.push(`audio/briefing_latest.mp3?t=${Date.now()}`);
+                candidateUrls.push(`audio/briefing_latest_ktm9898_gmail_com.mp3?t=${Date.now()}`);
+                candidateUrls.push(`audio/briefing_latest_ktm98_seoulshinbo_co_kr.mp3?t=${Date.now()}`);
             }
 
             let candidateIndex = 0;
