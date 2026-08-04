@@ -131,23 +131,12 @@ class SheetsManager:
             )
             ws.append_row(["날짜", "제목", "내용"])
 
-        # Approved_Users
-        if "Approved_Users" not in existing:
-            ws = self.spreadsheet.add_worksheet(
-                title="Approved_Users", rows=100, cols=4
-            )
-            ws.append_row(["이메일", "상태", "등록일", "승인일"])
-        else:
-            self._ensure_email_column("Approved_Users", ["이메일", "상태", "등록일", "승인일"])
-
         # Weekly_Briefing_Docs
         if "Weekly_Briefing_Docs" not in existing:
             ws = self.spreadsheet.add_worksheet(
-                title="Weekly_Briefing_Docs", rows=100, cols=4
+                title="Weekly_Briefing_Docs", rows=100, cols=3
             )
-            ws.append_row(["이메일", "날짜", "제목", "내용"])
-        else:
-            self._ensure_email_column("Weekly_Briefing_Docs", ["이메일", "날짜", "제목", "내용"])
+            ws.append_row(["날짜", "제목", "내용"])
 
     # ── Settings 탭 ──────────────────────────────────
 
