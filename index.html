@@ -2519,6 +2519,8 @@
                         return dateB - dateA;
                     });
                     targetArray = data;
+                } else if (data && typeof data === 'object') {
+                    console.warn('Report sheet returned non-array:', data);
                 }
 
                 if (currentReportTab === 'foundation') {
