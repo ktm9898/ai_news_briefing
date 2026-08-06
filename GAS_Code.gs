@@ -11,7 +11,9 @@ function doGet(e) {
 
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const tab = e.parameter.tab || 'News_Data';
-  const dateStr = e.parameter.date; // YYYY-MM-DD
+  const dateStr = e.parameter.date; // YYYY-MM-DD (단일 날짜)
+  const startDateStr = e.parameter.startDate; // YYYY-MM-DD (시작일)
+  const endDateStr = e.parameter.endDate; // YYYY-MM-DD (종료일)
   const topic = e.parameter.topic; // 주제 필터
   const action = e.parameter ? e.parameter.action : null;
 
@@ -88,7 +90,28 @@ function doGet(e) {
 
   // News_Data 탭의 경우 날짜 및 주제 필터 적용
   if (tab === 'News_Data') {
-    if (dateStr) {
+    if (startDateStr || endDateStr) {
+      result = result.filter(item => {
+        let itemDate = item['날짜'];
+        if (itemDate instanceof Date || (itemDate && Object.prototype.toString.call(itemDate) === '[object Date]')) {
+          itemDate = Utilities.formatDate(itemDate, "GMT+9", "yyyy-MM-dd");
+        } else if (itemDate) {
+          itemDate = String(itemDate).trim();
+          const match = itemDate.match(/(\d{4})[\.\-\/\s]+(\d{1,2})[\.\-\/\s]+(\d{1,2})/);
+          if (match) {
+            itemDate = match[1] + '-' + ('0' + match[2]).slice(-2) + '-' + ('0' + match[3]).slice(-2);
+          } else {
+            const dObj = new Date(itemDate);
+            if (!isNaN(dObj.getTime())) {
+               itemDate = Utilities.formatDate(dObj, "GMT+9", "yyyy-MM-dd");
+            }
+          }
+        }
+        if (startDateStr && itemDate < startDateStr) return false;
+        if (endDateStr && itemDate > endDateStr) return false;
+        return true;
+      });
+    } else if (dateStr) {
       result = result.filter(item => {
         let itemDate = item['날짜'];
         if (itemDate instanceof Date || (itemDate && Object.prototype.toString.call(itemDate) === '[object Date]')) {
@@ -113,9 +136,9 @@ function doGet(e) {
     if (topic && topic !== '전체') {
       result = result.filter(item => item['주제'] === topic);
     }
-    // 너무 많은 데이터 방지를 위해 최신 100건으로 제한 (필터 후)
-    if (!dateStr && !topic) {
-      result = result.slice(-100);
+    // 너무 많은 데이터 방지를 위해 최신 200건으로 제한 (필터 후)
+    if (!dateStr && !startDateStr && !endDateStr && !topic) {
+      result = result.slice(-200);
     }
   }
 

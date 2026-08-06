@@ -329,95 +329,77 @@
         <div
             class="bg-white rounded-xl border border-border p-3 lg:p-4 mb-4 lg:mb-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)]">
 
-            <!-- 모바일 전용 뷰 (lg 미만) -->
-            <div class="flex lg:hidden items-center gap-2">
-                <!-- 날짜: 커스텀 디스플레이 (인풋은 투명하게 덮기) -->
-                <div
-                    class="relative flex items-center flex-1 bg-gray-50/50 border border-border rounded-lg px-3 py-[9px] focus-within:ring-2 focus-within:ring-accent transition-shadow cursor-pointer hover:bg-white text-gray-900">
-                    <span id="displayDateMobile" class="text-[14px] tracking-tight pointer-events-none"></span>
-                    <span id="filterDayMobile"
-                        class="text-[13px] font-bold text-muted ml-0.5 pointer-events-none"></span>
-                    <div class="flex-1 pointer-events-none"></div>
-                    <svg class="w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor"
-                        viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
-                        </path>
-                    </svg>
-                    <input type="date" id="filterDateMobile"
-                        onchange="syncInput('filterDateMobile', 'filterDateDesktop'); loadData();"
-                        class="absolute inset-0 w-full h-full opacity-0 cursor-pointer text-transparent bg-transparent">
-                </div>
-                <!-- 세부 필터 버튼 -->
-                <button onclick="openFilterModal()"
-                    class="shrink-0 h-[40px] px-3.5 flex items-center justify-center gap-1.5 bg-accent hover:bg-blue-700 rounded-lg text-[13px] font-bold text-white shadow-sm transition-colors">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                    </svg>
-                    <span>상세필터</span>
-                </button>
-            </div>
+            <!-- 필터 바 (스마트 토글 및 다중 주제/스마트 검색 적용) -->
+            <div class="space-y-3.5">
+                <!-- 상단 컨트롤 라인 (날짜 모드 토글 + 날짜 선택기) -->
+                <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-gray-100">
+                    <!-- 날짜 모드 토글 및 날짜 입력영역 -->
+                    <div class="flex flex-wrap items-center gap-3">
+                        <button type="button" onclick="toggleDateMode()" id="dateModeBtn"
+                            class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-lg border border-border transition-colors flex items-center gap-1.5">
+                            <span id="dateModeIcon">📅</span>
+                            <span id="dateModeText">기간 조회 설정</span>
+                        </button>
 
-            <!-- 데스크톱 전용 뷰 (lg 이상) - 모든 필터를 가로 한 줄 또는 Grid로 배치 -->
-            <div class="hidden lg:grid grid-cols-4 gap-4 items-end">
-                <!-- 날짜 -->
-                <div>
-                    <label
-                        class="block text-[11px] font-bold text-muted uppercase tracking-wider mb-1.5 pl-1">날짜</label>
-                    <div
-                        class="relative flex items-center bg-gray-50/50 border border-border rounded-lg px-3 py-2 cursor-pointer hover:bg-white transition-shadow text-gray-900 focus-within:ring-2 focus-within:ring-accent focus-within:border-accent">
-                        <span id="displayDateDesktop" class="text-[14px] tracking-tight pointer-events-none"></span>
-                        <span id="filterDayDesktop"
-                            class="text-[13px] font-bold text-muted ml-0.5 pointer-events-none"></span>
-                        <div class="flex-1 pointer-events-none min-w-[10px]"></div>
-                        <svg class="w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor"
-                            viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
-                            </path>
-                        </svg>
-                        <input type="date" id="filterDateDesktop"
-                            onchange="syncInput('filterDateDesktop', 'filterDateMobile'); loadData();"
-                            class="absolute inset-0 w-full h-full opacity-0 cursor-pointer text-transparent bg-transparent">
+                        <!-- 단일 날짜 선택 모드 (디폴트) -->
+                        <div id="singleDateBox" class="relative flex items-center bg-gray-50/80 border border-border rounded-lg px-3 py-1.5 cursor-pointer hover:bg-white transition-all text-gray-900 focus-within:ring-2 focus-within:ring-accent">
+                            <span id="displayDateDesktop" class="text-sm font-semibold tracking-tight pointer-events-none"></span>
+                            <span id="filterDayDesktop" class="text-xs font-bold text-muted ml-1 pointer-events-none"></span>
+                            <svg class="w-4 h-4 text-gray-400 pointer-events-none ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                            <input type="date" id="filterDateDesktop" onchange="onSingleDateChange()" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer text-transparent bg-transparent">
+                        </div>
+
+                        <!-- 기간 선택 모드 (토글 켜질 시 확장) -->
+                        <div id="rangeDateBox" class="hidden flex items-center gap-2 bg-blue-50/50 p-1 rounded-xl border border-blue-200 animate-in fade-in duration-200">
+                            <div class="flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
+                                <span class="text-[11px] font-bold text-blue-600 shrink-0">시작:</span>
+                                <input type="date" id="filterStartDate" onchange="onRangeDateChange()" class="text-xs font-bold text-gray-800 outline-none bg-transparent cursor-pointer">
+                            </div>
+                            <span class="text-xs font-bold text-blue-400">~</span>
+                            <div class="flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
+                                <span class="text-[11px] font-bold text-blue-600 shrink-0">종료:</span>
+                                <input type="date" id="filterEndDate" onchange="onRangeDateChange()" class="text-xs font-bold text-gray-800 outline-none bg-transparent cursor-pointer">
+                            </div>
+                            <button onclick="loadData()" class="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors shrink-0">조회</button>
+                        </div>
+                    </div>
+
+                    <!-- 음성 브리핑 재생 모드 상태 표시 뱃지 -->
+                    <div id="audioAvailabilityNotice" class="text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 font-medium flex items-center gap-1">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span>단일 날짜 조회 (음성 재생 가능)</span>
                     </div>
                 </div>
-                <!-- 주제 -->
-                <div>
-                    <label
-                        class="block text-[11px] font-bold text-muted uppercase tracking-wider mb-1.5 pl-1">주제</label>
-                    <select id="filterCategoryDesktop"
-                        onchange="syncInput('filterCategoryDesktop', 'filterCategoryMobile'); applyFilters()"
-                        class="w-full text-sm border border-border rounded-lg px-3 py-2 focus:ring-2 focus:ring-accent outline-none bg-gray-50/50 transition-shadow">
-                        <option value="전체">모든 주제 보기</option>
-                    </select>
-                </div>
-                <!-- 중요도 -->
-                <div>
-                    <label class="block text-[11px] font-bold text-muted uppercase tracking-wider mb-1.5 pl-1">중요도
-                        필터</label>
-                    <div class="flex items-center gap-1.5 bg-gray-50/50 p-1 rounded-lg border border-border/50">
-                        <button onclick="toggleImportance('상')" data-imp="상"
-                            class="chip flex-1 text-xs py-1.5 rounded-md font-bold active transition-all shadow-sm">상</button>
-                        <button onclick="toggleImportance('중')" data-imp="중"
-                            class="chip flex-1 text-xs py-1.5 rounded-md font-bold active transition-all shadow-sm">중</button>
-                        <button onclick="toggleImportance('하')" data-imp="하"
-                            class="chip flex-1 text-xs py-1.5 rounded-md font-bold active transition-all shadow-sm">하</button>
+
+                <!-- 하단 라인: 다중 주제 칩 & 검색어 바 & 중요도 -->
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <!-- 다중 주제 토글 칩 목록 -->
+                    <div class="flex flex-wrap items-center gap-1.5 flex-1 min-w-[280px]">
+                        <span class="text-[11px] font-bold text-muted uppercase tracking-wider mr-1">주제:</span>
+                        <div id="topicChipsContainer" class="flex flex-wrap items-center gap-1.5">
+                            <!-- JS로 동적 생성됨 -->
+                        </div>
                     </div>
-                </div>
-                <!-- 검색 -->
-                <div>
-                    <label class="block text-[11px] font-bold text-muted uppercase tracking-wider mb-1.5 pl-1">뉴스
-                        검색</label>
-                    <div class="relative">
-                        <input type="text" id="filterSearchDesktop" placeholder="키워드 입력..."
-                            oninput="syncInput('filterSearchDesktop', 'filterSearchMobile'); applyFilters()"
-                            class="w-full text-sm border border-border rounded-lg pl-3 pr-9 py-2 focus:ring-2 focus:ring-accent outline-none bg-gray-50/50 transition-shadow">
-                        <svg class="w-4 h-4 text-gray-400 absolute right-3 top-2.5" fill="none" stroke="currentColor"
-                            viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
+
+                    <!-- 중요도 토글 & 뉴스 검색 -->
+                    <div class="flex items-center gap-3">
+                        <!-- 중요도 -->
+                        <div class="flex items-center gap-1 bg-gray-50/80 p-1 rounded-lg border border-border/80 shrink-0">
+                            <button onclick="toggleImportance('상')" data-imp="상" class="chip px-2.5 py-1 text-xs rounded font-bold active transition-all">상</button>
+                            <button onclick="toggleImportance('중')" data-imp="중" class="chip px-2.5 py-1 text-xs rounded font-bold active transition-all">중</button>
+                            <button onclick="toggleImportance('하')" data-imp="하" class="chip px-2.5 py-1 text-xs rounded font-bold active transition-all">하</button>
+                        </div>
+
+                        <!-- 스마트 뉴스 검색 -->
+                        <div class="relative w-48 sm:w-64">
+                            <input type="text" id="filterSearchInput" placeholder="제목/요약/본문 검색..." oninput="applyFilters()"
+                                class="w-full text-xs sm:text-sm border border-border rounded-lg pl-3 pr-8 py-1.5 focus:ring-2 focus:ring-accent outline-none bg-gray-50/50 focus:bg-white transition-all">
+                            <button id="clearSearchBtn" onclick="clearSearchInput()" class="hidden absolute right-2 top-1.5 text-gray-400 hover:text-gray-600">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -997,45 +979,104 @@
             const targetDate = `${yyyy}-${mm}-${dd}`;
 
             if (document.getElementById('filterDateDesktop')) document.getElementById('filterDateDesktop').value = targetDate;
-            if (document.getElementById('filterDateMobile')) document.getElementById('filterDateMobile').value = targetDate;
+            if (document.getElementById('filterStartDate')) document.getElementById('filterStartDate').value = targetDate;
+            if (document.getElementById('filterEndDate')) document.getElementById('filterEndDate').value = targetDate;
+            
             updateDayOfWeek();
 
             // 바로 데이터 로드 시작
             loadData();
         });
 
+        // ── 날짜 모드 토글 (단일날짜 ↔ 기간조회) ──
+        let isRangeMode = false;
+        let selectedTopics = new Set(['전체']); // 다중 주제 선택 상태
+
+        function toggleDateMode() {
+            isRangeMode = !isRangeMode;
+            const singleBox = document.getElementById('singleDateBox');
+            const rangeBox = document.getElementById('rangeDateBox');
+            const btnIcon = document.getElementById('dateModeIcon');
+            const btnText = document.getElementById('dateModeText');
+
+            if (isRangeMode) {
+                singleBox.classList.add('hidden');
+                rangeBox.classList.remove('hidden');
+                btnIcon.textContent = '◀';
+                btnText.textContent = '단일 날짜 보기';
+            } else {
+                rangeBox.classList.add('hidden');
+                singleBox.classList.remove('hidden');
+                btnIcon.textContent = '📅';
+                btnText.textContent = '기간 조회 설정';
+            }
+            updateAudioAvailabilityNotice();
+            loadData();
+        }
+
+        function onSingleDateChange() {
+            updateDayOfWeek();
+            updateAudioAvailabilityNotice();
+            loadData();
+        }
+
+        function onRangeDateChange() {
+            updateAudioAvailabilityNotice();
+        }
+
+        function updateAudioAvailabilityNotice() {
+            const notice = document.getElementById('audioAvailabilityNotice');
+            if (!notice) return;
+
+            if (!isRangeMode) {
+                notice.className = "text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 font-medium flex items-center gap-1";
+                notice.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span><span>단일 날짜 (음성 재생 가능)</span>';
+            } else {
+                const s = document.getElementById('filterStartDate').value;
+                const e = document.getElementById('filterEndDate').value;
+                if (s === e) {
+                    notice.className = "text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 font-medium flex items-center gap-1";
+                    notice.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span><span>단일 날짜 (음성 재생 가능)</span>';
+                } else {
+                    notice.className = "text-xs text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200 font-medium flex items-center gap-1";
+                    notice.innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-500"></span><span>기간 조회 모드 (음성 재생 불가)</span>';
+                }
+            }
+        }
+
         // ── 요일 및 날짜 텍스트 업데이트 ──
         function updateDayOfWeek() {
-            const dateStr = getVisibleValue('filterDateDesktop', 'filterDateMobile');
+            const dateStr = document.getElementById('filterDateDesktop')?.value;
             if (!dateStr) return;
 
             const parts = dateStr.split('-');
             const displayDateStr = parts.length === 3 ? `${parts[0]}. ${parts[1]}. ${parts[2]}.` : dateStr;
             const dDateEl = document.getElementById('displayDateDesktop');
-            const mDateEl = document.getElementById('displayDateMobile');
             if (dDateEl) dDateEl.textContent = displayDateStr;
-            if (mDateEl) mDateEl.textContent = displayDateStr;
 
             const days = ['일', '월', '화', '수', '목', '금', '토'];
             const dayIdx = new Date(dateStr).getDay();
             if (isNaN(dayIdx)) return;
             const dayStr = `(${days[dayIdx]})`;
             const dEl = document.getElementById('filterDayDesktop');
-            const mEl = document.getElementById('filterDayMobile');
             if (dEl) dEl.textContent = dayStr;
-            if (mEl) mEl.textContent = dayStr;
         }
 
         // ── 데이터 로드 ──
         async function loadData() {
-            const dateVal = getVisibleValue('filterDateDesktop', 'filterDateMobile');
-            const topicVal = getVisibleValue('filterCategoryDesktop', 'filterCategoryMobile');
-
-            // 날짜 필터를 GAS에 파라미터로 전달
             let fetchUrl = SCRIPT_URL;
             const params = [];
-            if (dateVal) params.push(`date=${encodeURIComponent(dateVal)}`);
-            // 캐시 방지를 위해 타임스탬프 추가
+
+            if (isRangeMode) {
+                const startVal = document.getElementById('filterStartDate')?.value;
+                const endVal = document.getElementById('filterEndDate')?.value;
+                if (startVal) params.push(`startDate=${encodeURIComponent(startVal)}`);
+                if (endVal) params.push(`endDate=${encodeURIComponent(endVal)}`);
+            } else {
+                const dateVal = document.getElementById('filterDateDesktop')?.value;
+                if (dateVal) params.push(`date=${encodeURIComponent(dateVal)}`);
+            }
+
             params.push(`t=${Date.now()}`);
             if (params.length > 0) fetchUrl += '?' + params.join('&');
 
@@ -1045,7 +1086,6 @@
             try {
                 let resp = await fetch(fetchUrl);
                 if (!resp.ok) {
-                    // 첫 실패 시 1.5초 대기 후 재시도 (Apps Script Cold Start 방지)
                     await new Promise(r => setTimeout(r, 1500));
                     resp = await fetch(fetchUrl);
                     if (!resp.ok) throw new Error('HTTP ' + resp.status);
@@ -1057,13 +1097,13 @@
                     주제: row['주제'] || '기타',
                     언론사: row['언론사'] || '',
                     제목: row['제목'] || '제목 없음',
+                    네이버요약: row['네이버 요약'] || row['네이버요약'] || '',
                     본문: row['본문 전문'] || row['본문전문'] || row['본문 전재'] || row['기사 전문'] || row['Full_Text'] || '',
                     링크: row['링크'] || '',
                     AI요약: row['AI 요약'] || row['AI요약'] || '',
                     중요도: row['중요도'] || '중',
                 }));
 
-                // 캐시 (필터링된 결과 저장)
                 localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: allNews }));
                 document.getElementById('lastUpdate').textContent = '방금 갱신됨';
                 document.getElementById('lastUpdate').classList.remove('hidden');
@@ -1091,9 +1131,7 @@
         // ── 날짜 포맷 ──
         function formatDate(raw) {
             if (!raw) return '';
-            // 이미 정확한 YYYY-MM-DD 형식이면 그대로
             if (typeof raw === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
-            // ISO 8601, 구글 시트 Date 직렬화 등 모든 형식 처리
             try {
                 const d = new Date(raw);
                 if (!isNaN(d.getTime())) {
@@ -1106,33 +1144,77 @@
             return String(raw);
         }
 
-        // ── 필터 채우기 ──
+        // ── 필터 채우기 (다중 주제 선택 칩 동적 생성) ──
         function populateFilters() {
-            const topics = [...new Set(allNews.map(n => n.주제))].sort();
+            const container = document.getElementById('topicChipsContainer');
+            if (!container) return;
 
-            ['filterCategoryDesktop', 'filterCategoryMobile'].forEach(id => {
-                const sel = document.getElementById(id);
-                if (!sel) return;
-                const current = sel.value;
-                sel.innerHTML = '<option value="전체">모든 주제 보기</option>';
-                topics.forEach(t => {
-                    const opt = document.createElement('option');
-                    opt.value = t; opt.textContent = t;
-                    sel.appendChild(opt);
-                });
-                sel.value = current || '전체';
+            const topics = [...new Set(allNews.map(n => n.주제))].sort();
+            const allOptionList = ['전체', ...topics];
+
+            container.innerHTML = allOptionList.map(t => {
+                const isSelected = selectedTopics.has(t);
+                const activeClass = isSelected
+                    ? 'bg-accent text-white border-accent shadow-sm'
+                    : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200';
+                return `<button onclick="toggleTopicChip('${t}')" class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all cursor-pointer ${activeClass}">${t}</button>`;
+            }).join('');
+        }
+
+        function toggleTopicChip(topic) {
+            if (topic === '전체') {
+                selectedTopics.clear();
+                selectedTopics.add('전체');
+            } else {
+                selectedTopics.delete('전체');
+                if (selectedTopics.has(topic)) {
+                    selectedTopics.delete(topic);
+                    if (selectedTopics.size === 0) selectedTopics.add('전체');
+                } else {
+                    selectedTopics.add(topic);
+                }
+            }
+            populateFilters();
+            applyFilters();
+        }
+
+        // ── 스마트 검색어 일치 검사 ──
+        function matchSmartSearch(n, query) {
+            if (!query) return true;
+
+            const keywords = query.split(/\s+/).filter(Boolean);
+            if (keywords.length === 0) return true;
+
+            const fullText = (
+                (n.제목 || '') + ' ' +
+                (n.AI요약 || '') + ' ' +
+                (n.네이버요약 || '') + ' ' +
+                (n.언론사 || '') + ' ' +
+                (n.본문 || '')
+            ).toLowerCase().replace(/\s+/g, '');
+
+            return keywords.every(kw => {
+                const cleanKw = kw.toLowerCase().replace(/\s+/g, '');
+                return fullText.includes(cleanKw);
             });
+        }
+
+        function clearSearchInput() {
+            const input = document.getElementById('filterSearchInput');
+            if (input) input.value = '';
+            const btn = document.getElementById('clearSearchBtn');
+            if (btn) btn.classList.add('hidden');
+            applyFilters();
         }
 
         // ── 중요도 토글 ──
         function toggleImportance(level) {
             if (activeImportance.has(level)) {
-                if (activeImportance.size <= 1) return; // 최소 1개
+                if (activeImportance.size <= 1) return;
                 activeImportance.delete(level);
             } else {
                 activeImportance.add(level);
             }
-            // UI 업데이트
             document.querySelectorAll('[data-imp]').forEach(btn => {
                 btn.classList.toggle('active', activeImportance.has(btn.dataset.imp));
             });
@@ -1142,15 +1224,19 @@
         // ── 필터 적용 ──
         function applyFilters() {
             updateDayOfWeek();
-            const dateVal = getVisibleValue('filterDateDesktop', 'filterDateMobile');
-            const catVal = getVisibleValue('filterCategoryDesktop', 'filterCategoryMobile');
-            const searchVal = getVisibleValue('filterSearchDesktop', 'filterSearchMobile').toLowerCase().trim();
+            const searchInput = document.getElementById('filterSearchInput');
+            const searchVal = searchInput ? searchInput.value.trim() : '';
+            
+            const clearBtn = document.getElementById('clearSearchBtn');
+            if (clearBtn) {
+                if (searchVal) clearBtn.classList.remove('hidden');
+                else clearBtn.classList.add('hidden');
+            }
 
             const filtered = allNews.filter(n => {
                 if (!activeImportance.has(n.중요도)) return false;
-                if (dateVal && n.날짜 !== dateVal) return false;
-                if (catVal !== '전체' && n.주제 !== catVal) return false;
-                if (searchVal && !n.제목.toLowerCase().includes(searchVal)) return false;
+                if (!selectedTopics.has('전체') && !selectedTopics.has(n.주제)) return false;
+                if (searchVal && !matchSmartSearch(n, searchVal)) return false;
                 return true;
             });
 
@@ -1828,8 +1914,15 @@
         let usingSpeechSynthesis = false; // 폴백 모드 여부
 
         function toggleTTS() {
+            if (isRangeMode) {
+                const s = document.getElementById('filterStartDate').value;
+                const e = document.getElementById('filterEndDate').value;
+                if (s !== e) {
+                    alert('🎧 브리핑 음성은 단일 날짜 조회 시에만 재생 가능합니다.\n(상단의 기간 조회를 단일 날짜로 변경해 주세요.)');
+                    return;
+                }
+            }
             if (isSpeaking) {
-                // 이미 재생 중이면 플레이어 UI만 다시 보여줌 (숨겨졌을 경우 대비)
                 showTTSProgress(true);
                 return;
             }
