@@ -368,26 +368,42 @@ function doPost(e) {
     return createResponse({ error: 'Keyword not found' });
   }
 
-  // 주제별 AI 기준 설정 (Topic_Settings 탭)
+  // 주제별 AI 기준 및 수집 갯수 설정 (Topic_Settings 탭)
   if (action === 'updateTopicCriteria') {
-    const sheet = getOrCreateTab(ss, 'Topic_Settings', ['Topic', 'Criteria']);
+    const sheet = getOrCreateTab(ss, 'Topic_Settings', ['Topic', 'Criteria', 'MaxCount']);
     const data = sheet.getDataRange().getValues();
     const headers = data[0];
     const topicIdx = headers.indexOf('Topic') !== -1 ? headers.indexOf('Topic') : (headers.indexOf('주제') !== -1 ? headers.indexOf('주제') : 0);
     const criteriaIdx = headers.indexOf('Criteria') !== -1 ? headers.indexOf('Criteria') : (headers.indexOf('기준') !== -1 ? headers.indexOf('기준') : 1);
+    let maxCountIdx = headers.indexOf('MaxCount') !== -1 ? headers.indexOf('MaxCount') : (headers.indexOf('수집갯수') !== -1 ? headers.indexOf('수집갯수') : headers.indexOf('개수'));
     
+    // MaxCount 헤더가 없으면 새로 추가
+    if (maxCountIdx === -1) {
+      maxCountIdx = headers.length;
+      sheet.getRange(1, maxCountIdx + 1).setValue('MaxCount');
+    }
+    
+    const maxCountVal = params.maxCount !== undefined && params.maxCount !== null ? parseInt(params.maxCount, 10) || 5 : 5;
+
     let found = false;
 
     for (let i = 1; i < data.length; i++) {
       const rowTopic = data[i][topicIdx];
       if (rowTopic === params.topic) {
-        sheet.getRange(i + 1, criteriaIdx + 1).setValue(params.criteria);
+        if (params.criteria !== undefined) {
+          sheet.getRange(i + 1, criteriaIdx + 1).setValue(params.criteria);
+        }
+        sheet.getRange(i + 1, maxCountIdx + 1).setValue(maxCountVal);
         found = true;
         break;
       }
     }
     if (!found) {
-      sheet.appendRow([email, params.topic, params.criteria]);
+      const newRow = [];
+      newRow[topicIdx] = params.topic;
+      newRow[criteriaIdx] = params.criteria || '';
+      newRow[maxCountIdx] = maxCountVal;
+      sheet.appendRow(newRow);
     }
     return createResponse({ success: true });
   }

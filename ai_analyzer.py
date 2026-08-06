@@ -50,10 +50,11 @@ class AIAnalyzer:
         self,
         news_list: list[dict],
         topic_criteria: dict[str, str] | None = None,
-        exclusion_keywords: list[str] | None = None
+        exclusion_keywords: list[str] | None = None,
+        topic_max_counts: dict[str, int] | None = None
     ) -> tuple[list[dict], list[dict]]:
         """
-        AI를 사용하여 각 뉴스의 중요도를 판별하고, 전체 중 주요뉴스 6개 및 각 주제별 5개를 선정.
+        AI를 사용하여 각 뉴스의 중요도를 판별하고, 주요뉴스 및 각 주제별 지정 개수를 선정.
         """
         if not news_list:
             return [], []
@@ -63,6 +64,10 @@ class AIAnalyzer:
             for news in news_list:
                 news["중요도"] = "중"
             return news_list, []
+
+        topic_max_counts = topic_max_counts or {}
+        main_news_count = topic_max_counts.get("주요뉴스", 6)
+        half_main = max(1, main_news_count // 2)
 
         # ── 1단계: 주요뉴스 후보군(헤드라인) 필터링 ──
         headline_candidates = []
@@ -97,9 +102,12 @@ class AIAnalyzer:
             criteria_text += "\n[경제헤드라인]\n주요 경제지의 메인 뉴스입니다. 거시 경제 핵심 지표나 대형 산업 소식이 포함되어 있습니다.\n"
             
         all_topics = sorted(list(set(n.get("주제", "기타") for n in final_list_for_ai if n.get("주제") != "경제헤드라인")))
+        topic_count_desc = []
         for topic in all_topics:
             criteria = (topic_criteria or {}).get(topic, DEFAULT_CRITERIA)
-            criteria_text += f"\n[{topic}]\n{criteria}\n"
+            max_c = topic_max_counts.get(topic, 5)
+            criteria_text += f"\n[{topic}] (목표 선정 개수: 최대 {max_c}개)\n{criteria}\n"
+            topic_count_desc.append(f"'{topic}': 최대 {max_c}개")
 
         news_texts = []
         headline_indices = []
@@ -119,16 +127,15 @@ class AIAnalyzer:
 
 [작업 1] 모든 뉴스의 중요도를 '상', '중', '하' 중 하나로 판별
 - 중요: **주제 적합성(Relevance)**을 최우선으로 고려하십시오.
-- **[핵심: 동일/유사 사건 중역 제거]**: 각 주제 내에서 매우 유사한 기사가 여러 개 있다면, 가장 정보량이 많은 1개만 '상'으로 분류하고 나머지는 낮추십시오.
+- **[핵심: 동일/유사 사건 중복 제거]**: 각 주제 내에서 매우 유사한 기사가 여러 개 있다면, 가장 정보량이 많은 1개만 '상'으로 분류하고 나머지는 낮추십시오.
 
-[작업 2] 오늘의 핵심 주요뉴스 **국내 3건 + 해외 3건 = 총 6건** 선정
+[작업 2] 오늘의 핵심 주요뉴스 **국내 {half_main}건 + 해외 {half_main}건 = 총 {main_news_count}건** 선정
 - **반드시 '주제: 경제헤드라인'으로 표시된 기사들(번호: {headline_indices}) 중에서만 선정하십시오.**
-- 수량 엄수: 국내 3건, 해외 3건 총 6건을 선정하고 각각 1~2문장으로 요약하십시오.
 
-[작업 3] 각 일반 주제별로 가장 가치 있는 뉴스 **최대 5건씩** 직접 선정
-- 대상 주제: {all_topics}
-- 각 주제별로 해당 분야의 목적에 가장 부합하고 독자에게 유익한 기사를 **최대 5개** 골라내십시오.
-- 기사가 부족하다면 5개 미만으로 선정해도 됩니다.
+[작업 3] 각 일반 주제별로 지정된 갯수만큼 뉴스 직접 선정
+- 대상 주제별 수량 기준: {', '.join(topic_count_desc)}
+- 각 주제별로 목적에 부합하고 독자에게 유익한 기사를 지정된 수량 이하로 골라내십시오.
+- 기사가 부족하다면 기준 미만으로 선정해도 됩니다.
 
 주제별 상세 기준:
 {criteria_text}

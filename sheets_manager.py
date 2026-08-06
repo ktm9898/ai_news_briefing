@@ -190,8 +190,26 @@ class SheetsManager:
         except Exception:
             return {}
 
-    def update_topic_criteria(self, topic: str, criteria: str):
-        """특정 주제의 AI 중요도 기준 업데이트"""
+    def get_topic_max_counts(self) -> dict[str, int]:
+        """주제별 수집/선정 목표 개수 맵 반환 (기본 5개)"""
+        try:
+            ws = self.spreadsheet.worksheet(TOPIC_SETTINGS_TAB)
+            records = ws.get_all_records()
+            counts = {}
+            for r in records:
+                t = r.get("Topic") or r.get("주제")
+                mc = r.get("MaxCount") or r.get("수집갯수") or r.get("개수")
+                if t:
+                    try:
+                        counts[t] = int(mc) if mc else 5
+                    except (ValueError, TypeError):
+                        counts[t] = 5
+            return counts
+        except Exception:
+            return {}
+
+    def update_topic_criteria(self, topic: str, criteria: str, max_count: int = 5):
+        """특정 주제의 AI 중요도 기준 및 목표 개수 업데이트"""
         ws = self.spreadsheet.worksheet(TOPIC_SETTINGS_TAB)
         data = ws.get_all_records()
         
@@ -203,8 +221,9 @@ class SheetsManager:
         
         if found_row != -1:
             ws.update_cell(found_row, 2, criteria)
+            ws.update_cell(found_row, 3, max_count)
         else:
-            ws.append_row([topic, criteria])
+            ws.append_row([topic, criteria, max_count])
 
     # ── News_Data 탭 ─────────────────────────────────
 

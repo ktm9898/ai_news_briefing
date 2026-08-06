@@ -612,9 +612,15 @@
                     <div id="topicDetailSection" class="animate-in fade-in duration-300 space-y-5">
                         <div id="criteriaSection">
                             <div class="flex items-center justify-between mb-1.5">
-                                <label class="text-xs font-bold text-muted uppercase">2. AI 중요도 판단 기준</label>
+                                <label class="text-xs font-bold text-muted uppercase">2. AI 중요도 판단 기준 & 수집 갯수</label>
                                 <button onclick="saveTopicCriteria()"
                                     class="text-[11px] font-bold text-gray-700 bg-gray-100 px-3 py-1.5 rounded-md hover:bg-gray-200 border border-border">저장</button>
+                            </div>
+                            <div class="flex items-center gap-3 mb-2 bg-gray-50 p-2.5 rounded-lg border border-border">
+                                <span class="text-xs font-bold text-gray-700">목표 수집/선정 갯수:</span>
+                                <input type="number" id="topicMaxCount" min="1" max="20" value="5"
+                                    class="w-20 text-xs font-bold border border-border rounded px-2.5 py-1 text-center focus:ring-2 focus:ring-accent outline-none bg-white">
+                                <span class="text-xs text-muted">개 (기본값: 5개)</span>
                             </div>
                             <textarea id="topicCriteria" rows="3"
                                 placeholder="이 주제의 뉴스 중요도를 판단하는 기준을 입력하세요... (예: 정책 변화는 '상')"
@@ -1485,10 +1491,15 @@
                 const criteriaData = Array.isArray(cData) ? cData : [];
 
                 topicCriteriaMap = {};
+                topicMaxCountMap = {};
                 criteriaData.forEach(item => {
                     const t = item['주제'] || item['Topic'] || item['카테고리'];
                     const c = item['기준'] || item['Criteria'];
-                    if (t) topicCriteriaMap[t] = c;
+                    const mc = item['MaxCount'] || item['수집갯수'] || item['개수'];
+                    if (t) {
+                        topicCriteriaMap[t] = c || '';
+                        topicMaxCountMap[t] = mc ? parseInt(mc, 10) : 5;
+                    }
                 });
 
                 populateSettingsTopicSelect();
@@ -1542,12 +1553,14 @@
             if (!topic) {
                 // 주제 미선택 시 필드만 초기화 (섹션은 계속 표시)
                 document.getElementById('topicCriteria').value = '';
+                document.getElementById('topicMaxCount').value = '5';
                 document.getElementById('settingsList').innerHTML = '<p class="text-xs text-muted text-center py-4">주제를 선택하면 키워드가 나타납니다</p>';
                 return;
             }
 
-            // 기준 로드
+            // 기준 및 목표 갯수 로드
             document.getElementById('topicCriteria').value = topicCriteriaMap[topic] || '';
+            document.getElementById('topicMaxCount').value = topicMaxCountMap[topic] || 5;
 
             // 키워드 목록 필터링 및 렌더링
             renderFilteredKeywords(topic);
@@ -1693,6 +1706,7 @@
             if (!checkSettingsPermission()) return;
             const topic = document.getElementById('settingsTopicSelect').value;
             const criteria = document.getElementById('topicCriteria').value.trim();
+            const maxCount = parseInt(document.getElementById('topicMaxCount').value, 10) || 5;
             if (!topic) return;
 
             const btn = event.target;
@@ -1704,9 +1718,10 @@
                 await fetch(SCRIPT_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify({ action: 'updateTopicCriteria', topic, criteria, email: localStorage.getItem('user_email') }),
+                    body: JSON.stringify({ action: 'updateTopicCriteria', topic, criteria, maxCount, email: localStorage.getItem('user_email') }),
                 });
                 topicCriteriaMap[topic] = criteria;
+                topicMaxCountMap[topic] = maxCount;
                 btn.textContent = '✅ 저장됨';
                 setTimeout(() => {
                     btn.textContent = originalText;

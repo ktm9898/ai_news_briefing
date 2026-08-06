@@ -59,26 +59,28 @@ def run_pipeline():
             result["status"] = "완료"
             return result
 
-        # ── 2단계: AI 1차 선별 (중요도 판별 + Top6 선정) ──
-        logger.info("STEP 2/7: AI 중요도 선별 + 주요뉴스 Top6 선정")
+        # ── 2단계: AI 1차 선별 (중요도 판별 + 주요뉴스 선정) ──
+        logger.info("STEP 2/7: AI 중요도 선별 + 주요뉴스 선정")
         topic_criteria = sheets.get_all_topic_criteria()
+        topic_max_counts = sheets.get_topic_max_counts()
         user_active_settings = sheets.get_active_settings()
         exclusion_keywords = list(set(s.get("키워드", "") for s in user_active_settings if s.get("키워드")))
 
         all_collected, top6_results = analyzer.screen_importance(
             all_collected,
             topic_criteria,
-            exclusion_keywords=exclusion_keywords
+            exclusion_keywords=exclusion_keywords,
+            topic_max_counts=topic_max_counts
         )
 
-        # Top6 주요뉴스 링크 추출
+        # 주요뉴스 링크 추출
         top6_links = set()
         if top6_results:
             for item in top6_results:
                 link = item.get("original_link") or item.get("링크", "")
                 if link:
                     top6_links.add(link)
-            logger.info(f"Top6 주요뉴스 {len(top6_links)}건 선정 완료")
+            logger.info(f"주요뉴스 {len(top6_links)}건 선정 완료")
 
         # 주제별 그룹화 및 중요도 순 정렬
         topic_groups = {}
@@ -93,14 +95,16 @@ def run_pipeline():
 
         for topic, group in topic_groups.items():
             selected = [item for item in group if item.get("ai_selected") is True]
+            max_c = topic_max_counts.get(topic, 5)
 
             if not selected:
                 sorted_group = sorted(group, key=lambda x: importance_map.get(x.get("중요도", ""), 3))
                 filtered_group = [item for item in sorted_group if item.get("링크", "") not in top6_links]
-                selected = filtered_group[:MAX_DISPLAY_PER_TOPIC]
+                selected = filtered_group[:max_c]
                 logger.info(f"[{topic}] AI 직접 선정 결과 없음 -> 중요도 순 {len(selected)}건 자동 선정")
             else:
                 selected = [item for item in selected if item.get("링크", "") not in top6_links]
+                selected = selected[:max_c]
 
             final_selection_for_save.extend(selected)
 

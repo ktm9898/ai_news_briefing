@@ -70,7 +70,7 @@ GWS_DRIVE_FOLDER_ID = _get_config("GWS_DRIVE_FOLDER_ID", "10943q-ULxI18680w_82UV
 
 # Settings 탭 헤더
 SETTINGS_HEADERS = ["주제", "키워드", "활성화"]
-TOPIC_SETTINGS_HEADERS = ["Topic", "Criteria"]
+TOPIC_SETTINGS_HEADERS = ["Topic", "Criteria", "MaxCount"]
 
 # News_Data 탭 헤더
 NEWS_DATA_HEADERS = [
