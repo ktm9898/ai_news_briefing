@@ -1417,8 +1417,6 @@
             if (el.classList.contains('hidden')) {
                 el.classList.remove('hidden');
                 document.body.style.overflow = 'hidden';
-                activeModals.push(el);
-                history.pushState({ modalId: el.id }, '');
             }
         }
 
@@ -1426,30 +1424,15 @@
             if (!el) return;
             if (!el.classList.contains('hidden')) {
                 el.classList.add('hidden');
-                const idx = activeModals.indexOf(el);
-                if (idx !== -1) {
-                    activeModals.splice(idx, 1);
-                    if (window.history.state && window.history.state.modalId === el.id) {
-                        window.history.back();
-                    }
-                }
-                if (activeModals.length === 0) {
-                    document.body.style.overflow = '';
-                }
+                document.body.style.overflow = '';
             }
         }
 
         window.addEventListener('popstate', (e) => {
-            if (activeModals.length > 0) {
-                const topModal = activeModals.pop();
-                topModal.classList.add('hidden');
-                if (topModal.id === 'ttsProgressContainer' && isSpeaking) {
-                    stopTTS();
-                }
-                if (activeModals.length === 0) {
-                    document.body.style.overflow = '';
-                }
-            }
+            document.querySelectorAll('.modal-overlay').forEach(modal => {
+                modal.classList.add('hidden');
+            });
+            document.body.style.overflow = '';
         });
 
         function closeModal() {
