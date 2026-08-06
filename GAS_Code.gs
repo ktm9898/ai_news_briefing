@@ -65,14 +65,25 @@ function doGet(e) {
   const lastRow = sheet.getLastRow();
   if (lastRow <= 1) return createResponse([]);
 
-  // News_Data 탭의 경우: 기본 조회 시에는 최근 1000건으로 빠른 속도를 보장하고, 
-  // 사용자가 더 과거의 특정 날짜/기간을 조회할 때는 전체 시트를 검색하도록 유연하게 동작
-  const isSpecificDateQuery = Boolean(dateStr || startDateStr || endDateStr);
+  // News_Data 탭의 경우: 기본 조회 및 최근 2주 이내 조회 시에는 최근 1000건 스캔으로 빠른 속도 보장.
+  // 요청한 날짜가 14일 이전인 진짜 먼 과거일 경우에만 전체 시트 스캔 수행!
+  let isFarPastQuery = false;
+  const targetDateCheck = startDateStr || dateStr;
+  if (targetDateCheck) {
+    try {
+      const qDate = new Date(targetDateCheck);
+      const twoWeeksAgo = new Date();
+      twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+      if (!isNaN(qDate.getTime()) && qDate < twoWeeksAgo) {
+        isFarPastQuery = true;
+      }
+    } catch (e) { }
+  }
 
   let startRow = 1;
   let numRows = lastRow;
 
-  if (tab === 'News_Data' && lastRow > 1000 && !isSpecificDateQuery) {
+  if (tab === 'News_Data' && lastRow > 1000 && !isFarPastQuery) {
     startRow = Math.max(2, lastRow - 1000 + 1);
     numRows = lastRow - startRow + 1;
     const headerVals = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
