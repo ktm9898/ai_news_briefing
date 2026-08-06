@@ -1024,9 +1024,12 @@
             if (!isRangeMode) {
                 textEl.textContent = '기간조회';
             } else {
-                const s = document.getElementById('filterStartDate')?.value;
-                const e = document.getElementById('filterEndDate')?.value;
-                textEl.textContent = `기간: ${s}~${e}`;
+                const s = document.getElementById('filterStartDate')?.value || '';
+                const e = document.getElementById('filterEndDate')?.value || '';
+                // 2026-08-05 -> 08.05 콤팩트 축약 포맷
+                const shortS = s.length === 10 ? s.substring(5).replace('-', '.') : s;
+                const shortE = e.length === 10 ? e.substring(5).replace('-', '.') : e;
+                textEl.textContent = `${shortS}~${shortE}`;
             }
         }
 
