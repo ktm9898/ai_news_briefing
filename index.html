@@ -125,6 +125,9 @@
         }
 
         /* 날짜 입력칸 전체 영역을 클릭해도 달력이 열리도록 하는 트릭 */
+        input[type="date"] {
+            position: relative;
+        }
         input[type="date"]::-webkit-calendar-picker-indicator {
             position: absolute;
             top: 0;
