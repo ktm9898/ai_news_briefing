@@ -325,39 +325,38 @@
                 Daily Briefing</span>
         </div>
 
-        <!-- 필터 바 (통합 카드 박스 디자인) -->
-        <div class="bg-white rounded-xl border border-border p-3 lg:p-4 mb-4 lg:mb-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)]">
-            <!-- 필터 바 (완벽한 한 줄 세련된 UI: [날짜/기간] [주제(선택갯수)] [중요도] ------------ [검색창]) -->
-            <div class="flex flex-wrap items-center justify-between gap-2.5">
-                <!-- 좌측 그룹: 날짜/기간 버튼, 주제 버튼, 중요도 버튼 -->
-                <div class="flex items-center gap-2 flex-wrap">
-                    <!-- 1. 날짜/기간 박스 -->
-                    <div id="singleDateBox" class="relative flex items-center bg-gray-50/90 border border-border rounded-xl px-3 py-1.5 cursor-pointer hover:bg-white transition-all text-gray-900 focus-within:ring-2 focus-within:ring-accent shadow-sm">
+        <!-- 필터 바 (완벽한 한 줄 통합 카드 디자인) -->
+        <div class="bg-white rounded-xl border border-border p-2.5 lg:p-3.5 mb-4 lg:mb-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)]">
+            <div class="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
+                <!-- 좌측 그룹: 날짜/기간, 주제, 중요도 -->
+                <div class="flex items-center gap-1.5 shrink-0">
+                    <!-- 1. 날짜 박스 -->
+                    <div id="singleDateBox" class="relative flex items-center bg-gray-50/90 border border-border rounded-xl px-2.5 py-1.5 cursor-pointer hover:bg-white transition-all text-gray-900 focus-within:ring-2 focus-within:ring-accent shadow-sm shrink-0">
                         <span class="text-xs mr-1">📅</span>
-                        <span id="displayDateDesktop" class="text-xs sm:text-sm font-bold tracking-tight pointer-events-none"></span>
-                        <span id="filterDayDesktop" class="text-xs font-bold text-muted ml-1 pointer-events-none"></span>
-                        <svg class="w-3.5 h-3.5 text-gray-400 pointer-events-none ml-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <span id="displayDateDesktop" class="text-xs sm:text-sm font-bold tracking-tight pointer-events-none whitespace-nowrap"></span>
+                        <span id="filterDayDesktop" class="text-xs font-bold text-muted ml-0.5 pointer-events-none"></span>
+                        <svg class="w-3.5 h-3.5 text-gray-400 pointer-events-none ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                         </svg>
                         <input type="date" id="filterDateDesktop" onchange="onSingleDateChange()" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer text-transparent bg-transparent">
                     </div>
 
-                    <!-- 1-1. 기간설정 버튼 (기간 모드 열기) -->
+                    <!-- 1-1. 기간설정 버튼 -->
                     <button type="button" onclick="openDateRangeModal()" id="dateRangeModalBtn"
-                        class="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl border border-border transition-all flex items-center gap-1 shadow-sm">
+                        class="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl border border-border transition-all flex items-center gap-1 shadow-sm shrink-0 whitespace-nowrap">
                         <span id="rangeSummaryText">기간조회</span>
                     </button>
 
-                    <!-- 2. 주제 선택 버튼 (선택 갯수만 요약 표시) -->
+                    <!-- 2. 주제 선택 버튼 -->
                     <button type="button" onclick="openTopicSelectModal()" id="topicSelectModalBtn"
-                        class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold rounded-xl border border-border transition-all flex items-center gap-1.5 shadow-sm">
+                        class="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold rounded-xl border border-border transition-all flex items-center gap-1 shadow-sm shrink-0 whitespace-nowrap">
                         <span>📑</span>
                         <span id="topicSummaryText">주제: 전체</span>
                         <svg class="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                     </button>
 
                     <!-- 3. 중요도 선택 버튼 -->
-                    <div class="flex items-center gap-1 bg-gray-50/90 p-1 rounded-xl border border-border/80 shadow-sm shrink-0">
+                    <div class="flex items-center gap-0.5 bg-gray-50/90 p-1 rounded-xl border border-border/80 shadow-sm shrink-0 whitespace-nowrap">
                         <span class="text-[11px] font-bold text-muted px-1">중요도:</span>
                         <button onclick="toggleImportance('상')" data-imp="상" class="chip px-2 py-0.5 text-xs rounded-md font-bold active transition-all">상</button>
                         <button onclick="toggleImportance('중')" data-imp="중" class="chip px-2 py-0.5 text-xs rounded-md font-bold active transition-all">중</button>
@@ -365,11 +364,14 @@
                     </div>
                 </div>
 
-                <!-- 우측 그룹: 뉴스 검색창 -->
-                <div class="relative flex-1 max-w-xs min-w-[180px]">
-                    <input type="text" id="filterSearchInput" placeholder="제목/요약/본문 검색..." oninput="applyFilters()"
-                        class="w-full text-xs sm:text-sm border border-border rounded-xl pl-3 pr-7 py-1.5 focus:ring-2 focus:ring-accent outline-none bg-gray-50/60 focus:bg-white shadow-inner transition-all">
-                    <button id="clearSearchBtn" onclick="clearSearchInput()" class="hidden absolute right-2.5 top-1.5 text-gray-400 hover:text-gray-600">
+                <!-- 우측 그룹: 뉴스 검색창 (Enter키 및 돋보기 버튼 전용 검색) -->
+                <div class="relative flex-1 max-w-[240px] min-w-[140px] shrink-0">
+                    <input type="text" id="filterSearchInput" placeholder="검색어 입력 후 Enter..." onkeydown="if(event.key==='Enter') executeSearch()"
+                        class="w-full text-xs sm:text-sm border border-border rounded-xl pl-3 pr-8 py-1.5 focus:ring-2 focus:ring-accent outline-none bg-gray-50/60 focus:bg-white shadow-inner transition-all">
+                    <button type="button" onclick="executeSearch()" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-accent p-0.5">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    </button>
+                    <button id="clearSearchBtn" onclick="clearSearchInput()" class="hidden absolute right-7 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                 </div>
@@ -1212,7 +1214,15 @@
             applyFilters();
         }
 
-        // ── 스마트 검색어 일치 검사 ──
+        // ── 스마트 검색어 일치 검사 및 검색 실행 ──
+        let activeSearchQuery = '';
+
+        function executeSearch() {
+            const input = document.getElementById('filterSearchInput');
+            activeSearchQuery = input ? input.value.trim() : '';
+            applyFilters();
+        }
+
         function matchSmartSearch(n, query) {
             if (!query) return true;
 
@@ -1236,6 +1246,7 @@
         function clearSearchInput() {
             const input = document.getElementById('filterSearchInput');
             if (input) input.value = '';
+            activeSearchQuery = '';
             const btn = document.getElementById('clearSearchBtn');
             if (btn) btn.classList.add('hidden');
             applyFilters();
@@ -1259,18 +1270,18 @@
         function applyFilters() {
             updateDayOfWeek();
             const searchInput = document.getElementById('filterSearchInput');
-            const searchVal = searchInput ? searchInput.value.trim() : '';
+            const currentInputVal = searchInput ? searchInput.value.trim() : '';
             
             const clearBtn = document.getElementById('clearSearchBtn');
             if (clearBtn) {
-                if (searchVal) clearBtn.classList.remove('hidden');
+                if (currentInputVal) clearBtn.classList.remove('hidden');
                 else clearBtn.classList.add('hidden');
             }
 
             const filtered = allNews.filter(n => {
                 if (!activeImportance.has(n.중요도)) return false;
                 if (!selectedTopics.has('전체') && !selectedTopics.has(n.주제)) return false;
-                if (searchVal && !matchSmartSearch(n, searchVal)) return false;
+                if (activeSearchQuery && !matchSmartSearch(n, activeSearchQuery)) return false;
                 return true;
             });
 
