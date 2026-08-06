@@ -325,31 +325,35 @@
                 Daily Briefing</span>
         </div>
 
-        <!-- 필터 바 (완벽한 한 줄 통합 카드 디자인) -->
-        <div class="bg-white rounded-xl border border-border p-2.5 lg:p-3.5 mb-4 lg:mb-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)]">
-            <div class="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
-                <!-- 좌측 그룹: 날짜/기간, 주제, 중요도 -->
-                <div class="flex items-center gap-1.5 shrink-0">
-                    <!-- 1. 날짜 박스 -->
-                    <div id="singleDateBox" class="relative flex items-center bg-gray-50/90 border border-border rounded-xl px-2.5 py-1.5 cursor-pointer hover:bg-white transition-all text-gray-900 focus-within:ring-2 focus-within:ring-accent shadow-sm shrink-0">
-                        <span class="text-xs mr-1">📅</span>
-                        <span id="displayDateDesktop" class="text-xs sm:text-sm font-bold tracking-tight pointer-events-none whitespace-nowrap"></span>
-                        <span id="filterDayDesktop" class="text-xs font-bold text-muted ml-0.5 pointer-events-none"></span>
-                        <svg class="w-3.5 h-3.5 text-gray-400 pointer-events-none ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                        </svg>
-                        <input type="date" id="filterDateDesktop" onchange="onSingleDateChange()" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer text-transparent bg-transparent">
-                    </div>
+        <!-- 필터 바 (2줄 깔끔 분리 디자인) -->
+        <div class="bg-white rounded-xl border border-border p-3 lg:p-3.5 mb-4 lg:mb-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] space-y-2.5">
+            <!-- 1번째 줄: 날짜 표시 & 기간조회 버튼 -->
+            <div class="flex items-center gap-2 pb-2 border-b border-gray-100">
+                <!-- 1. 단일 날짜 박스 -->
+                <div id="singleDateBox" class="relative flex items-center bg-gray-50/90 border border-border rounded-xl px-3 py-1.5 cursor-pointer hover:bg-white transition-all text-gray-900 focus-within:ring-2 focus-within:ring-accent shadow-sm">
+                    <span class="text-xs mr-1">📅</span>
+                    <span id="displayDateDesktop" class="text-xs sm:text-sm font-bold tracking-tight pointer-events-none whitespace-nowrap"></span>
+                    <span id="filterDayDesktop" class="text-xs font-bold text-muted ml-0.5 pointer-events-none"></span>
+                    <svg class="w-3.5 h-3.5 text-gray-400 pointer-events-none ml-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                    <input type="date" id="filterDateDesktop" onchange="onSingleDateChange()" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer text-transparent bg-transparent">
+                </div>
 
-                    <!-- 1-1. 기간설정 버튼 -->
-                    <button type="button" onclick="openDateRangeModal()" id="dateRangeModalBtn"
-                        class="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl border border-border transition-all flex items-center gap-1 shadow-sm shrink-0 whitespace-nowrap">
-                        <span id="rangeSummaryText">기간조회</span>
-                    </button>
+                <!-- 1-1. 기간조회 버튼 -->
+                <button type="button" onclick="openDateRangeModal()" id="dateRangeModalBtn"
+                    class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl border border-border transition-all flex items-center gap-1 shadow-sm whitespace-nowrap">
+                    <span id="rangeSummaryText">기간조회</span>
+                </button>
+            </div>
 
+            <!-- 2번째 줄: 주제 선택 + 중요도 선택 + 우측 뉴스 검색창 -->
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <!-- 주제 & 중요도 그룹 -->
+                <div class="flex items-center gap-2 flex-wrap">
                     <!-- 2. 주제 선택 버튼 -->
                     <button type="button" onclick="openTopicSelectModal()" id="topicSelectModalBtn"
-                        class="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold rounded-xl border border-border transition-all flex items-center gap-1 shadow-sm shrink-0 whitespace-nowrap">
+                        class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold rounded-xl border border-border transition-all flex items-center gap-1.5 shadow-sm whitespace-nowrap">
                         <span>📑</span>
                         <span id="topicSummaryText">주제: 전체</span>
                         <svg class="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
@@ -364,8 +368,8 @@
                     </div>
                 </div>
 
-                <!-- 우측 그룹: 뉴스 검색창 (Enter키 및 돋보기 버튼 전용 검색) -->
-                <div class="relative flex-1 max-w-[240px] min-w-[140px] shrink-0">
+                <!-- 뉴스 검색창 (Enter키 및 돋보기 버튼 전용 검색) -->
+                <div class="relative flex-1 max-w-[260px] min-w-[160px]">
                     <input type="text" id="filterSearchInput" placeholder="검색어 입력 후 Enter..." onkeydown="if(event.key==='Enter') executeSearch()"
                         class="w-full text-xs sm:text-sm border border-border rounded-xl pl-3 pr-8 py-1.5 focus:ring-2 focus:ring-accent outline-none bg-gray-50/60 focus:bg-white shadow-inner transition-all">
                     <button type="button" onclick="executeSearch()" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-accent p-0.5">
