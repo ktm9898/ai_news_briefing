@@ -2486,6 +2486,24 @@
             }
         }
 
+        function openReportsModal() {
+            openModalElement(document.getElementById('reportsModal'));
+            switchReportTab('foundation');
+        }
+
+        function closeReportsModal() {
+            closeModalElement(document.getElementById('reportsModal'));
+        }
+
+        function showReportList() {
+            document.getElementById('reportTabMenu').classList.remove('hidden');
+            document.getElementById('reportListContainer').classList.remove('hidden');
+            document.getElementById('reportDetailContainer').classList.add('hidden');
+            document.getElementById('printReportBtn').classList.add('hidden');
+            document.getElementById('backToListBtn').classList.add('hidden');
+            document.getElementById('reportsModalTitle').textContent = '📑 지난 리포트';
+        }
+
         function renderReportList(targetArray) {
             const container = document.getElementById('reportListContent');
             const loading = document.getElementById('reportListLoading');
