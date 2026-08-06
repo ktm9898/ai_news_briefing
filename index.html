@@ -325,63 +325,57 @@
                 Daily Briefing</span>
         </div>
 
-        <!-- 필터 바 (반응형: PC웹=1줄 통합, 모바일=2줄 분리 디자인) -->
-        <div class="bg-white rounded-xl border border-border p-3 lg:p-3.5 mb-4 lg:mb-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)]">
-            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
-                <!-- 1그룹 (날짜/기간) & 2그룹 (주제/중요도) 통합 조율 -->
-                <div class="flex flex-col sm:flex-row sm:items-center gap-2 flex-wrap">
-                    <!-- 날짜 & 기간조회 -->
-                    <div class="flex items-center gap-2">
-                        <!-- 1. 단일 날짜 박스 -->
-                        <div id="singleDateBox" onclick="document.getElementById('filterDateDesktop').showPicker && document.getElementById('filterDateDesktop').showPicker()" class="relative flex items-center bg-gray-50/90 border border-border rounded-xl px-3 py-1.5 cursor-pointer hover:bg-white transition-all text-gray-900 focus-within:ring-2 focus-within:ring-accent shadow-sm shrink-0">
-                            <span class="text-xs mr-1">📅</span>
-                            <span id="displayDateDesktop" class="text-xs sm:text-sm font-bold tracking-tight pointer-events-none whitespace-nowrap"></span>
-                            <span id="filterDayDesktop" class="text-xs font-bold text-muted ml-0.5 pointer-events-none"></span>
-                            <svg class="w-3.5 h-3.5 text-gray-400 pointer-events-none ml-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                            </svg>
-                            <input type="date" id="filterDateDesktop" onchange="onSingleDateChange()" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
-                        </div>
-
-                        <!-- 1-1. 기간조회 버튼 -->
-                        <button type="button" onclick="openDateRangeModal()" id="dateRangeModalBtn"
-                            class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl border border-border transition-all flex items-center gap-1 shadow-sm whitespace-nowrap shrink-0">
-                            <span id="rangeSummaryText">기간조회</span>
-                        </button>
+        <!-- 필터 바 (2줄 완벽 고정 레이아웃: 1줄=날짜/기간, 2줄=주제+중요도+검색) -->
+        <div class="bg-white rounded-xl border border-border p-2.5 lg:p-3.5 mb-4 lg:mb-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] space-y-2 lg:space-y-0">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-2">
+                <!-- 1번째 줄 (모바일): 날짜 & 기간조회 -->
+                <div class="flex items-center gap-2">
+                    <!-- 1. 단일 날짜 박스 -->
+                    <div id="singleDateBox" onclick="document.getElementById('filterDateDesktop').showPicker && document.getElementById('filterDateDesktop').showPicker()" class="relative flex items-center bg-gray-50/90 border border-border rounded-xl px-2.5 py-1.5 cursor-pointer hover:bg-white transition-all text-gray-900 focus-within:ring-2 focus-within:ring-accent shadow-sm shrink-0">
+                        <span class="text-xs mr-1">📅</span>
+                        <span id="displayDateDesktop" class="text-xs sm:text-sm font-bold tracking-tight pointer-events-none whitespace-nowrap"></span>
+                        <span id="filterDayDesktop" class="text-xs font-bold text-muted ml-0.5 pointer-events-none"></span>
+                        <svg class="w-3.5 h-3.5 text-gray-400 pointer-events-none ml-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        <input type="date" id="filterDateDesktop" onchange="onSingleDateChange()" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
                     </div>
 
-                    <!-- 구분선 (모바일 세로 구분용, PC에선 자동 숨김) -->
-                    <div class="hidden lg:block w-px h-5 bg-gray-200 mx-0.5"></div>
-
-                    <!-- 주제 & 중요도 -->
-                    <div class="flex items-center gap-1.5 shrink-0">
-                        <!-- 2. 주제 선택 버튼 (초슬림 디자인) -->
-                        <button type="button" onclick="openTopicSelectModal()" id="topicSelectModalBtn"
-                            class="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold rounded-xl border border-border transition-all flex items-center gap-1 shadow-sm whitespace-nowrap shrink-0">
-                            <span>📑</span>
-                            <span id="topicSummaryText">전체</span>
-                            <svg class="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                        </button>
-
-                        <!-- 3. 중요도 선택 버튼 ('중요도:' 텍스트 제거하고 [상][중][하]만 표시) -->
-                        <div class="flex items-center gap-0.5 bg-gray-50/90 p-0.5 rounded-xl border border-border/80 shadow-sm shrink-0 whitespace-nowrap">
-                            <button onclick="toggleImportance('상')" data-imp="상" class="chip px-1.5 py-0.5 text-xs rounded-md font-bold active transition-all">상</button>
-                            <button onclick="toggleImportance('중')" data-imp="중" class="chip px-2 py-0.5 text-xs rounded-md font-bold active transition-all">중</button>
-                            <button onclick="toggleImportance('하')" data-imp="하" class="chip px-1.5 py-0.5 text-xs rounded-md font-bold active transition-all">하</button>
-                        </div>
-                    </div>
+                    <!-- 1-1. 기간조회 버튼 -->
+                    <button type="button" onclick="openDateRangeModal()" id="dateRangeModalBtn"
+                        class="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl border border-border transition-all flex items-center gap-1 shadow-sm whitespace-nowrap shrink-0">
+                        <span id="rangeSummaryText">기간조회</span>
+                    </button>
                 </div>
 
-                <!-- 우측 뉴스 검색창 -->
-                <div class="relative flex-1 min-w-[110px] sm:min-w-[160px] lg:max-w-[260px]">
-                    <input type="text" id="filterSearchInput" placeholder="검색..." onkeydown="if(event.key==='Enter') executeSearch()"
-                        class="w-full text-xs sm:text-sm border border-border rounded-xl pl-2.5 pr-7 py-1 focus:ring-2 focus:ring-accent outline-none bg-gray-50/60 focus:bg-white shadow-inner transition-all">
-                    <button type="button" onclick="executeSearch()" class="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-accent p-0.5">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <!-- 2번째 줄 (모바일): 주제 + 중요도 + 검색창 (flex-nowrap으로 절대 2줄로 안 쪼개짐) -->
+                <div class="flex items-center gap-1.5 flex-nowrap w-full lg:w-auto">
+                    <!-- 2. 주제 선택 버튼 -->
+                    <button type="button" onclick="openTopicSelectModal()" id="topicSelectModalBtn"
+                        class="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold rounded-xl border border-border transition-all flex items-center gap-1 shadow-sm whitespace-nowrap shrink-0">
+                        <span>📑</span>
+                        <span id="topicSummaryText">전체</span>
+                        <svg class="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                     </button>
-                    <button id="clearSearchBtn" onclick="clearSearchInput()" class="hidden absolute right-6 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                    </button>
+
+                    <!-- 3. 중요도 선택 버튼 -->
+                    <div class="flex items-center gap-0.5 bg-gray-50/90 p-0.5 rounded-xl border border-border/80 shadow-sm shrink-0 whitespace-nowrap">
+                        <button onclick="toggleImportance('상')" data-imp="상" class="chip px-1.5 py-0.5 text-xs rounded-md font-bold active transition-all">상</button>
+                        <button onclick="toggleImportance('중')" data-imp="중" class="chip px-1.5 py-0.5 text-xs rounded-md font-bold active transition-all">중</button>
+                        <button onclick="toggleImportance('하')" data-imp="하" class="chip px-1.5 py-0.5 text-xs rounded-md font-bold active transition-all">하</button>
+                    </div>
+
+                    <!-- 우측 뉴스 검색창 (flex-1로 남은 공간만 적절히 차지) -->
+                    <div class="relative flex-1 min-w-[90px] max-w-[200px] lg:max-w-[240px]">
+                        <input type="text" id="filterSearchInput" placeholder="검색..." onkeydown="if(event.key==='Enter') executeSearch()"
+                            class="w-full text-xs sm:text-sm border border-border rounded-xl pl-2.5 pr-7 py-1 focus:ring-2 focus:ring-accent outline-none bg-gray-50/60 focus:bg-white shadow-inner transition-all">
+                        <button type="button" onclick="executeSearch()" class="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-accent p-0.5">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        </button>
+                        <button id="clearSearchBtn" onclick="clearSearchInput()" class="hidden absolute right-6 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
