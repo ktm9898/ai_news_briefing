@@ -65,35 +65,68 @@ function doGet(e) {
   const lastRow = sheet.getLastRow();
   if (lastRow <= 1) return createResponse([]);
 
-  // News_Data 탭의 경우: 기본 조회 및 최근 2주 이내 조회 시에는 최근 1000건 스캔으로 빠른 속도 보장.
-  // 요청한 날짜가 14일 이전인 진짜 먼 과거일 경우에만 전체 시트 스캔 수행!
-  let isFarPastQuery = false;
-  const targetDateCheck = startDateStr || dateStr;
-  if (targetDateCheck) {
-    try {
-      const qDate = new Date(targetDateCheck);
-      const twoWeeksAgo = new Date();
-      twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
-      if (!isNaN(qDate.getTime()) && qDate < twoWeeksAgo) {
-        isFarPastQuery = true;
+  let headers = [];
+  let rows = [];
+
+  // ── News_Data 탭 초고속 2-Pass Pinpoint Lookup 최적화 ──
+  if (tab === 'News_Data') {
+    headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    
+    // 1-Pass: A열(날짜)만 0.05초 만에 읽어서 타겟 행 범위(Start~End) 핀포인트 계산
+    const dateColValues = sheet.getRange(1, 1, lastRow, 1).getValues(); // [[날짜], [2026-08-06], ...]
+    let matchStartRow = -1;
+    let matchEndRow = -1;
+
+    const reqDate = dateStr;
+    const reqStart = startDateStr || reqDate;
+    const reqEnd = endDateStr || reqDate;
+
+    if (reqStart || reqEnd) {
+      for (let i = 1; i < dateColValues.length; i++) {
+        let cellVal = dateColValues[i][0];
+        if (!cellVal) continue;
+
+        let dStr = '';
+        if (cellVal instanceof Date || Object.prototype.toString.call(cellVal) === '[object Date]') {
+          dStr = Utilities.formatDate(cellVal, "GMT+9", "yyyy-MM-dd");
+        } else {
+          dStr = String(cellVal).trim();
+          const match = dStr.match(/(\d{4})[\.\-\/\s]+(\d{1,2})[\.\-\/\s]+(\d{1,2})/);
+          if (match) {
+            dStr = match[1] + '-' + ('0' + match[2]).slice(-2) + '-' + ('0' + match[3]).slice(-2);
+          }
+        }
+
+        let isMatch = true;
+        if (reqStart && dStr < reqStart) isMatch = false;
+        if (reqEnd && dStr > reqEnd) isMatch = false;
+
+        if (isMatch) {
+          const rowNum = i + 1; // 1-indexed
+          if (matchStartRow === -1) matchStartRow = rowNum;
+          matchEndRow = rowNum;
+        }
       }
-    } catch (e) { }
-  }
+    }
 
-  let startRow = 1;
-  let numRows = lastRow;
-
-  if (tab === 'News_Data' && lastRow > 1000 && !isFarPastQuery) {
-    startRow = Math.max(2, lastRow - 1000 + 1);
-    numRows = lastRow - startRow + 1;
-    const headerVals = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-    const dataVals = sheet.getRange(startRow, 1, numRows, sheet.getLastColumn()).getValues();
-    var headers = headerVals;
-    var rows = dataVals;
+    // 2-Pass: 매칭되는 날짜가 발견되면 해당 행들만 핀포인트 수집!
+    if (matchStartRow !== -1 && matchEndRow !== -1) {
+      const numRowsToFetch = matchEndRow - matchStartRow + 1;
+      rows = sheet.getRange(matchStartRow, 1, numRowsToFetch, sheet.getLastColumn()).getValues();
+    } else if (!reqStart && !reqEnd) {
+      // 날짜 미지정 시 최근 300행만 핀포인트 수집
+      const fetchStart = Math.max(2, lastRow - 300 + 1);
+      const fetchCount = lastRow - fetchStart + 1;
+      rows = sheet.getRange(fetchStart, 1, fetchCount, sheet.getLastColumn()).getValues();
+    } else {
+      // 매칭되는 날짜가 없으면 빈 결과 반환
+      return createResponse([]);
+    }
   } else {
+    // 기타 탭 (Settings, Briefing_Docs 등)
     const data = sheet.getDataRange().getValues();
-    var headers = data[0];
-    var rows = data.slice(1);
+    headers = data[0];
+    rows = data.slice(1);
   }
 
   // 빈 행 제거
@@ -116,52 +149,9 @@ function doGet(e) {
     result = result.slice(-10);
   }
 
-  // News_Data 탭의 경우 날짜 및 주제 필터 적용
-  if (tab === 'News_Data') {
-    if (startDateStr || endDateStr) {
-      result = result.filter(item => {
-        let itemDate = item['날짜'];
-        if (itemDate instanceof Date || (itemDate && Object.prototype.toString.call(itemDate) === '[object Date]')) {
-          itemDate = Utilities.formatDate(itemDate, "GMT+9", "yyyy-MM-dd");
-        } else if (itemDate) {
-          itemDate = String(itemDate).trim();
-          const match = itemDate.match(/(\d{4})[\.\-\/\s]+(\d{1,2})[\.\-\/\s]+(\d{1,2})/);
-          if (match) {
-            itemDate = match[1] + '-' + ('0' + match[2]).slice(-2) + '-' + ('0' + match[3]).slice(-2);
-          } else {
-            const dObj = new Date(itemDate);
-            if (!isNaN(dObj.getTime())) {
-               itemDate = Utilities.formatDate(dObj, "GMT+9", "yyyy-MM-dd");
-            }
-          }
-        }
-        if (startDateStr && itemDate < startDateStr) return false;
-        if (endDateStr && itemDate > endDateStr) return false;
-        return true;
-      });
-    } else if (dateStr) {
-      result = result.filter(item => {
-        let itemDate = item['날짜'];
-        if (itemDate instanceof Date || (itemDate && Object.prototype.toString.call(itemDate) === '[object Date]')) {
-          itemDate = Utilities.formatDate(itemDate, "GMT+9", "yyyy-MM-dd");
-        } else if (itemDate) {
-          itemDate = String(itemDate).trim();
-          const match = itemDate.match(/(\d{4})[\.\-\/\s]+(\d{1,2})[\.\-\/\s]+(\d{1,2})/);
-          if (match) {
-            itemDate = match[1] + '-' + ('0' + match[2]).slice(-2) + '-' + ('0' + match[3]).slice(-2);
-          } else {
-            const dObj = new Date(itemDate);
-            if (!isNaN(dObj.getTime())) {
-               itemDate = Utilities.formatDate(dObj, "GMT+9", "yyyy-MM-dd");
-            }
-          }
-        }
-        return itemDate === dateStr;
-      });
-    }
-    if (topic && topic !== '전체') {
-      result = result.filter(item => item['주제'] === topic);
-    }
+  // 주제 필터 적용 (News_Data 탭)
+  if (tab === 'News_Data' && topic && topic !== '전체') {
+    result = result.filter(item => item['주제'] === topic);
   }
 
   return createResponse(result);
