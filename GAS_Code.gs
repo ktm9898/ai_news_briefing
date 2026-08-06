@@ -65,14 +65,16 @@ function doGet(e) {
   const lastRow = sheet.getLastRow();
   if (lastRow <= 1) return createResponse([]);
 
-  // News_Data 탭인 경우 최근 1000개 행만 읽어와서 파싱 속도 극대화 (전체 시트 스캔 방지)
+  // News_Data 탭의 경우: 기본 조회 시에는 최근 1000건으로 빠른 속도를 보장하고, 
+  // 사용자가 더 과거의 특정 날짜/기간을 조회할 때는 전체 시트를 검색하도록 유연하게 동작
+  const isSpecificDateQuery = Boolean(dateStr || startDateStr || endDateStr);
+
   let startRow = 1;
   let numRows = lastRow;
 
-  if (tab === 'News_Data' && lastRow > 1000) {
+  if (tab === 'News_Data' && lastRow > 1000 && !isSpecificDateQuery) {
     startRow = Math.max(2, lastRow - 1000 + 1);
     numRows = lastRow - startRow + 1;
-    // 헤더 + 데이터 범위 병합 읽기
     const headerVals = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
     const dataVals = sheet.getRange(startRow, 1, numRows, sheet.getLastColumn()).getValues();
     var headers = headerVals;
