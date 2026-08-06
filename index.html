@@ -2679,30 +2679,30 @@
     <div id="dateRangeModal"
         class="modal-overlay fixed inset-0 bg-black/50 z-[110] hidden flex items-center justify-center animate-in fade-in duration-200"
         onclick="if(event.target===this) closeDateRangeModal()">
-        <div class="modal-content bg-white w-full max-w-sm rounded-2xl p-5 shadow-2xl space-y-4">
+        <div class="modal-content bg-white w-full max-w-sm rounded-2xl p-5 shadow-2xl space-y-4" onclick="event.stopPropagation()">
             <div class="flex items-center justify-between border-b border-gray-100 pb-3">
                 <h3 class="text-sm font-bold text-gray-900 flex items-center gap-1.5">
                     <span>📅</span> 뉴스 기간 조회 설정
                 </h3>
-                <button onclick="closeDateRangeModal()" class="text-gray-400 hover:text-gray-600 text-sm">✕</button>
+                <button type="button" onclick="closeDateRangeModal()" class="w-7 h-7 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 text-sm font-bold transition-colors">✕</button>
             </div>
             
             <div class="space-y-3">
                 <div class="flex items-center justify-between bg-gray-50 p-2.5 rounded-xl border border-gray-200">
-                    <span class="text-xs font-bold text-gray-700">시작일:</span>
-                    <input type="date" id="filterStartDate" class="text-xs font-bold text-blue-600 bg-white px-2.5 py-1 rounded-lg border border-gray-200 outline-none">
+                    <label for="filterStartDate" class="text-xs font-bold text-gray-700 cursor-pointer">시작일:</label>
+                    <input type="date" id="filterStartDate" class="text-xs font-bold text-blue-600 bg-white px-2.5 py-1.5 rounded-lg border border-gray-200 outline-none cursor-pointer">
                 </div>
                 <div class="flex items-center justify-between bg-gray-50 p-2.5 rounded-xl border border-gray-200">
-                    <span class="text-xs font-bold text-gray-700">종료일:</span>
-                    <input type="date" id="filterEndDate" class="text-xs font-bold text-blue-600 bg-white px-2.5 py-1 rounded-lg border border-gray-200 outline-none">
+                    <label for="filterEndDate" class="text-xs font-bold text-gray-700 cursor-pointer">종료일:</label>
+                    <input type="date" id="filterEndDate" class="text-xs font-bold text-blue-600 bg-white px-2.5 py-1.5 rounded-lg border border-gray-200 outline-none cursor-pointer">
                 </div>
             </div>
 
             <div class="flex gap-2 pt-2">
-                <button onclick="resetToSingleDate()" class="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl transition-colors">
+                <button type="button" onclick="resetToSingleDate()" class="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl transition-colors">
                     오늘 단일날짜로
                 </button>
-                <button onclick="applyDateRangeModal()" class="flex-1 py-2.5 bg-accent hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md transition-colors">
+                <button type="button" onclick="applyDateRangeModal()" class="flex-1 py-2.5 bg-accent hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md transition-colors">
                     기간 조회 적용
                 </button>
             </div>
@@ -2713,12 +2713,12 @@
     <div id="topicSelectModal"
         class="modal-overlay fixed inset-0 bg-black/50 z-[110] hidden flex items-center justify-center animate-in fade-in duration-200"
         onclick="if(event.target===this) closeTopicSelectModal()">
-        <div class="modal-content bg-white w-full max-w-sm rounded-2xl p-5 shadow-2xl space-y-4">
+        <div class="modal-content bg-white w-full max-w-sm rounded-2xl p-5 shadow-2xl space-y-4" onclick="event.stopPropagation()">
             <div class="flex items-center justify-between border-b border-gray-100 pb-3">
                 <h3 class="text-sm font-bold text-gray-900 flex items-center gap-1.5">
                     <span>📑</span> 조회할 뉴스 주제 선택
                 </h3>
-                <button onclick="closeTopicSelectModal()" class="text-gray-400 hover:text-gray-600 text-sm">✕</button>
+                <button type="button" onclick="closeTopicSelectModal()" class="w-7 h-7 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 text-sm font-bold transition-colors">✕</button>
             </div>
             
             <div id="topicModalContainer" class="max-h-[50vh] overflow-y-auto space-y-1.5 pr-1">
@@ -2726,7 +2726,7 @@
             </div>
 
             <div class="pt-2">
-                <button onclick="closeTopicSelectModal()" class="w-full py-2.5 bg-accent hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md transition-colors">
+                <button type="button" onclick="closeTopicSelectModal()" class="w-full py-2.5 bg-accent hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md transition-colors">
                     선택 완료
                 </button>
             </div>
