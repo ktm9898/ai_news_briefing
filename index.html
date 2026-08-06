@@ -1065,7 +1065,9 @@
                     <label onclick="toggleTopicChip('${t}')" class="flex items-center justify-between p-2.5 rounded-xl border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors">
                         <span class="text-xs font-bold text-gray-800">${t}</span>
                         <input type="checkbox" ${isChecked ? 'checked' : ''} class="w-4 h-4 text-accent rounded focus:ring-accent pointer-events-none">
-                    </label>
+                    </label>`;
+            }).join('');
+        }
 
         // ── 요일 및 날짜 텍스트 업데이트 ──
         function updateDayOfWeek() {
