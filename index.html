@@ -383,11 +383,6 @@
                                 <input type="date" id="filterEndDate" onchange="onRangeDateChange()" class="text-xs font-bold text-gray-800 outline-none bg-transparent cursor-pointer">
                             </div>
                             <button onclick="applyDateRangeQuery()" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors">기간 조회 적용</button>
-                            <button onclick="resetToSingleDate()" class="px-2.5 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold rounded-lg transition-colors">단일 날짜로 리셋</button>
-                        </div>
-                        <div id="audioAvailabilityNotice" class="text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 font-medium flex items-center gap-1 shrink-0">
-                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                            <span>단일 날짜 (음성 재생 가능)</span>
                         </div>
                     </div>
 
@@ -1059,27 +1054,6 @@
         }
 
         function onRangeDateChange() {
-            updateAudioAvailabilityNotice();
-        }
-
-        function updateAudioAvailabilityNotice() {
-            const notice = document.getElementById('audioAvailabilityNotice');
-            if (!notice) return;
-
-            if (!isRangeMode) {
-                notice.className = "text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 font-medium flex items-center gap-1";
-                notice.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span><span>단일 날짜 (음성 재생 가능)</span>';
-            } else {
-                const s = document.getElementById('filterStartDate').value;
-                const e = document.getElementById('filterEndDate').value;
-                if (s === e) {
-                    notice.className = "text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 font-medium flex items-center gap-1";
-                    notice.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span><span>단일 날짜 (음성 재생 가능)</span>';
-                } else {
-                    notice.className = "text-xs text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200 font-medium flex items-center gap-1";
-                    notice.innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-500"></span><span>기간 조회 모드 (음성 재생 불가)</span>';
-                }
-            }
         }
 
         // ── 요일 및 날짜 텍스트 업데이트 ──
