@@ -2007,9 +2007,9 @@
         function showTTSProgress(show) {
             const container = document.getElementById('ttsProgressContainer');
             if (show) {
-                openModalElement(container);
+                container.classList.remove('hidden');
             } else {
-                closeModalElement(container);
+                container.classList.add('hidden');
                 const bar = document.getElementById('ttsProgressBar');
                 bar.style.transition = 'none';
                 bar.style.width = '0%';

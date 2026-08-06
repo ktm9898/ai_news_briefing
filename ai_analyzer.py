@@ -553,7 +553,6 @@ class AIAnalyzer:
                 model=GEMINI_MODEL,
                 contents=prompt,
                 config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
                     tools=[types.Tool(google_search=types.GoogleSearch())],
                 )
             )
