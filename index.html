@@ -330,14 +330,14 @@
             <!-- 1번째 줄: 날짜 표시 & 기간조회 버튼 -->
             <div class="flex items-center gap-2 pb-2 border-b border-gray-100">
                 <!-- 1. 단일 날짜 박스 -->
-                <div id="singleDateBox" class="relative flex items-center bg-gray-50/90 border border-border rounded-xl px-3 py-1.5 cursor-pointer hover:bg-white transition-all text-gray-900 focus-within:ring-2 focus-within:ring-accent shadow-sm">
+                <div id="singleDateBox" onclick="document.getElementById('filterDateDesktop').showPicker && document.getElementById('filterDateDesktop').showPicker()" class="relative flex items-center bg-gray-50/90 border border-border rounded-xl px-3 py-1.5 cursor-pointer hover:bg-white transition-all text-gray-900 focus-within:ring-2 focus-within:ring-accent shadow-sm">
                     <span class="text-xs mr-1">📅</span>
                     <span id="displayDateDesktop" class="text-xs sm:text-sm font-bold tracking-tight pointer-events-none whitespace-nowrap"></span>
                     <span id="filterDayDesktop" class="text-xs font-bold text-muted ml-0.5 pointer-events-none"></span>
                     <svg class="w-3.5 h-3.5 text-gray-400 pointer-events-none ml-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                     </svg>
-                    <input type="date" id="filterDateDesktop" onchange="onSingleDateChange()" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer text-transparent bg-transparent">
+                    <input type="date" id="filterDateDesktop" onchange="onSingleDateChange()" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
                 </div>
 
                 <!-- 1-1. 기간조회 버튼 -->
@@ -1429,7 +1429,12 @@
             if (!el.classList.contains('hidden')) {
                 el.classList.add('hidden');
                 const idx = activeModals.indexOf(el);
-                if (idx !== -1) activeModals.splice(idx, 1);
+                if (idx !== -1) {
+                    activeModals.splice(idx, 1);
+                    if (window.history.state && window.history.state.modalId === el.id) {
+                        window.history.back();
+                    }
+                }
                 if (activeModals.length === 0) {
                     document.body.style.overflow = '';
                 }
