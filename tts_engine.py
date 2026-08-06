@@ -205,6 +205,10 @@ class TTSEngine:
         # 예: 3.5% -> 3쩜5% (TTS가 마침표로 읽어 끊기는 현상 방지)
         text = re.sub(r'(\d)\.(\d)', r'\1쩜\2', text)
         
+        # 2. S&P500 지수 발음 정정: S&P500 / S&P 500 -> 에스앤피 오백, S&P -> 에스앤피
+        text = re.sub(r'S&P\s*500', '에스앤피 오백', text, flags=re.IGNORECASE)
+        text = re.sub(r'S&P', '에스앤피', text, flags=re.IGNORECASE)
+        
         return text
 
     # ── 메인 생성 메서드 ──
