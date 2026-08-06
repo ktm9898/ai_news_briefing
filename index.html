@@ -2476,30 +2476,50 @@
                 document.getElementById('tab-foundation').className = "flex-1 py-3 text-sm font-bold text-gray-500 border-b-2 border-transparent hover:text-gray-700 hover:bg-gray-100 transition-colors";
             }
             showReportList();
-            loadReports();
+            
+            // 이미 캐시된 데이터가 있으면 재요청 없이 즉시 렌더링
+            const cachedList = tab === 'foundation' ? allFoundationReports : allBusinessReports;
+            if (cachedList && cachedList.length > 0) {
+                renderReportList(cachedList);
+            } else {
+                loadReports();
+            }
         }
 
-        function openReportsModal() {
-            openModalElement(document.getElementById('reportsModal'));
-            switchReportTab('foundation');
-        }
-
-        function closeReportsModal() {
-            closeModalElement(document.getElementById('reportsModal'));
-        }
-
-        function showReportList() {
-            document.getElementById('reportTabMenu').classList.remove('hidden');
-            document.getElementById('reportListContainer').classList.remove('hidden');
-            document.getElementById('reportDetailContainer').classList.add('hidden');
-            document.getElementById('printReportBtn').classList.add('hidden');
-            document.getElementById('backToListBtn').classList.add('hidden');
-            document.getElementById('reportsModalTitle').textContent = '📑 지난 리포트';
-        }
-
-        async function loadReports() {
+        function renderReportList(targetArray) {
             const container = document.getElementById('reportListContent');
             const loading = document.getElementById('reportListLoading');
+            loading.classList.add('hidden');
+
+            if (!targetArray || targetArray.length === 0) {
+                container.innerHTML = '<p class="text-sm text-center text-muted py-8">저장된 리포트가 없습니다.</p>';
+                return;
+            }
+
+            const isFoundation = currentReportTab === 'foundation';
+            const fallbackTitle = isFoundation ? '서울신용보증재단 인사이트 리포트' : '소기업·소상공인 주간 인사이트 리포트';
+            
+            container.innerHTML = targetArray.map((r, i) => `
+                <div class="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 border border-border rounded-xl cursor-pointer transition-colors" onclick="viewReport(${i})">
+                    <div>
+                        <h3 class="text-sm font-bold text-gray-900">${r['제목'] || fallbackTitle}</h3>
+                        <p class="text-xs text-muted mt-1">${r['날짜']}</p>
+                    </div>
+                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </div>
+            `).join('');
+        }
+
+        async function loadReports(forceRefresh = false) {
+            const container = document.getElementById('reportListContent');
+            const loading = document.getElementById('reportListLoading');
+            const cachedList = currentReportTab === 'foundation' ? allFoundationReports : allBusinessReports;
+            
+            if (!forceRefresh && cachedList && cachedList.length > 0) {
+                renderReportList(cachedList);
+                return;
+            }
+
             container.innerHTML = '';
             loading.classList.remove('hidden');
 
@@ -2530,25 +2550,10 @@
                     allBusinessReports = targetArray;
                 }
 
-                if (targetArray.length === 0) {
-                    container.innerHTML = '<p class="text-sm text-center text-muted py-8">저장된 리포트가 없습니다.</p>';
-                } else {
-                    const isFoundation = currentReportTab === 'foundation';
-                    const fallbackTitle = isFoundation ? '서울신용보증재단 인사이트 리포트' : '소기업·소상공인 주간 인사이트 리포트';
-                    
-                    container.innerHTML = targetArray.map((r, i) => `
-                        <div class="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 border border-border rounded-xl cursor-pointer transition-colors" onclick="viewReport(${i})">
-                            <div>
-                                <h3 class="text-sm font-bold text-gray-900">${r['제목'] || fallbackTitle}</h3>
-                                <p class="text-xs text-muted mt-1">${r['날짜']}</p>
-                            </div>
-                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                        </div>
-                    `).join('');
-                }
+                renderReportList(targetArray);
             } catch (err) {
                 console.error('loadReports error:', err);
-                container.innerHTML = `<p class="text-sm text-center text-rose-500 py-8">⚠️ 리포트를 불러오는 중 오류가 발생했습니다.<br><span class="text-xs text-rose-400 font-normal">(${err.message || err})</span><br><button onclick="loadReports()" class="mt-3 px-3 py-1 bg-rose-50 border border-rose-200 text-xs font-bold text-rose-600 rounded-lg hover:bg-rose-100 transition-colors">다시 시도</button></p>`;
+                container.innerHTML = `<p class="text-sm text-center text-rose-500 py-8">⚠️ 리포트를 불러오는 중 오류가 발생했습니다.<br><span class="text-xs text-rose-400 font-normal">(${err.message || err})</span><br><button onclick="loadReports(true)" class="mt-3 px-3 py-1 bg-rose-50 border border-rose-200 text-xs font-bold text-rose-600 rounded-lg hover:bg-rose-100 transition-colors">다시 시도</button></p>`;
             } finally {
                 loading.classList.add('hidden');
             }
