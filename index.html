@@ -2512,16 +2512,17 @@
                 let data = await resp.json();
                 
                 let targetArray = [];
-                if (Array.isArray(data)) {
-                    data.sort((a, b) => {
-                        const dateA = a['날짜'] ? new Date(String(a['날짜']).substring(0, 10)) : new Date(0);
-                        const dateB = b['날짜'] ? new Date(String(b['날짜']).substring(0, 10)) : new Date(0);
-                        return dateB - dateA;
-                    });
-                    targetArray = data;
-                } else if (data && typeof data === 'object') {
-                    console.warn('Report sheet returned non-array:', data);
+                if (!Array.isArray(data)) {
+                    const errMsg = (data && data.error) ? data.error : '응답 데이터 형식이 올바르지 않습니다 (배열 아님).';
+                    throw new Error(errMsg);
                 }
+
+                data.sort((a, b) => {
+                    const dateA = a['날짜'] ? new Date(String(a['날짜']).substring(0, 10)) : new Date(0);
+                    const dateB = b['날짜'] ? new Date(String(b['날짜']).substring(0, 10)) : new Date(0);
+                    return dateB - dateA;
+                });
+                targetArray = data;
 
                 if (currentReportTab === 'foundation') {
                     allFoundationReports = targetArray;
@@ -2547,7 +2548,7 @@
                 }
             } catch (err) {
                 console.error('loadReports error:', err);
-                container.innerHTML = '<p class="text-sm text-center text-rose-500 py-8">리포트를 불러오는 중 오류가 발생했습니다.<br><button onclick="loadReports()" class="mt-2 text-xs font-bold text-blue-600 underline">다시 시도</button></p>';
+                container.innerHTML = `<p class="text-sm text-center text-rose-500 py-8">⚠️ 리포트를 불러오는 중 오류가 발생했습니다.<br><span class="text-xs text-rose-400 font-normal">(${err.message || err})</span><br><button onclick="loadReports()" class="mt-3 px-3 py-1 bg-rose-50 border border-rose-200 text-xs font-bold text-rose-600 rounded-lg hover:bg-rose-100 transition-colors">다시 시도</button></p>`;
             } finally {
                 loading.classList.add('hidden');
             }
