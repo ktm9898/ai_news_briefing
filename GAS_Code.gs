@@ -62,13 +62,28 @@ function doGet(e) {
   const sheet = ss.getSheetByName(tab);
   if (!sheet) return createResponse([]);
 
-  const data = sheet.getDataRange().getValues();
-  if (data.length <= 1) return createResponse([]);
+  const lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return createResponse([]);
 
-  const headers = data[0];
-  let rows = data.slice(1);
+  // News_Data 탭인 경우 최근 1000개 행만 읽어와서 파싱 속도 극대화 (전체 시트 스캔 방지)
+  let startRow = 1;
+  let numRows = lastRow;
 
-  // 빈 행 제거 (어느 열이든 값이 존재하는 행만 유지)
+  if (tab === 'News_Data' && lastRow > 1000) {
+    startRow = Math.max(2, lastRow - 1000 + 1);
+    numRows = lastRow - startRow + 1;
+    // 헤더 + 데이터 범위 병합 읽기
+    const headerVals = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    const dataVals = sheet.getRange(startRow, 1, numRows, sheet.getLastColumn()).getValues();
+    var headers = headerVals;
+    var rows = dataVals;
+  } else {
+    const data = sheet.getDataRange().getValues();
+    var headers = data[0];
+    var rows = data.slice(1);
+  }
+
+  // 빈 행 제거
   rows = rows.filter(row => row.some(cell => String(cell).trim() !== ''));
 
   let result = rows.map(row => {
@@ -118,12 +133,10 @@ function doGet(e) {
           itemDate = Utilities.formatDate(itemDate, "GMT+9", "yyyy-MM-dd");
         } else if (itemDate) {
           itemDate = String(itemDate).trim();
-          // 정규식으로 YYYY-MM-DD 형식 우선 추출
           const match = itemDate.match(/(\d{4})[\.\-\/\s]+(\d{1,2})[\.\-\/\s]+(\d{1,2})/);
           if (match) {
             itemDate = match[1] + '-' + ('0' + match[2]).slice(-2) + '-' + ('0' + match[3]).slice(-2);
           } else {
-            // 정규식 실패 시 Date 파싱 시도
             const dObj = new Date(itemDate);
             if (!isNaN(dObj.getTime())) {
                itemDate = Utilities.formatDate(dObj, "GMT+9", "yyyy-MM-dd");
@@ -135,10 +148,6 @@ function doGet(e) {
     }
     if (topic && topic !== '전체') {
       result = result.filter(item => item['주제'] === topic);
-    }
-    // 너무 많은 데이터 방지를 위해 최신 200건으로 제한 (필터 후)
-    if (!dateStr && !startDateStr && !endDateStr && !topic) {
-      result = result.slice(-200);
     }
   }
 
