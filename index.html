@@ -329,21 +329,14 @@
         <div
             class="bg-white rounded-xl border border-border p-3 lg:p-4 mb-4 lg:mb-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)]">
 
-            <!-- 필터 바 (스마트 토글 및 다중 주제/스마트 검색 적용) -->
-            <div class="space-y-3.5">
-                <!-- 상단 컨트롤 라인 (날짜 모드 토글 + 날짜 선택기) -->
-                <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-gray-100">
-                    <!-- 날짜 모드 토글 및 날짜 입력영역 -->
-                    <div class="flex flex-wrap items-center gap-3">
-                        <button type="button" onclick="toggleDateMode()" id="dateModeBtn"
-                            class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-lg border border-border transition-colors flex items-center gap-1.5">
-                            <span id="dateModeIcon">📅</span>
-                            <span id="dateModeText">기간 조회 설정</span>
-                        </button>
-
-                        <!-- 단일 날짜 선택 모드 (디폴트) -->
-                        <div id="singleDateBox" class="relative flex items-center bg-gray-50/80 border border-border rounded-lg px-3 py-1.5 cursor-pointer hover:bg-white transition-all text-gray-900 focus-within:ring-2 focus-within:ring-accent">
-                            <span id="displayDateDesktop" class="text-sm font-semibold tracking-tight pointer-events-none"></span>
+            <!-- 필터 바 (기본: 날짜 + 검색 + 조회설정 버튼 / 토글: 고급 필터 패널) -->
+            <div class="space-y-3">
+                <!-- 메인 필터 라인 (날짜 표시 -> 조회 설정 패널 토글 버튼 -> 우측 뉴스 검색) -->
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <!-- 1. 날짜 박스 (항상 맨 앞 배치) -->
+                        <div id="singleDateBox" class="relative flex items-center bg-gray-50/80 border border-border rounded-xl px-3.5 py-2 cursor-pointer hover:bg-white transition-all text-gray-900 focus-within:ring-2 focus-within:ring-accent shadow-sm">
+                            <span id="displayDateDesktop" class="text-sm font-bold tracking-tight pointer-events-none"></span>
                             <span id="filterDayDesktop" class="text-xs font-bold text-muted ml-1 pointer-events-none"></span>
                             <svg class="w-4 h-4 text-gray-400 pointer-events-none ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
@@ -351,54 +344,69 @@
                             <input type="date" id="filterDateDesktop" onchange="onSingleDateChange()" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer text-transparent bg-transparent">
                         </div>
 
-                        <!-- 기간 선택 모드 (토글 켜질 시 확장) -->
-                        <div id="rangeDateBox" class="hidden flex items-center gap-2 bg-blue-50/50 p-1 rounded-xl border border-blue-200 animate-in fade-in duration-200">
-                            <div class="flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
-                                <span class="text-[11px] font-bold text-blue-600 shrink-0">시작:</span>
-                                <input type="date" id="filterStartDate" onchange="onRangeDateChange()" class="text-xs font-bold text-gray-800 outline-none bg-transparent cursor-pointer">
-                            </div>
-                            <span class="text-xs font-bold text-blue-400">~</span>
-                            <div class="flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
-                                <span class="text-[11px] font-bold text-blue-600 shrink-0">종료:</span>
-                                <input type="date" id="filterEndDate" onchange="onRangeDateChange()" class="text-xs font-bold text-gray-800 outline-none bg-transparent cursor-pointer">
-                            </div>
-                            <button onclick="loadData()" class="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors shrink-0">조회</button>
-                        </div>
+                        <!-- 2. 상세 조회 설정 토글 버튼 (날짜 바로 뒤) -->
+                        <button type="button" onclick="toggleFilterPanel()" id="filterPanelBtn"
+                            class="px-3.5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl border border-border transition-all flex items-center gap-1.5 shadow-sm">
+                            <span id="filterPanelIcon">⚙️</span>
+                            <span id="filterPanelText">조회 설정</span>
+                            <svg id="filterPanelArrow" class="w-3.5 h-3.5 text-gray-500 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
                     </div>
 
-                    <!-- 음성 브리핑 재생 모드 상태 표시 뱃지 -->
-                    <div id="audioAvailabilityNotice" class="text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 font-medium flex items-center gap-1">
-                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                        <span>단일 날짜 조회 (음성 재생 가능)</span>
+                    <!-- 3. 뉴스 검색창 (항상 우측 배치) -->
+                    <div class="relative flex-1 max-w-xs min-w-[200px]">
+                        <input type="text" id="filterSearchInput" placeholder="제목/요약/본문/언론사 검색..." oninput="applyFilters()"
+                            class="w-full text-xs sm:text-sm border border-border rounded-xl pl-3.5 pr-8 py-2 focus:ring-2 focus:ring-accent outline-none bg-gray-50/50 focus:bg-white shadow-inner transition-all">
+                        <button id="clearSearchBtn" onclick="clearSearchInput()" class="hidden absolute right-2.5 top-2 text-gray-400 hover:text-gray-600">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
                     </div>
                 </div>
 
-                <!-- 하단 라인: 다중 주제 칩 & 검색어 바 & 중요도 -->
-                <div class="flex flex-wrap items-center justify-between gap-3">
-                    <!-- 다중 주제 토글 칩 목록 -->
-                    <div class="flex flex-wrap items-center gap-1.5 flex-1 min-w-[280px]">
-                        <span class="text-[11px] font-bold text-muted uppercase tracking-wider mr-1">주제:</span>
-                        <div id="topicChipsContainer" class="flex flex-wrap items-center gap-1.5">
-                            <!-- JS로 동적 생성됨 -->
+                <!-- 4. 상세 조회 설정 패널 (조회 설정 버튼 클릭 시 펼쳐짐) -->
+                <div id="filterPanel" class="hidden pt-3 border-t border-gray-100 space-y-3.5 animate-in fade-in duration-200">
+                    <!-- 기간 설정 세션 -->
+                    <div class="flex flex-wrap items-center justify-between gap-3 bg-gray-50/70 p-2.5 rounded-xl border border-gray-200">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-xs font-bold text-gray-700 flex items-center gap-1">
+                                <span>📅</span> 기간 설정:
+                            </span>
+                            <div class="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
+                                <span class="text-[11px] font-bold text-blue-600 shrink-0">시작</span>
+                                <input type="date" id="filterStartDate" onchange="onRangeDateChange()" class="text-xs font-bold text-gray-800 outline-none bg-transparent cursor-pointer">
+                            </div>
+                            <span class="text-xs font-bold text-gray-400">~</span>
+                            <div class="flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
+                                <span class="text-[11px] font-bold text-blue-600 shrink-0">종료</span>
+                                <input type="date" id="filterEndDate" onchange="onRangeDateChange()" class="text-xs font-bold text-gray-800 outline-none bg-transparent cursor-pointer">
+                            </div>
+                            <button onclick="applyDateRangeQuery()" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors">기간 조회 적용</button>
+                            <button onclick="resetToSingleDate()" class="px-2.5 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold rounded-lg transition-colors">단일 날짜로 리셋</button>
+                        </div>
+                        <div id="audioAvailabilityNotice" class="text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 font-medium flex items-center gap-1 shrink-0">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span>단일 날짜 (음성 재생 가능)</span>
                         </div>
                     </div>
 
-                    <!-- 중요도 토글 & 뉴스 검색 -->
-                    <div class="flex items-center gap-3">
-                        <!-- 중요도 -->
-                        <div class="flex items-center gap-1 bg-gray-50/80 p-1 rounded-lg border border-border/80 shrink-0">
-                            <button onclick="toggleImportance('상')" data-imp="상" class="chip px-2.5 py-1 text-xs rounded font-bold active transition-all">상</button>
-                            <button onclick="toggleImportance('중')" data-imp="중" class="chip px-2.5 py-1 text-xs rounded font-bold active transition-all">중</button>
-                            <button onclick="toggleImportance('하')" data-imp="하" class="chip px-2.5 py-1 text-xs rounded font-bold active transition-all">하</button>
+                    <!-- 주제 선택 (다중 칩) & 중요도 선택 -->
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <!-- 주제 다중 칩 -->
+                        <div class="flex flex-wrap items-center gap-1.5 flex-1 min-w-[280px]">
+                            <span class="text-[11px] font-bold text-muted uppercase tracking-wider mr-1">주제 선택:</span>
+                            <div id="topicChipsContainer" class="flex flex-wrap items-center gap-1.5">
+                                <!-- JS로 동적 생성됨 -->
+                            </div>
                         </div>
 
-                        <!-- 스마트 뉴스 검색 -->
-                        <div class="relative w-48 sm:w-64">
-                            <input type="text" id="filterSearchInput" placeholder="제목/요약/본문 검색..." oninput="applyFilters()"
-                                class="w-full text-xs sm:text-sm border border-border rounded-lg pl-3 pr-8 py-1.5 focus:ring-2 focus:ring-accent outline-none bg-gray-50/50 focus:bg-white transition-all">
-                            <button id="clearSearchBtn" onclick="clearSearchInput()" class="hidden absolute right-2 top-1.5 text-gray-400 hover:text-gray-600">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                            </button>
+                        <!-- 중요도 필터 -->
+                        <div class="flex items-center gap-1.5 bg-gray-50/80 p-1 rounded-xl border border-border/80 shrink-0">
+                            <span class="text-[11px] font-bold text-muted uppercase tracking-wider px-1">중요도:</span>
+                            <button onclick="toggleImportance('상')" data-imp="상" class="chip px-2.5 py-1 text-xs rounded-lg font-bold active transition-all">상</button>
+                            <button onclick="toggleImportance('중')" data-imp="중" class="chip px-2.5 py-1 text-xs rounded-lg font-bold active transition-all">중</button>
+                            <button onclick="toggleImportance('하')" data-imp="하" class="chip px-2.5 py-1 text-xs rounded-lg font-bold active transition-all">하</button>
                         </div>
                     </div>
                 </div>
@@ -988,33 +996,63 @@
             loadData();
         });
 
-        // ── 날짜 모드 토글 (단일날짜 ↔ 기간조회) ──
+        // ── 상세 조회 설정 패널 토글 ──
+        let isFilterPanelOpen = false;
         let isRangeMode = false;
         let selectedTopics = new Set(['전체']); // 다중 주제 선택 상태
 
-        function toggleDateMode() {
-            isRangeMode = !isRangeMode;
-            const singleBox = document.getElementById('singleDateBox');
-            const rangeBox = document.getElementById('rangeDateBox');
-            const btnIcon = document.getElementById('dateModeIcon');
-            const btnText = document.getElementById('dateModeText');
+        function toggleFilterPanel() {
+            isFilterPanelOpen = !isFilterPanelOpen;
+            const panel = document.getElementById('filterPanel');
+            const arrow = document.getElementById('filterPanelArrow');
+            const btn = document.getElementById('filterPanelBtn');
 
-            if (isRangeMode) {
-                singleBox.classList.add('hidden');
-                rangeBox.classList.remove('hidden');
-                btnIcon.textContent = '◀';
-                btnText.textContent = '단일 날짜 보기';
+            if (isFilterPanelOpen) {
+                panel.classList.remove('hidden');
+                arrow.style.transform = 'rotate(180deg)';
+                btn.classList.add('bg-blue-50', 'border-blue-300', 'text-blue-700');
             } else {
-                rangeBox.classList.add('hidden');
-                singleBox.classList.remove('hidden');
-                btnIcon.textContent = '📅';
-                btnText.textContent = '기간 조회 설정';
+                panel.classList.add('hidden');
+                arrow.style.transform = 'rotate(0deg)';
+                btn.classList.remove('bg-blue-50', 'border-blue-300', 'text-blue-700');
             }
+        }
+
+        function applyDateRangeQuery() {
+            const startVal = document.getElementById('filterStartDate')?.value;
+            const endVal = document.getElementById('filterEndDate')?.value;
+            if (!startVal || !endVal) {
+                alert('시작일과 종료일을 모두 선택해 주세요.');
+                return;
+            }
+            if (startVal > endVal) {
+                alert('시작일이 종료일보다 이후일 수 없습니다.');
+                return;
+            }
+            isRangeMode = true;
+            updateAudioAvailabilityNotice();
+            loadData();
+        }
+
+        function resetToSingleDate() {
+            isRangeMode = false;
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            const targetDate = `${yyyy}-${mm}-${dd}`;
+
+            if (document.getElementById('filterDateDesktop')) document.getElementById('filterDateDesktop').value = targetDate;
+            if (document.getElementById('filterStartDate')) document.getElementById('filterStartDate').value = targetDate;
+            if (document.getElementById('filterEndDate')) document.getElementById('filterEndDate').value = targetDate;
+
+            updateDayOfWeek();
             updateAudioAvailabilityNotice();
             loadData();
         }
 
         function onSingleDateChange() {
+            isRangeMode = false;
             updateDayOfWeek();
             updateAudioAvailabilityNotice();
             loadData();
