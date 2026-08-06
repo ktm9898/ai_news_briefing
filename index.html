@@ -622,9 +622,11 @@
                                     class="w-20 text-xs font-bold border border-border rounded px-2.5 py-1 text-center focus:ring-2 focus:ring-accent outline-none bg-white">
                                 <span class="text-xs text-muted">개 (기본값: 5개)</span>
                             </div>
-                            <textarea id="topicCriteria" rows="3"
-                                placeholder="이 주제의 뉴스 중요도를 판단하는 기준을 입력하세요... (예: 정책 변화는 '상')"
-                                class="w-full text-sm border border-border rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-accent outline-none resize-none bg-white"></textarea>
+                            <div id="criteriaTextareaBox">
+                                <textarea id="topicCriteria" rows="3"
+                                    placeholder="이 주제의 뉴스 중요도를 판단하는 기준을 입력하세요... (예: 정책 변화는 '상')"
+                                    class="w-full text-sm border border-border rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-accent outline-none resize-none bg-white"></textarea>
+                            </div>
                         </div>
 
                         <div id="keywordInputSection">
@@ -1543,10 +1545,12 @@
             }
 
             if (topic === "주요뉴스") {
-                if (criteriaSection) criteriaSection.classList.add('hidden');
+                if (criteriaSection) criteriaSection.classList.remove('hidden');
+                if (document.getElementById('criteriaTextareaBox')) document.getElementById('criteriaTextareaBox').classList.add('hidden');
                 if (keywordInputSection) keywordInputSection.classList.add('hidden');
             } else {
                 if (criteriaSection) criteriaSection.classList.remove('hidden');
+                if (document.getElementById('criteriaTextareaBox')) document.getElementById('criteriaTextareaBox').classList.remove('hidden');
                 if (keywordInputSection) keywordInputSection.classList.remove('hidden');
             }
 
@@ -1560,7 +1564,7 @@
 
             // 기준 및 목표 갯수 로드
             document.getElementById('topicCriteria').value = topicCriteriaMap[topic] || '';
-            document.getElementById('topicMaxCount').value = topicMaxCountMap[topic] || 5;
+            document.getElementById('topicMaxCount').value = topicMaxCountMap[topic] || (topic === "주요뉴스" ? 6 : 5);
 
             // 키워드 목록 필터링 및 렌더링
             renderFilteredKeywords(topic);
