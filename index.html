@@ -39,6 +39,11 @@
     </script>
 
     <style>
+        /* 당겨서 새로고침(Pull-to-refresh) 방지 */
+        html, body {
+            overscroll-behavior-y: contain;
+        }
+
         /* 스크롤바 커스텀 */
         ::-webkit-scrollbar {
             width: 6px;
