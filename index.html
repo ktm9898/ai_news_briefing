@@ -1432,11 +1432,14 @@
         }
 
         window.addEventListener('popstate', (e) => {
-            // 뒤로가기를 눌렀을 때 가장 최근에 열린 모달만 하나씩 닫기
+            // 뒤로가기를 눌렀을 때 가장 최근에 열린 모달/플레이어만 하나씩 닫기
             if (activeModals.length > 0) {
                 const topModal = activeModals.pop();
                 if (topModal) {
                     topModal.classList.add('hidden');
+                    if (topModal.id === 'ttsProgressContainer' && typeof stopTTS === 'function' && isSpeaking) {
+                        stopTTS();
+                    }
                 }
             } else {
                 // 열린 모달이 없는 경우 모든 모달 숨김 처리
@@ -2165,9 +2168,9 @@
         function showTTSProgress(show) {
             const container = document.getElementById('ttsProgressContainer');
             if (show) {
-                container.classList.remove('hidden');
+                openModalElement(container);
             } else {
-                container.classList.add('hidden');
+                closeModalElement(container);
                 const bar = document.getElementById('ttsProgressBar');
                 bar.style.transition = 'none';
                 bar.style.width = '0%';
