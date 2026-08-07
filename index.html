@@ -2715,11 +2715,8 @@
                     html += `<div class="section-header">${insightTitle}</div>`;
                     if (data.news_insights && Array.isArray(data.news_insights)) {
                         data.news_insights.forEach((item, idx) => {
-                            let displayTitle = item.issue_title || item.title || '주요 이슈';
-                            // 주요 이슈 N. 형식 보장
-                            if (!/^주요\s*이슈\s*\d+/i.test(displayTitle)) {
-                                displayTitle = `주요 이슈 ${idx + 1}. ${displayTitle}`;
-                            }
+                            let rawTitle = (item.issue_title || item.title || '이슈').replace(/^(주요\s*이슈|ISSUE)\s*\d+[\.\:\s]*/i, '').trim();
+                            let displayTitle = `ISSUE ${idx + 1}. ${rawTitle}`;
                             
                             html += `<div class="news-title"><b>${displayTitle}</b></div>`;
                             html += `<p><b>주요내용:</b> ${formatParagraphs(item.summary)}</p>`;
