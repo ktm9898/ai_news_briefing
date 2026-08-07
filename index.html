@@ -1396,6 +1396,11 @@
             <div class="bg-amber-50 border border-amber-100 rounded-lg p-4">
                 <p class="text-sm text-amber-700 font-medium">⌛ AI 요약이 생성되지 않았습니다. 다음 뉴스 수집 시 생성됩니다.</p>
             </div>`}
+            ${(sessionStorage.getItem('admin_pw') && n.본문 && n.본문.trim()) ? `
+            <div class="pt-2">
+                <p class="text-xs font-bold text-muted uppercase mb-2 tracking-wider">기사 전문 <span class="text-[10px] font-normal text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded ml-1">👑 관리자 전용</span></p>
+                <div class="text-sm text-gray-600 leading-relaxed bg-gray-50 rounded-xl p-4 border border-border shadow-inner whitespace-pre-wrap">${n.본문.substring(0, 5000)}${n.본문.length > 5000 ? '...' : ''}</div>
+            </div>` : ''}
         `;
 
             openModalElement(document.getElementById('detailModal'));
