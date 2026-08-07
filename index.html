@@ -1408,7 +1408,10 @@
             if (!el) return;
             if (el.classList.contains('hidden')) {
                 el.classList.remove('hidden');
-                document.body.style.overflow = 'hidden';
+                
+                // 모달을 열 때 activeModals 스택에 넣고 history state 추가
+                activeModals.push(el);
+                history.pushState({ modalId: el.id, modalTime: Date.now() }, '');
             }
         }
 
@@ -1416,15 +1419,31 @@
             if (!el) return;
             if (!el.classList.contains('hidden')) {
                 el.classList.add('hidden');
-                document.body.style.overflow = '';
+                
+                const idx = activeModals.indexOf(el);
+                if (idx !== -1) {
+                    activeModals.splice(idx, 1);
+                    // X버튼이나 배경 클릭으로 직접 닫은 경우 pushState 해제(back)
+                    if (window.history.state && window.history.state.modalId === el.id) {
+                        window.history.back();
+                    }
+                }
             }
         }
 
         window.addEventListener('popstate', (e) => {
-            document.querySelectorAll('.modal-overlay').forEach(modal => {
-                modal.classList.add('hidden');
-            });
-            document.body.style.overflow = '';
+            // 뒤로가기를 눌렀을 때 가장 최근에 열린 모달만 하나씩 닫기
+            if (activeModals.length > 0) {
+                const topModal = activeModals.pop();
+                if (topModal) {
+                    topModal.classList.add('hidden');
+                }
+            } else {
+                // 열린 모달이 없는 경우 모든 모달 숨김 처리
+                document.querySelectorAll('.modal-overlay').forEach(modal => {
+                    modal.classList.add('hidden');
+                });
+            }
         });
 
         function closeModal() {
