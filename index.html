@@ -1434,6 +1434,9 @@
                 const res = await resp.json();
                 if (res && res.success) {
                     sessionStorage.setItem('app_authed', 'true');
+                    if (res.isAdmin) {
+                        sessionStorage.setItem('admin_pw', pw);
+                    }
                     document.getElementById('appLockModal').classList.add('hidden');
                 } else {
                     errEl.textContent = res.error || '비밀번호가 올바르지 않습니다.';
