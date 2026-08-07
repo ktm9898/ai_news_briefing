@@ -2715,10 +2715,17 @@
                     html += `<div class="section-header">${insightTitle}</div>`;
                     if (data.news_insights && Array.isArray(data.news_insights)) {
                         data.news_insights.forEach((item, idx) => {
-                            let rawTitle = (item.issue_title || item.title || '이슈').replace(/^(주요\s*이슈|ISSUE)\s*\d+[\.\:\s]*/i, '').trim();
-                            let displayTitle = `ISSUE ${idx + 1}. ${rawTitle}`;
+                            if (isFoundation) {
+                                // 서울신용보증재단 인사이트 리포트 (업무용): 기사 제목, 언론사, 날짜 명시
+                                let publisherDate = (item.publisher || item.date) ? ` <span style="font-size:10pt; color:#666; font-weight:normal;">(${item.publisher || ''}${(item.publisher && item.date) ? ', ' : ''}${item.date || ''})</span>` : '';
+                                html += `<div class="news-title"><b>${item.title || item.issue_title || ''}</b>${publisherDate}</div>`;
+                            } else {
+                                // 소기업·소상공인 주간 인사이트 리포트 (배포용): ISSUE N. 포맷 적용
+                                let rawTitle = (item.issue_title || item.title || '이슈').replace(/^(주요\s*이슈|ISSUE)\s*\d+[\.\:\s]*/i, '').trim();
+                                let displayTitle = `ISSUE ${idx + 1}. ${rawTitle}`;
+                                html += `<div class="news-title"><b>${displayTitle}</b></div>`;
+                            }
                             
-                            html += `<div class="news-title"><b>${displayTitle}</b></div>`;
                             html += `<p><b>주요내용:</b> ${formatParagraphs(item.summary)}</p>`;
                             
                             let impText = formatParagraphs(item.implication);
