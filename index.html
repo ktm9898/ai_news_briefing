@@ -1585,7 +1585,12 @@
         let pendingSettingsOpen = false;
 
         function openSettingsModal() {
-            // 항상 비밀번호 확인 모달 노출
+            // 이미 관리자 인증이 되어 있다면 바로 설정창 오픈
+            if (sessionStorage.getItem('admin_pw')) {
+                doOpenSettingsModal();
+                return;
+            }
+            // 미인증 상태일 때만 비밀번호 확인 모달 노출
             pendingSettingsOpen = true;
             openModalElement(document.getElementById('adminPwModal'));
             document.getElementById('loginAdminPw').value = '';
