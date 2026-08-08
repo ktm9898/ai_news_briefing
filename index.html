@@ -1758,7 +1758,7 @@
 
             // 기준 및 목표 갯수 로드
             document.getElementById('topicCriteria').value = topicCriteriaMap[topic] || '';
-            document.getElementById('topicMaxCount').value = topicMaxCountMap[topic] || (topic === "주요뉴스" ? 6 : 5);
+            document.getElementById('topicMaxCount').value = topicMaxCountMap[topic] || (topic === "주요뉴스" ? 10 : 5);
 
             // 키워드 목록 필터링 및 렌더링
             renderFilteredKeywords(topic);
@@ -1777,7 +1777,7 @@
                         <div class="flex items-center justify-between">
                             <div>
                                 <h4 class="text-sm font-bold text-gray-800">📌 주요뉴스(경제헤드라인) 수집</h4>
-                                <p class="text-xs text-muted mt-0.5">매일 아침 주요 경제 헤드라인 6개 뉴스를 자동으로 선별합니다.</p>
+                                <p class="text-xs text-muted mt-0.5">매일 아침 주요 경제 헤드라인 뉴스를 설정한 개수만큼 자동으로 선별합니다.</p>
                             </div>
                             <button onclick="toggleMainNews(${isActive})" class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isActive ? 'bg-accent' : 'bg-gray-200'}">
                                 <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isActive ? 'translate-x-5' : 'translate-x-0'}"></span>

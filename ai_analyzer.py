@@ -66,8 +66,9 @@ class AIAnalyzer:
             return news_list, []
 
         topic_max_counts = topic_max_counts or {}
-        main_news_count = topic_max_counts.get("주요뉴스", 6)
+        main_news_count = topic_max_counts.get("주요뉴스") or topic_max_counts.get("경제헤드라인") or 6
         half_main = max(1, main_news_count // 2)
+        overseas_main = main_news_count - half_main
 
         # ── 1단계: 주요뉴스 후보군(헤드라인) 필터링 ──
         headline_candidates = []
@@ -129,7 +130,7 @@ class AIAnalyzer:
 - 중요: **주제 적합성(Relevance)**을 최우선으로 고려하십시오.
 - **[핵심: 동일/유사 사건 중복 제거]**: 각 주제 내에서 매우 유사한 기사가 여러 개 있다면, 가장 정보량이 많은 1개만 '상'으로 분류하고 나머지는 낮추십시오.
 
-[작업 2] 오늘의 핵심 주요뉴스 **국내 {half_main}건 + 해외 {half_main}건 = 총 {main_news_count}건** 선정
+[작업 2] 오늘의 핵심 주요뉴스 **국내 {half_main}건 + 해외 {overseas_main}건 = 총 {main_news_count}건** 선정
 - **반드시 '주제: 경제헤드라인'으로 표시된 기사들(번호: {headline_indices}) 중에서만 선정하십시오.**
 
 [작업 3] 각 일반 주제별로 지정된 갯수만큼 뉴스 직접 선정
@@ -144,9 +145,9 @@ class AIAnalyzer:
 (주의: JSON 문자열 내부에 큰따옴표(")를 사용할 경우 반드시 백슬래시(\\)로 이스케이프 처리하세요.)
 {{
   "importance": [{{"index": 1, "importance": "상"}}, ...],
-  "top6": [
+  "main_news": [
     {{"index": ..., "region": "국내", "summary": "..."}},
-    ... (총 6개)
+    ... (총 {main_news_count}개)
   ],
   "topic_tops": {{
     "주제명1": [인덱스1, 인덱스2, ...],
@@ -198,18 +199,18 @@ class AIAnalyzer:
                             # AI가 선정한 기사임을 표시하는 플래그
                             final_list_for_ai[idx]["ai_selected"] = True
 
-                # 3. Top6 결과 구성
-                top6_list = result.get("top6", [])
-                top6_results = []
-                for item in top6_list:
+                # 3. 주요뉴스 결과 구성 (main_news 혹은 top6 하위 호환)
+                main_news_list = result.get("main_news") or result.get("top6") or []
+                main_news_results = []
+                for item in main_news_list:
                     idx = item.get("index", 1) - 1
                     if 0 <= idx < len(final_list_for_ai):
                         news_item = final_list_for_ai[idx].copy()
                         news_item["summary"] = item.get("summary", "")
                         news_item["region"] = item.get("region", "국내")
-                        top6_results.append(news_item)
+                        main_news_results.append(news_item)
 
-                return final_list_for_ai, top6_results
+                return final_list_for_ai, main_news_results
 
             except Exception as e:
                 logger.error(f"AI 1차 선별 실패 (시도 {attempt + 1}/{max_retries}): {e}")

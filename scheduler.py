@@ -66,7 +66,7 @@ def run_pipeline():
         user_active_settings = sheets.get_active_settings()
         exclusion_keywords = list(set(s.get("키워드", "") for s in user_active_settings if s.get("키워드")))
 
-        all_collected, top6_results = analyzer.screen_importance(
+        all_collected, main_news_results = analyzer.screen_importance(
             all_collected,
             topic_criteria,
             exclusion_keywords=exclusion_keywords,
@@ -74,13 +74,13 @@ def run_pipeline():
         )
 
         # 주요뉴스 링크 추출
-        top6_links = set()
-        if top6_results:
-            for item in top6_results:
+        main_news_links = set()
+        if main_news_results:
+            for item in main_news_results:
                 link = item.get("original_link") or item.get("링크", "")
                 if link:
-                    top6_links.add(link)
-            logger.info(f"주요뉴스 {len(top6_links)}건 선정 완료")
+                    main_news_links.add(link)
+            logger.info(f"주요뉴스 {len(main_news_links)}건 선정 완료")
 
         # 주제별 그룹화 및 중요도 순 정렬
         topic_groups = {}
@@ -99,19 +99,19 @@ def run_pipeline():
 
             if not selected:
                 sorted_group = sorted(group, key=lambda x: importance_map.get(x.get("중요도", ""), 3))
-                filtered_group = [item for item in sorted_group if item.get("링크", "") not in top6_links]
+                filtered_group = [item for item in sorted_group if item.get("링크", "") not in main_news_links]
                 selected = filtered_group[:max_c]
                 logger.info(f"[{topic}] AI 직접 선정 결과 없음 -> 중요도 순 {len(selected)}건 자동 선정")
             else:
-                selected = [item for item in selected if item.get("링크", "") not in top6_links]
+                selected = [item for item in selected if item.get("링크", "") not in main_news_links]
                 selected = selected[:max_c]
 
             final_selection_for_save.extend(selected)
 
         # ── 3단계: 기사 본문 크롤링 ──
         logger.info("STEP 3/7: 주요 기사 본문 크롤링")
-        top6_source_news = [n for n in all_collected if n.get("링크") in top6_links]
-        selected_for_crawl = top6_source_news + final_selection_for_save
+        main_news_source_news = [n for n in all_collected if n.get("링크") in main_news_links]
+        selected_for_crawl = main_news_source_news + final_selection_for_save
 
         for n in selected_for_crawl:
             n["is_essential"] = True
@@ -156,8 +156,8 @@ def run_pipeline():
 
         # ── 5단계: 시트 저장 ──
         logger.info("STEP 5/7: 데이터 시트 저장")
-        top6_news = []
-        if top6_results:
+        main_news_save_list = []
+        if main_news_results:
             today_str = datetime.now(KST).strftime("%Y-%m-%d")
             crawled_lookup = {}
             for n in selected_for_crawl:
@@ -167,7 +167,7 @@ def run_pipeline():
                 if n.get("네이버링크"):
                     crawled_lookup.setdefault(n["네이버링크"], n)
 
-            for item in top6_results:
+            for item in main_news_results:
                 link = item.get("original_link") or item.get("링크", "")
                 article_info = crawled_lookup.get(link)
                 if not article_info:
@@ -180,7 +180,7 @@ def run_pipeline():
                 final_body = article_info.get("본문 전문", "") if article_info else item.get("본문 전문", "")
                 final_summary = (article_info.get("AI 요약") if article_info else "") or item.get("summary", "")
 
-                top6_news.append({
+                main_news_save_list.append({
                     "날짜": today_str,
                     "주제": f"📌 주요뉴스({region_label})",
                     "언론사": item.get("언론사", ""),
@@ -192,7 +192,7 @@ def run_pipeline():
                     "중요도": "상",
                 })
 
-            top6_news.sort(key=lambda x: 0 if "해외" in x.get("주제", "") else 1)
+            main_news_save_list.sort(key=lambda x: 0 if "해외" in x.get("주제", "") else 1)
 
         import copy
         topic_counts = {}
@@ -201,7 +201,7 @@ def run_pipeline():
         for n in selected_for_crawl:
             link = n.get("링크", "")
             topic = n.get("주제", "기타")
-            if link in top6_links:
+            if link in main_news_links:
                 continue
             if topic in ["경제헤드라인", "기타(세부관심사)", "기타"]:
                 continue
@@ -214,7 +214,7 @@ def run_pipeline():
         for news in save_list:
             news.pop("네이버링크", None)
 
-        final_save = top6_news + save_list
+        final_save = main_news_save_list + save_list
         sheets.append_news(final_save)
 
         if briefing_script:
