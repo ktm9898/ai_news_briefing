@@ -1457,6 +1457,7 @@
 
         // ── 모달 open/close 및 히스토리 관리 (뒤로가기 시 모달 닫기) ──
         const activeModals = [];
+        let ignoreNextPopstate = false;
 
         function openModalElement(el) {
             if (!el) return;
@@ -1473,12 +1474,18 @@
             if (!el) return;
             if (!el.classList.contains('hidden')) {
                 el.classList.add('hidden');
+
+                // TTS 모달인 경우 stopTTS 호출
+                if (el.id === 'ttsProgressContainer' && typeof stopTTS === 'function' && isSpeaking) {
+                    stopTTS();
+                }
                 
                 const idx = activeModals.indexOf(el);
                 if (idx !== -1) {
                     activeModals.splice(idx, 1);
-                    // X버튼이나 배경 클릭으로 직접 닫은 경우 pushState 해제(back)
+                    // X버튼이나 배경 클릭으로 직접 닫은 경우 history 정리
                     if (window.history.state && window.history.state.modalId === el.id) {
+                        ignoreNextPopstate = true;
                         window.history.back();
                     }
                 }
@@ -1486,6 +1493,11 @@
         }
 
         window.addEventListener('popstate', (e) => {
+            if (ignoreNextPopstate) {
+                ignoreNextPopstate = false;
+                return;
+            }
+
             // 뒤로가기를 눌렀을 때 가장 최근에 열린 모달/플레이어만 하나씩 닫기
             if (activeModals.length > 0) {
                 const topModal = activeModals.pop();
