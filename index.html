@@ -608,42 +608,25 @@
                                 </svg>
                                 최신 뉴스 수집 즉시 실행 (GitHub Actions)
                             </button>
-                            <button id="pwaInstallBtn" onclick="installPWA()"
-                                class="hidden w-full py-3.5 bg-blue-600 text-white text-[14px] font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-200 animate-bounce flex items-center justify-center gap-2 mb-2">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                </svg>
-                                이 앱을 설치하기
-                            </button>
-                            <div class="grid grid-cols-2 gap-2">
+                            <div class="grid grid-cols-3 gap-1.5">
                                 <button onclick="updateAppVersion()"
-                                    class="py-2.5 bg-emerald-50 text-emerald-600 text-[11px] font-bold rounded-xl hover:bg-emerald-100 border border-emerald-100 transition-colors flex items-center justify-center gap-1.5">
+                                    class="py-2.5 bg-emerald-50 text-emerald-600 text-[11px] font-bold rounded-xl hover:bg-emerald-100 border border-emerald-100 transition-colors flex items-center justify-center gap-1">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                                    최신 버전 업데이트
+                                    업데이트
+                                </button>
+                                <button onclick="openSubscriberModal()"
+                                    class="py-2.5 bg-blue-50 text-accent text-[11px] font-bold rounded-xl hover:bg-blue-100 border border-blue-100 transition-colors flex items-center justify-center gap-1">
+                                    <span>📧</span> 구독 관리
                                 </button>
                                 <button onclick="pwaHardReset()"
-                                    class="py-2.5 bg-gray-50 text-gray-500 text-[11px] font-bold rounded-xl hover:bg-gray-100 border border-gray-200 transition-colors flex items-center justify-center gap-1.5">
+                                    class="py-2.5 bg-gray-50 text-gray-500 text-[11px] font-bold rounded-xl hover:bg-gray-100 border border-gray-200 transition-colors flex items-center justify-center gap-1">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                    시스템 초기화
+                                    초기화
                                 </button>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 📧 인사이트 리포트 이메일 구독 등록 Section -->
-                    <div class="mt-6 pt-4 border-t border-gray-100">
-                        <label class="text-[10px] font-bold text-muted uppercase block mb-1">📧 인사이트 리포트 이메일 구독 신청</label>
-                        <p class="text-xs text-gray-500 mb-2.5">매일 아침 수집되는 인사이트 리포트(PDF 첨부)를 전송받을 이메일 주소를 등록하세요.</p>
-                        <div class="flex gap-2">
-                            <input type="email" id="subscribeEmailInput" placeholder="수신 이메일 주소 입력 (name@domain.com)"
-                                class="flex-1 text-xs border border-border rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-accent outline-none bg-white">
-                            <button onclick="addSubscriptionInSettings()" id="subscribeBtn"
-                                class="px-4 py-2.5 bg-accent hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-sm whitespace-nowrap transition-colors">
-                                구독 등록
-                            </button>
-                        </div>
-                    </div>
 
                 </div>
             </div>
@@ -2038,7 +2021,159 @@
             } finally {
                 if (btn) { btn.disabled = false; btn.textContent = '구독 등록'; }
             }
+        // ── 📧 이메일 구독자 관리 모달 제어 ──
+        function openSubscriberModal() {
+            openModalElement(document.getElementById('subscriberModal'));
+            loadSubscribersModal();
         }
+
+        function closeSubscriberModal() {
+            closeModalElement(document.getElementById('subscriberModal'));
+        }
+
+        async function loadSubscribersModal() {
+            const tbody = document.getElementById('modalSubscriberTableBody');
+            tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-gray-400 font-medium"><svg class="animate-spin h-4 w-4 text-accent inline mr-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>구독자 목록 불러오는 중...</td></tr>`;
+
+            try {
+                const resp = await fetch(SCRIPT_URL + '?tab=Subscribers&t=' + Date.now());
+                const data = await resp.json();
+
+                if (!Array.isArray(data)) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-gray-400">등록된 구독자가 없거나 데이터를 읽을 수 없습니다.</td></tr>`;
+                    return;
+                }
+
+                renderSubscribersModal(data);
+            } catch (e) {
+                console.error('loadSubscribersModal error:', e);
+                tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-rose-500 font-medium">구독자 목록을 불러오지 못했습니다.</td></tr>`;
+            }
+        }
+
+        function renderSubscribersModal(subscribers) {
+            const tbody = document.getElementById('modalSubscriberTableBody');
+            if (subscribers.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-gray-400 font-medium">등록된 구독자가 없습니다. 상단 폼에서 이메일을 추가해 주세요.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = subscribers.map(s => {
+                const email = s['이메일'] || s['Email'] || '';
+                const date = s['등록일'] || s['Date'] || '-';
+                const isActive = String(s['활성화'] || '').toUpperCase() === 'TRUE';
+
+                const statusBadge = isActive
+                    ? `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800"><span class="w-1.5 h-1.5 bg-emerald-600 rounded-full mr-1"></span>수신 중</span>`
+                    : `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600"><span class="w-1.5 h-1.5 bg-gray-400 rounded-full mr-1"></span>일시중지</span>`;
+
+                return `
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="py-2.5 px-3 font-bold text-gray-900">${email}</td>
+                        <td class="py-2.5 px-3 text-gray-500">${date}</td>
+                        <td class="py-2.5 px-3">${statusBadge}</td>
+                        <td class="py-2.5 px-3 text-center">
+                            <div class="flex justify-center items-center gap-1.5">
+                                <button onclick="sendTestMailModal('${email}')" class="text-[10px] px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-md transition-colors">
+                                    📨 테스트
+                                </button>
+                                <button onclick="toggleSubscriberModal('${email}')" class="text-[10px] px-2 py-1 ${isActive ? 'bg-amber-50 hover:bg-amber-100 text-amber-700' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700'} font-bold rounded-md transition-colors">
+                                    ${isActive ? '일시중지' : '수신재개'}
+                                </button>
+                                <button onclick="deleteSubscriberModal('${email}')" class="text-[10px] px-2 py-1 text-rose-600 hover:bg-rose-50 rounded-md transition-colors font-bold">
+                                    삭제
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function addSubscriberModal() {
+            const input = document.getElementById('modalSubscriberEmail');
+            const email = input ? input.value.trim() : '';
+            if (!email || !email.includes('@')) {
+                return alert('유효한 이메일 주소를 입력해 주세요.');
+            }
+
+            try {
+                const resp = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({ action: 'addSubscriber', email })
+                });
+                const res = await resp.json();
+                if (res && res.success) {
+                    alert('✅ 구독자 이메일이 추가되었습니다.');
+                    input.value = '';
+                    loadSubscribersModal();
+                } else {
+                    alert('❌ 추가 실패: ' + (res.error || '알 수 없는 오류'));
+                }
+            } catch (e) {
+                alert('구독자 추가 중 오류가 발생했습니다.');
+            }
+        }
+
+        async function toggleSubscriberModal(email) {
+            try {
+                const resp = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({ action: 'toggleSubscriber', email })
+                });
+                const res = await resp.json();
+                if (res && res.success) {
+                    loadSubscribersModal();
+                } else {
+                    alert('❌ 상태 변경 실패: ' + (res.error || '오류 발생'));
+                }
+            } catch (e) {
+                alert('오류가 발생했습니다.');
+            }
+        }
+
+        async function deleteSubscriberModal(email) {
+            if (!confirm(`'${email}' 구독자를 수신 목록에서 삭제하시겠습니까?`)) return;
+
+            try {
+                const resp = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({ action: 'deleteSubscriber', email })
+                });
+                const res = await resp.json();
+                if (res && res.success) {
+                    loadSubscribersModal();
+                } else {
+                    alert('❌ 삭제 실패: ' + (res.error || '오류 발생'));
+                }
+            } catch (e) {
+                alert('삭제 중 오류가 발생했습니다.');
+            }
+        }
+
+        async function sendTestMailModal(email) {
+            if (!confirm(`'${email}' 주소로 최근 인사이트 리포트 테스트 메일을 발송하시겠습니까?`)) return;
+
+            try {
+                const resp = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({ action: 'sendTestReport', email })
+                });
+                const res = await resp.json();
+                if (res && res.success) {
+                    alert('✅ 테스트 메일이 발송되었습니다!\n수신 이메일함을 확인해 주세요.');
+                } else {
+                    alert('❌ 테스트 메일 발송 실패: ' + (res.error || '오류 발생'));
+                }
+            } catch (e) {
+                alert('테스트 메일 요청 실패');
+            }
+        }
+
 
 
         function showSettingsLoading(show) {
@@ -2896,6 +3031,52 @@
             
             <div id="topicModalContainer" class="max-h-[55vh] overflow-y-auto space-y-1.5 pr-1">
                 <!-- JS로 주제 체크박스 동적 생성 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════ 4. 이메일 구독자 관리 모달 ═══════════ -->
+    <div id="subscriberModal"
+        class="modal-overlay fixed inset-0 bg-black/50 z-[120] hidden flex items-end sm:items-center justify-center animate-in fade-in duration-200"
+        onclick="if(event.target===this) closeSubscriberModal()">
+        <div class="modal-content bg-white w-full sm:max-w-xl sm:rounded-2xl rounded-t-2xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl" onclick="event.stopPropagation()">
+            <div class="sticky top-0 bg-white border-b border-border px-5 py-3.5 flex items-center justify-between shrink-0">
+                <h2 class="text-sm font-bold text-gray-900 flex items-center gap-2">
+                    <span>📧</span> 인사이트 리포트 구독자 관리
+                </h2>
+                <button onclick="closeSubscriberModal()" class="w-7 h-7 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 text-sm font-bold transition-colors">✕</button>
+            </div>
+            
+            <div class="p-5 space-y-4 overflow-y-auto flex-1">
+                <p class="text-xs text-gray-500">매일 아침 수집되는 인사이트 리포트(PDF 첨부)를 전송받을 이메일 목록을 관리합니다.</p>
+                
+                <!-- 이메일 추가 폼 -->
+                <div class="flex gap-2">
+                    <input type="email" id="modalSubscriberEmail" placeholder="수신 이메일 주소 입력 (name@domain.com)"
+                        class="flex-1 text-xs border border-border rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-accent outline-none bg-white">
+                    <button onclick="addSubscriberModal()" class="px-4 py-2.5 bg-accent hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-sm whitespace-nowrap transition-colors">
+                        + 구독자 추가
+                    </button>
+                </div>
+
+                <!-- 구독자 테이블 -->
+                <div class="border border-border rounded-xl overflow-hidden shadow-sm">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-gray-50 text-gray-600 border-b border-border">
+                                <th class="py-2.5 px-3 font-bold">이메일 주소</th>
+                                <th class="py-2.5 px-3 font-bold">등록일</th>
+                                <th class="py-2.5 px-3 font-bold">상태</th>
+                                <th class="py-2.5 px-3 font-bold text-center">관리</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modalSubscriberTableBody" class="divide-y divide-border">
+                            <tr>
+                                <td colspan="4" class="py-6 text-center text-gray-400 font-medium">구독자 목록을 불러오는 중...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
