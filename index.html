@@ -1425,17 +1425,19 @@
 
             try {
                 let res = null;
+                // 1차 POST 시도 (302 리다이렉션 이슈 우회)
                 try {
-                    const resp = await fetch(SCRIPT_URL + '?action=appLogin&pw=' + encodeURIComponent(pw));
-                    res = await resp.json();
-                } catch(getErr) {
-                    console.warn('GET appLogin fetch failed, trying POST fallback...', getErr);
                     const postResp = await fetch(SCRIPT_URL, {
                         method: 'POST',
                         headers: { 'Content-Type': 'text/plain' },
                         body: JSON.stringify({ action: 'appLogin', pw: pw })
                     });
                     res = await postResp.json();
+                } catch(postErr) {
+                    console.warn('POST appLogin fetch failed, trying GET fallback...', postErr);
+                    // 2차 GET 시도
+                    const getResp = await fetch(SCRIPT_URL + '?action=appLogin&pw=' + encodeURIComponent(pw) + '&t=' + Date.now());
+                    res = await getResp.json();
                 }
 
                 if (res && res.success) {
@@ -1446,11 +1448,12 @@
                     document.getElementById('appLockModal').classList.add('hidden');
                     loadData();
                 } else {
-                    errEl.textContent = (res && res.error) ? res.error : '비밀번호가 올바르지 않습니다.';
+                    errEl.textContent = (res && res.error) ? res.error : '비밀번호가 일치하지 않습니다.';
                     errEl.classList.remove('hidden');
                 }
             } catch (err) {
-                errEl.textContent = '인증 중 오류가 발생했습니다: ' + (err.message || err);
+                console.error('App Login Auth Error:', err);
+                errEl.textContent = '인증 중 네트워크 오류가 발생했습니다: ' + (err.message || err);
                 errEl.classList.remove('hidden');
             } finally {
                 btn.disabled = false;

@@ -177,6 +177,20 @@ function doPost(e) {
   const action = params.action;
   const ADMIN_PW = PropertiesService.getScriptProperties().getProperty('ADMIN_PW');
 
+  // ── 접속 비밀번호 인증 API (POST 대응) ──
+  if (action === 'appLogin') {
+    const props = PropertiesService.getScriptProperties();
+    const APP_PW = props.getProperty('APP_PASSWORD') || '1234';
+    
+    if (params.pw === ADMIN_PW) {
+      return createResponse({ success: true, isAdmin: true });
+    } else if (params.pw === APP_PW) {
+      return createResponse({ success: true, isAdmin: false });
+    } else {
+      return createResponse({ success: false, error: '접속 비밀번호가 일치하지 않습니다.' });
+    }
+  }
+
   // ── 수동 수집 트리거 (GitHub Actions) ──
   if (action === 'triggerWorkflow') {
     if (params.pw !== ADMIN_PW) {
