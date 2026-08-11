@@ -1990,34 +1990,6 @@
             }
         }
 
-        async function addSubscriptionInSettings() {
-            const input = document.getElementById('subscribeEmailInput');
-            const email = input ? input.value.trim() : '';
-            if (!email || !email.includes('@')) {
-                alert('유효한 이메일 주소를 입력해 주세요.');
-                return;
-            }
-            const btn = document.getElementById('subscribeBtn');
-            if (btn) { btn.disabled = true; btn.textContent = '등록 중...'; }
-
-            try {
-                const resp = await fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify({ action: 'addSubscriber', email })
-                });
-                const res = await resp.json();
-                if (res && res.success) {
-                    alert('✅ 인사이트 리포트 이메일 구독이 완료되었습니다!\n매일 아침 인사이트 보고서가 이메일(PDF)로 자동 발송됩니다.');
-                    if (input) input.value = '';
-                } else {
-                    alert('❌ 구독 등록 실패: ' + (res.error || '알 수 없는 오류'));
-                }
-            } catch (e) {
-                alert('구독 등록 요청 중 오류가 발생했습니다.');
-            } finally {
-                if (btn) { btn.disabled = false; btn.textContent = '구독 등록'; }
-            }
         // ── 📧 이메일 구독자 관리 모달 제어 ──
         function openSubscriberModal() {
             openModalElement(document.getElementById('subscriberModal'));
