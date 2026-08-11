@@ -947,8 +947,8 @@
             
             updateDayOfWeek();
 
-            // 바로 데이터 로드 시작
-            loadData();
+            // 접속 인증 모달 노출 (비밀번호 입력 전 데이터 로드 방지)
+            checkAppAuth();
         });
 
         // ── 상세 조회 설정 패널 토글 ──
@@ -1400,15 +1400,13 @@
             openModalElement(document.getElementById('detailModal'));
         }
 
-        // ── 앱 접속 인증 처리 ──
+        // ── 앱 접속 인증 처리 (매번 비밀번호 입력 요구) ──
         function checkAppAuth() {
-            if (sessionStorage.getItem('app_authed') === 'true') {
-                document.getElementById('appLockModal').classList.add('hidden');
-                return true;
-            } else {
-                document.getElementById('appLockModal').classList.remove('hidden');
-                return false;
-            }
+            sessionStorage.removeItem('app_authed');
+            const input = document.getElementById('appAuthPw');
+            if (input) input.value = '';
+            document.getElementById('appLockModal').classList.remove('hidden');
+            return false;
         }
 
         async function submitAppAuth(e) {
