@@ -17,12 +17,16 @@ function doGet(e) {
   const topic = e.parameter.topic; // 주제 필터
   const action = e.parameter ? e.parameter.action : null;
 
-  // ── 접속 비밀번호 확인 API (GET 대응) ──
+  // ── 비밀번호 확인 API (GET 대응) ──
   if (action === 'appLogin') {
     const props = PropertiesService.getScriptProperties();
-    const APP_PW = props.getProperty('APP_PASSWORD') || props.getProperty('ADMIN_PW') || '1234';
-    if (e.parameter.pw === APP_PW) {
-      return createResponse({ success: true });
+    const APP_PW = props.getProperty('APP_PASSWORD') || '1234';
+    const ADMIN_PW = props.getProperty('ADMIN_PW');
+    
+    if (e.parameter.pw === ADMIN_PW) {
+      return createResponse({ success: true, isAdmin: true });
+    } else if (e.parameter.pw === APP_PW) {
+      return createResponse({ success: true, isAdmin: false });
     } else {
       return createResponse({ success: false, error: '접속 비밀번호가 일치하지 않습니다.' });
     }
