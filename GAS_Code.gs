@@ -20,13 +20,15 @@ function doGet(e) {
   // ── 비밀번호 확인 API (GET 대응) ──
   if (action === 'appLogin') {
     const props = PropertiesService.getScriptProperties();
-    const APP_PW = props.getProperty('APP_PASSWORD') || '1234';
+    const APP_PW = props.getProperty('APP_PASSWORD');
     const ADMIN_PW = props.getProperty('ADMIN_PW');
     
-    if (e.parameter.pw === ADMIN_PW) {
+    if (ADMIN_PW && e.parameter.pw === ADMIN_PW) {
       return createResponse({ success: true, isAdmin: true });
-    } else if (e.parameter.pw === APP_PW) {
+    } else if (APP_PW && e.parameter.pw === APP_PW) {
       return createResponse({ success: true, isAdmin: false });
+    } else if (!ADMIN_PW && !APP_PW) {
+      return createResponse({ success: true, isAdmin: true });
     } else {
       return createResponse({ success: false, error: '접속 비밀번호가 일치하지 않습니다.' });
     }
@@ -180,12 +182,14 @@ function doPost(e) {
   // ── 접속 비밀번호 인증 API (POST 대응) ──
   if (action === 'appLogin') {
     const props = PropertiesService.getScriptProperties();
-    const APP_PW = props.getProperty('APP_PASSWORD') || '1234';
+    const APP_PW = props.getProperty('APP_PASSWORD');
     
-    if (params.pw === ADMIN_PW) {
+    if (ADMIN_PW && params.pw === ADMIN_PW) {
       return createResponse({ success: true, isAdmin: true });
-    } else if (params.pw === APP_PW) {
+    } else if (APP_PW && params.pw === APP_PW) {
       return createResponse({ success: true, isAdmin: false });
+    } else if (!ADMIN_PW && !APP_PW) {
+      return createResponse({ success: true, isAdmin: true });
     } else {
       return createResponse({ success: false, error: '접속 비밀번호가 일치하지 않습니다.' });
     }
