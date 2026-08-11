@@ -1432,6 +1432,7 @@
                         sessionStorage.setItem('admin_pw', pw);
                     }
                     document.getElementById('appLockModal').classList.add('hidden');
+                    loadData();
                 } else {
                     errEl.textContent = res.error || '비밀번호가 올바르지 않습니다.';
                     errEl.classList.remove('hidden');
