@@ -1648,10 +1648,22 @@
                 }
                 
                 sessionStorage.setItem('admin_pw', pw);
-                closeModalElement(document.getElementById('adminPwModal'));
+                
+                // adminPwModal의 히스토리를 settingsModal로 대체하여 뒤로가기 시 설정창만 정상적으로 닫히도록 조치
+                const adminModalEl = document.getElementById('adminPwModal');
+                adminModalEl.classList.add('hidden');
+                const idx = activeModals.indexOf(adminModalEl);
+                if (idx !== -1) activeModals.splice(idx, 1);
+
                 if (pendingSettingsOpen) {
                     pendingSettingsOpen = false;
-                    doOpenSettingsModal();
+                    const settingsEl = document.getElementById('settingsModal');
+                    if (settingsEl.classList.contains('hidden')) {
+                        settingsEl.classList.remove('hidden');
+                        activeModals.push(settingsEl);
+                        history.replaceState({ modalId: 'settingsModal', modalTime: Date.now() }, '');
+                    }
+                    loadSettings();
                 }
             } catch(e) {
                 console.error('Password verify error:', e);
@@ -3058,7 +3070,6 @@
             </div>
             <div>
                 <h3 class="text-lg font-bold text-gray-900">접속 비밀번호 인증</h3>
-                <p class="text-xs text-muted mt-1">AI 뉴스 비서 서비스를 이용하시려면 비밀번호를 입력해주세요.</p>
             </div>
             
             <form onsubmit="submitAppAuth(event)" class="space-y-3">
