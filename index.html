@@ -1424,36 +1424,17 @@
             btn.innerHTML = `<svg class="w-4 h-4 animate-spin inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> 확인 중...`;
 
             try {
-                let res = null;
-                // 1차 POST 시도 (302 리다이렉션 이슈 우회)
-                try {
-                    const postResp = await fetch(SCRIPT_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'text/plain' },
-                        body: JSON.stringify({ action: 'appLogin', pw: pw })
-                    });
-                    res = await postResp.json();
-                } catch(postErr) {
-                    console.warn('POST appLogin fetch failed, trying GET fallback...', postErr);
-                    // 2차 GET 시도
-                    const getResp = await fetch(SCRIPT_URL + '?action=appLogin&pw=' + encodeURIComponent(pw) + '&t=' + Date.now());
-                    res = await getResp.json();
-                }
-
+                const resp = await fetch(SCRIPT_URL + '?action=appLogin&pw=' + encodeURIComponent(pw));
+                const res = await resp.json();
                 if (res && res.success) {
                     sessionStorage.setItem('app_authed', 'true');
-                    if (res.isAdmin) {
-                        sessionStorage.setItem('admin_pw', pw);
-                    }
                     document.getElementById('appLockModal').classList.add('hidden');
-                    loadData();
                 } else {
-                    errEl.textContent = (res && res.error) ? res.error : '비밀번호가 일치하지 않습니다.';
+                    errEl.textContent = res.error || '비밀번호가 올바르지 않습니다.';
                     errEl.classList.remove('hidden');
                 }
             } catch (err) {
-                console.error('App Login Auth Error:', err);
-                errEl.textContent = '인증 중 네트워크 오류가 발생했습니다: ' + (err.message || err);
+                errEl.textContent = '인증 중 오류가 발생했습니다: ' + (err.message || err);
                 errEl.classList.remove('hidden');
             } finally {
                 btn.disabled = false;
