@@ -1424,16 +1424,29 @@
             btn.innerHTML = `<svg class="w-4 h-4 animate-spin inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> 확인 중...`;
 
             try {
-                const resp = await fetch(SCRIPT_URL + '?action=appLogin&pw=' + encodeURIComponent(pw));
-                const res = await resp.json();
+                let res = null;
+                try {
+                    const resp = await fetch(SCRIPT_URL + '?action=appLogin&pw=' + encodeURIComponent(pw));
+                    res = await resp.json();
+                } catch(getErr) {
+                    console.warn('GET appLogin fetch failed, trying POST fallback...', getErr);
+                    const postResp = await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({ action: 'appLogin', pw: pw })
+                    });
+                    res = await postResp.json();
+                }
+
                 if (res && res.success) {
                     sessionStorage.setItem('app_authed', 'true');
                     if (res.isAdmin) {
                         sessionStorage.setItem('admin_pw', pw);
                     }
                     document.getElementById('appLockModal').classList.add('hidden');
+                    loadData();
                 } else {
-                    errEl.textContent = res.error || '비밀번호가 올바르지 않습니다.';
+                    errEl.textContent = (res && res.error) ? res.error : '비밀번호가 올바르지 않습니다.';
                     errEl.classList.remove('hidden');
                 }
             } catch (err) {
