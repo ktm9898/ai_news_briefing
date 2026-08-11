@@ -85,6 +85,50 @@
                     </table>
                 </div>
             </div>
+
+            <!-- 📧 인사이트 리포트 이메일 구독 관리 Section -->
+            <div class="mt-12 flex justify-between items-end mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold flex items-center gap-2">
+                        <span>📧</span> 인사이트 리포트 구독자 관리
+                    </h2>
+                    <p class="text-sm text-slate-500 mt-1">매일 아침 수집된 인사이트 리포트(PDF 첨부)를 전달받을 이메일 목록을 관리합니다.</p>
+                </div>
+                <button onclick="loadSubscribers()" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors flex items-center">
+                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    구독자 새로고침
+                </button>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
+                <!-- 이메일 추가 폼 -->
+                <div class="flex gap-3 max-w-lg">
+                    <input type="email" id="newSubscriberEmail" placeholder="수신 이메일 주소 입력 (예: name@seoulshinbo.co.kr)"
+                        class="flex-1 px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-accent focus:border-accent outline-none text-sm font-medium">
+                    <button onclick="addSubscriber()" class="px-5 py-2.5 bg-accent text-white font-bold rounded-xl text-sm hover:bg-blue-700 transition-colors shadow-sm shrink-0">
+                        + 구독자 추가
+                    </button>
+                </div>
+
+                <!-- 구독자 리스트 테이블 -->
+                <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-600 text-sm border-b border-slate-200">
+                                <th class="py-3.5 px-6 font-semibold">이메일 주소</th>
+                                <th class="py-3.5 px-6 font-semibold">등록일</th>
+                                <th class="py-3.5 px-6 font-semibold">상태</th>
+                                <th class="py-3.5 px-6 font-semibold text-center">관리</th>
+                            </tr>
+                        </thead>
+                        <tbody id="subscriberTableBody" class="divide-y divide-slate-100">
+                            <tr>
+                                <td colspan="4" class="py-8 text-center text-slate-500 text-sm">구독자 목록을 불러오는 중...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </section>
     </main>
 
@@ -147,6 +191,7 @@
                     document.getElementById('logoutBtn').classList.remove('hidden');
                     showToast('로그인 성공');
                     loadUsers();
+                    loadSubscribers();
                 } else {
                     showToast(result.error || '비밀번호가 틀렸습니다.', 'error');
                 }
@@ -273,6 +318,154 @@
                 showToast('서버 연결 오류', 'error');
             }
         }
+
+        // ── 📧 이메일 구독자 관리 ──────────────────────
+        async function loadSubscribers() {
+            const tbody = document.getElementById('subscriberTableBody');
+            tbody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-slate-500"><svg class="animate-spin h-5 w-5 text-accent mx-auto mb-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>구독자 목록 불러오는 중...</td></tr>`;
+
+            try {
+                const resp = await fetch(SCRIPT_URL + '?tab=Subscribers&t=' + Date.now());
+                const data = await resp.json();
+
+                if (!Array.isArray(data)) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-400">등록된 구독자가 없거나 시트를 읽을 수 없습니다.</td></tr>`;
+                    return;
+                }
+
+                renderSubscribers(data);
+            } catch (e) {
+                console.error('loadSubscribers error:', e);
+                tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-rose-500">구독자 목록을 불러오지 못했습니다.</td></tr>`;
+            }
+        }
+
+        function renderSubscribers(subscribers) {
+            const tbody = document.getElementById('subscriberTableBody');
+            if (subscribers.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-400">등록된 구독자가 없습니다. 상단에서 이메일을 추가해 주세요.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = subscribers.map(s => {
+                const email = s['이메일'] || s['Email'] || '';
+                const date = s['등록일'] || s['Date'] || '-';
+                const isActive = String(s['활성화'] || '').toUpperCase() === 'TRUE';
+
+                const statusBadge = isActive
+                    ? `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800"><span class="w-1.5 h-1.5 bg-green-600 rounded-full mr-1.5"></span>수신 중</span>`
+                    : `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600"><span class="w-1.5 h-1.5 bg-slate-400 rounded-full mr-1.5"></span>일시중지</span>`;
+
+                return `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="py-3.5 px-6 font-medium text-slate-900">${email}</td>
+                        <td class="py-3.5 px-6 text-sm text-slate-500">${date}</td>
+                        <td class="py-3.5 px-6">${statusBadge}</td>
+                        <td class="py-3.5 px-6 text-center">
+                            <div class="flex justify-center items-center gap-2">
+                                <button onclick="sendTestMail('${email}')" class="text-xs px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg transition-colors">
+                                    📨 테스트 발송
+                                </button>
+                                <button onclick="toggleSubscriber('${email}')" class="text-xs px-2.5 py-1 ${isActive ? 'bg-amber-50 hover:bg-amber-100 text-amber-700' : 'bg-green-50 hover:bg-green-100 text-green-700'} font-semibold rounded-lg transition-colors">
+                                    ${isActive ? '일시중지' : '수신 재개'}
+                                </button>
+                                <button onclick="deleteSubscriber('${email}')" class="text-xs px-2.5 py-1 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors border border-transparent hover:border-rose-200 font-semibold">
+                                    삭제
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function addSubscriber() {
+            const input = document.getElementById('newSubscriberEmail');
+            const email = input.value.trim();
+            if (!email || !email.includes('@')) {
+                return alert('유효한 이메일 주소를 입력해 주세요.');
+            }
+
+            try {
+                const resp = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({ action: 'addSubscriber', email })
+                });
+                const res = await resp.json();
+                if (res.success) {
+                    showToast('구독자 이메일이 등록되었습니다.');
+                    input.value = '';
+                    loadSubscribers();
+                } else {
+                    showToast(res.error || '구독자 추가 실패', 'error');
+                }
+            } catch (e) {
+                showToast('구독자 추가 중 오류 발생', 'error');
+            }
+        }
+
+        async function toggleSubscriber(email) {
+            try {
+                const resp = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({ action: 'toggleSubscriber', email })
+                });
+                const res = await resp.json();
+                if (res.success) {
+                    showToast('구독 상태가 변경되었습니다.');
+                    loadSubscribers();
+                } else {
+                    showToast(res.error || '상태 변경 실패', 'error');
+                }
+            } catch (e) {
+                showToast('오류가 발생했습니다.', 'error');
+            }
+        }
+
+        async function deleteSubscriber(email) {
+            if (!confirm(`'${email}' 구독자를 목록에서 삭제하시겠습니까?`)) return;
+
+            try {
+                const resp = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({ action: 'deleteSubscriber', email })
+                });
+                const res = await resp.json();
+                if (res.success) {
+                    showToast('구독자가 삭제되었습니다.');
+                    loadSubscribers();
+                } else {
+                    showToast(res.error || '구독자 삭제 실패', 'error');
+                }
+            } catch (e) {
+                showToast('삭제 중 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        async function sendTestMail(email) {
+            if (!confirm(`'${email}' 주소로 최근 인사이트 리포트 테스트 메일을 발송하시겠습니까?`)) return;
+
+            showToast('테스트 메일 발송 중...');
+            try {
+                const resp = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({ action: 'sendTestReport', email })
+                });
+                const res = await resp.json();
+                if (res.success) {
+                    showToast('✅ 테스트 메일이 발송되었습니다!');
+                } else {
+                    showToast('❌ 메일 발송 실패: ' + (res.error || '알 수 없는 오류'), 'error');
+                }
+            } catch (e) {
+                showToast('메일 발송 요청 실패', 'error');
+            }
+        }
     </script>
+
 </body>
 </html>

@@ -240,6 +240,11 @@ def run_pipeline():
         if insight_data:
             doc_content = json.dumps(insight_data, ensure_ascii=False)
             sheets.save_briefing_doc(today_str, doc_title, doc_content)
+            # 전체 등록된 이메일 구독자 대상 일일 인사이트 리포트 자동 발송
+            try:
+                sheets.trigger_email_dispatch("daily")
+            except Exception as mail_err:
+                logger.error(f"일일 메일 발송 중 오류 (파이프라인 결과에 영향 없음): {mail_err}")
 
         # ── 일요일인 경우 주간 소기업·소상공인 인사이트 리포트 생성 ──
         if now.weekday() == 6:  # 6=일요일
@@ -264,10 +269,16 @@ def run_pipeline():
                             weekly_date_range
                         )
                         logger.info("Weekly_Briefing_Docs 저장 성공")
+                        # 전체 등록된 이메일 구독자 대상 주간 인사이트 리포트 자동 발송
+                        try:
+                            sheets.trigger_email_dispatch("weekly")
+                        except Exception as wmail_err:
+                            logger.error(f"주간 메일 발송 중 오류: {wmail_err}")
                 else:
                     logger.warning("지난 7일간 기사 데이터가 존재하지 않아 주간 리포트를 생성할 수 없습니다.")
             except Exception as weekly_err:
                 logger.error(f"주간 리포트 생성 중 오류 발생: {weekly_err}", exc_info=True)
+
 
         result["status"] = "완료"
         elapsed = (datetime.now(KST) - start_time).total_seconds()

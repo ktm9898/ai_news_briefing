@@ -25,6 +25,7 @@ from config import (
     SETTINGS_HEADERS,
     TOPIC_SETTINGS_HEADERS,
     NEWS_DATA_HEADERS,
+    GAS_SCRIPT_URL,
 )
 
 
@@ -137,6 +138,40 @@ class SheetsManager:
                 title="Weekly_Briefing_Docs", rows=100, cols=3
             )
             ws.append_row(["날짜", "제목", "내용"])
+
+        # Subscribers
+        if "Subscribers" not in existing:
+            ws = self.spreadsheet.add_worksheet(
+                title="Subscribers", rows=100, cols=3
+            )
+            ws.append_row(["이메일", "등록일", "활성화"])
+
+    def trigger_email_dispatch(self, report_type: str = "daily") -> bool:
+        """GAS 웹앱에 이메일 발송 요청 전송 (daily/weekly)"""
+        if not GAS_SCRIPT_URL:
+            logger.warning("GAS_SCRIPT_URL이 설정되지 않아 이메일 발송 요청을 건너뜁니다.")
+            return False
+
+        action = "sendDailyReportToAll" if report_type == "daily" else "sendWeeklyReportToAll"
+        logger.info(f"📧 전체 구독자 대상 이메일 일괄 발송 요청 중 ({report_type})...")
+
+        try:
+            import requests
+            resp = requests.post(GAS_SCRIPT_URL, json={"action": action}, timeout=30)
+            if resp.status_code == 200:
+                res_json = resp.json()
+                if res_json.get("success"):
+                    logger.info(f"✅ 이메일 발송 요청 성공! (발송 수: {res_json.get('sentCount', 0)} / 대상: {res_json.get('total', 0)})")
+                    return True
+                else:
+                    logger.error(f"❌ 이메일 발송 요청 실패: {res_json.get('error')}")
+            else:
+                logger.error(f"❌ GAS 웹앱 응답 오류 (Status Code: {resp.status_code})")
+        except Exception as e:
+            logger.error(f"❌ 이메일 발송 요청 중 예외 발생: {e}")
+
+        return False
+
 
     # ── Settings 탭 ──────────────────────────────────
 

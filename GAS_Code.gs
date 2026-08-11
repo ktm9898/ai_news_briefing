@@ -306,6 +306,191 @@ function doPost(e) {
     }
   }
 
+  // ── 전체 활성 구독자에게 일일 인사이트 리포트 일괄 발송 ──
+  if (action === 'sendDailyReportToAll') {
+    try {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const subSheet = getOrCreateTab(ss, 'Subscribers', ['이메일', '등록일', '활성화']);
+      const subData = subSheet.getDataRange().getValues();
+      if (subData.length <= 1) {
+        return createResponse({ success: false, error: '등록된 구독자가 없습니다.' });
+      }
+
+      const activeEmails = [];
+      const headers = subData[0];
+      const emailIdx = headers.indexOf('이메일') !== -1 ? headers.indexOf('이메일') : 0;
+      const activeIdx = headers.indexOf('활성화') !== -1 ? headers.indexOf('활성화') : 2;
+
+      for (let i = 1; i < subData.length; i++) {
+        const email = String(subData[i][emailIdx] || '').trim();
+        const active = String(subData[i][activeIdx] || '').toUpperCase();
+        if (email && active === 'TRUE') {
+          activeEmails.push(email);
+        }
+      }
+
+      if (activeEmails.length === 0) {
+        return createResponse({ success: false, error: '활성화된 구독자가 없습니다.' });
+      }
+
+      const docSheet = getOrCreateTab(ss, 'Briefing_Docs', ['날짜', '제목', '내용']);
+      const docData = docSheet.getDataRange().getValues();
+      if (docData.length <= 1) {
+        return createResponse({ success: false, error: '저장된 인사이트 리포트가 없습니다.' });
+      }
+
+      const lastRow = docData[docData.length - 1];
+      const dateIdx = docData[0].indexOf('날짜') !== -1 ? docData[0].indexOf('날짜') : 0;
+      const contentIdx = docData[0].indexOf('내용') !== -1 ? docData[0].indexOf('내용') : 2;
+
+      let rDate = lastRow[dateIdx];
+      let reportDate = Utilities.formatDate(new Date(), "GMT+9", "yyyy-MM-dd");
+      if (rDate instanceof Date || (rDate && Object.prototype.toString.call(rDate) === '[object Date]')) {
+        reportDate = Utilities.formatDate(rDate, "GMT+9", "yyyy-MM-dd");
+      } else if (rDate) {
+        reportDate = String(rDate);
+      }
+
+      let insightReport = null;
+      try {
+        insightReport = JSON.parse(lastRow[contentIdx]);
+      } catch(e) {
+        return createResponse({ success: false, error: '리포트 파싱 실패: ' + e.toString() });
+      }
+
+      let sentCount = 0;
+      activeEmails.forEach(function(email) {
+        try {
+          sendDailyReportEmail(email, reportDate, '', insightReport, []);
+          sentCount++;
+        } catch(e) {
+          Logger.log('이메일 발송 실패 (' + email + '): ' + e.toString());
+        }
+      });
+
+      return createResponse({ success: true, sentCount: sentCount, total: activeEmails.length });
+    } catch (err) {
+      return createResponse({ success: false, error: err.toString() });
+    }
+  }
+
+  // ── 전체 활성 구독자에게 주간 인사이트 리포트 일괄 발송 ──
+  if (action === 'sendWeeklyReportToAll') {
+    try {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const subSheet = getOrCreateTab(ss, 'Subscribers', ['이메일', '등록일', '활성화']);
+      const subData = subSheet.getDataRange().getValues();
+      if (subData.length <= 1) {
+        return createResponse({ success: false, error: '등록된 구독자가 없습니다.' });
+      }
+
+      const activeEmails = [];
+      const headers = subData[0];
+      const emailIdx = headers.indexOf('이메일') !== -1 ? headers.indexOf('이메일') : 0;
+      const activeIdx = headers.indexOf('활성화') !== -1 ? headers.indexOf('활성화') : 2;
+
+      for (let i = 1; i < subData.length; i++) {
+        const email = String(subData[i][emailIdx] || '').trim();
+        const active = String(subData[i][activeIdx] || '').toUpperCase();
+        if (email && active === 'TRUE') {
+          activeEmails.push(email);
+        }
+      }
+
+      if (activeEmails.length === 0) {
+        return createResponse({ success: false, error: '활성화된 구독자가 없습니다.' });
+      }
+
+      const docSheet = getOrCreateTab(ss, 'Weekly_Briefing_Docs', ['날짜', '제목', '내용']);
+      const docData = docSheet.getDataRange().getValues();
+      if (docData.length <= 1) {
+        return createResponse({ success: false, error: '저장된 주간 인사이트 리포트가 없습니다.' });
+      }
+
+      const lastRow = docData[docData.length - 1];
+      const dateIdx = docData[0].indexOf('날짜') !== -1 ? docData[0].indexOf('날짜') : 0;
+      const contentIdx = docData[0].indexOf('내용') !== -1 ? docData[0].indexOf('내용') : 2;
+
+      let dateRange = String(lastRow[dateIdx] || '');
+      let insightReport = null;
+      try {
+        insightReport = JSON.parse(lastRow[contentIdx]);
+      } catch(e) {
+        return createResponse({ success: false, error: '주간 리포트 파싱 실패: ' + e.toString() });
+      }
+
+      let sentCount = 0;
+      activeEmails.forEach(function(email) {
+        try {
+          sendWeeklyReportEmail(email, dateRange, insightReport);
+          sentCount++;
+        } catch(e) {
+          Logger.log('주간 이메일 발송 실패 (' + email + '): ' + e.toString());
+        }
+      });
+
+      return createResponse({ success: true, sentCount: sentCount, total: activeEmails.length });
+    } catch (err) {
+      return createResponse({ success: false, error: err.toString() });
+    }
+  }
+
+  // ── 이메일 구독자 관리 API ──
+  if (action === 'addSubscriber') {
+    const email = params.email ? String(params.email).trim() : '';
+    if (!email || email.indexOf('@') === -1) {
+      return createResponse({ success: false, error: '유효한 이메일 주소를 입력하세요.' });
+    }
+
+    const sheet = getOrCreateTab(ss, 'Subscribers', ['이메일', '등록일', '활성화']);
+    const data = sheet.getDataRange().getValues();
+    const todayStr = Utilities.formatDate(new Date(), "GMT+9", "yyyy-MM-dd");
+
+    // 이미 등록되어 있는지 확인
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]).trim().toLowerCase() === email.toLowerCase()) {
+        sheet.getRange(i + 1, 3).setValue('TRUE'); // 활성화로 변경
+        return createResponse({ success: true, message: '이미 등록된 이메일입니다. 활성화 처리되었습니다.' });
+      }
+    }
+
+    sheet.appendRow([email, todayStr, 'TRUE']);
+    return createResponse({ success: true });
+  }
+
+  if (action === 'deleteSubscriber') {
+    const email = params.email ? String(params.email).trim() : '';
+    const sheet = ss.getSheetByName('Subscribers');
+    if (!sheet) return createResponse({ error: 'Subscribers tab not found' });
+    const data = sheet.getDataRange().getValues();
+
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]).trim().toLowerCase() === email.toLowerCase()) {
+        sheet.deleteRow(i + 1);
+        return createResponse({ success: true });
+      }
+    }
+    return createResponse({ error: 'Subscriber not found' });
+  }
+
+  if (action === 'toggleSubscriber') {
+    const email = params.email ? String(params.email).trim() : '';
+    const sheet = ss.getSheetByName('Subscribers');
+    if (!sheet) return createResponse({ error: 'Subscribers tab not found' });
+    const data = sheet.getDataRange().getValues();
+
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]).trim().toLowerCase() === email.toLowerCase()) {
+        let currentValue = data[i][2];
+        let newValue = (String(currentValue).toUpperCase() === 'TRUE') ? 'FALSE' : 'TRUE';
+        sheet.getRange(i + 1, 3).setValue(newValue);
+        return createResponse({ success: true });
+      }
+    }
+    return createResponse({ error: 'Subscriber not found' });
+  }
+
+
   // ── 관리자 인증 API ──
   if (action === 'adminLogin') {
     if (params.pw === ADMIN_PW) {
