@@ -2036,19 +2036,19 @@
                     : `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600"><span class="w-1.5 h-1.5 bg-gray-400 rounded-full mr-1"></span>일시중지</span>`;
 
                 return `
-                    <tr class="hover:bg-gray-50 transition-colors">
-                        <td class="py-2.5 px-2.5 font-bold text-gray-900 break-all max-w-[130px] sm:max-w-none text-[11px] sm:text-xs">${email}</td>
-                        <td class="py-2.5 px-1.5 text-gray-500 text-[10px] sm:text-xs whitespace-nowrap text-center">${date}</td>
-                        <td class="py-2.5 px-1 text-center">${statusBadge}</td>
-                        <td class="py-2.5 px-1.5 text-center">
-                            <div class="flex flex-wrap sm:flex-nowrap justify-center items-center gap-1">
-                                <button onclick="sendTestMailModal('${email}')" class="text-[10px] px-1.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-md transition-colors whitespace-nowrap" title="테스트 리포트 메일 발송">
+                    <tr class="hover:bg-gray-50 transition-colors whitespace-nowrap">
+                        <td class="py-2.5 px-3 font-bold text-gray-900 text-xs whitespace-nowrap">${email}</td>
+                        <td class="py-2.5 px-2 text-gray-500 text-xs whitespace-nowrap text-center">${date}</td>
+                        <td class="py-2.5 px-2 text-center whitespace-nowrap">${statusBadge}</td>
+                        <td class="py-2.5 px-3 text-center whitespace-nowrap">
+                            <div class="inline-flex items-center gap-1.5 whitespace-nowrap">
+                                <button onclick="sendTestMailModal('${email}')" class="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-md transition-colors whitespace-nowrap" title="테스트 리포트 메일 발송">
                                     📨 테스트
                                 </button>
-                                <button onclick="toggleSubscriberModal('${email}')" class="text-[10px] px-1.5 py-1 ${isActive ? 'bg-amber-50 hover:bg-amber-100 text-amber-700' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700'} font-bold rounded-md transition-colors whitespace-nowrap">
+                                <button onclick="toggleSubscriberModal('${email}')" class="text-xs px-2 py-1 ${isActive ? 'bg-amber-50 hover:bg-amber-100 text-amber-700' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700'} font-bold rounded-md transition-colors whitespace-nowrap">
                                     ${isActive ? '일시중지' : '수신재개'}
                                 </button>
-                                <button onclick="deleteSubscriberModal('${email}')" class="text-[10px] px-1.5 py-1 text-rose-600 hover:bg-rose-50 rounded-md transition-colors font-bold whitespace-nowrap">
+                                <button onclick="deleteSubscriberModal('${email}')" class="text-xs px-2 py-1 text-rose-600 hover:bg-rose-50 rounded-md transition-colors font-bold whitespace-nowrap">
                                     삭제
                                 </button>
                             </div>
@@ -3027,15 +3027,15 @@
                     </button>
                 </div>
 
-                <!-- 구독자 테이블 (가로 스크롤 및 모바일 반응형 처리) -->
+                <!-- 구독자 테이블 (단일 행 가로 스크롤 제공) -->
                 <div class="border border-border rounded-xl overflow-x-auto shadow-sm">
-                    <table class="w-full text-left border-collapse text-xs min-w-[340px] sm:min-w-full">
+                    <table class="w-full text-left border-collapse text-xs min-w-[480px]">
                         <thead>
-                            <tr class="bg-gray-50 text-gray-600 border-b border-border">
-                                <th class="py-2.5 px-2.5 font-bold">이메일 주소</th>
+                            <tr class="bg-gray-50 text-gray-600 border-b border-border whitespace-nowrap">
+                                <th class="py-2.5 px-3 font-bold">이메일 주소</th>
                                 <th class="py-2.5 px-2 font-bold text-center">등록일</th>
                                 <th class="py-2.5 px-2 font-bold text-center">상태</th>
-                                <th class="py-2.5 px-2 font-bold text-center">관리</th>
+                                <th class="py-2.5 px-3 font-bold text-center">관리</th>
                             </tr>
                         </thead>
                         <tbody id="modalSubscriberTableBody" class="divide-y divide-border">
