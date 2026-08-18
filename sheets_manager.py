@@ -88,18 +88,6 @@ class SheetsManager:
 
     # ── 초기화 ────────────────────────────────────────
 
-    def _ensure_email_column(self, tab_name: str, expected_headers: list[str]):
-        """시트에 '이메일' 컬럼이 첫 번째 열에 없으면 삽입하여 마이그레이션"""
-        try:
-            ws = self.spreadsheet.worksheet(tab_name)
-            first_row = ws.row_values(1)
-            if first_row and ("이메일" not in first_row and "Email" not in first_row):
-                # 첫 번째 열로 '이메일' 컬럼 추가
-                ws.insert_cols([[expected_headers[0]] + [""] * (ws.row_count - 1)], col=1)
-                logger.info(f"'{tab_name}' 시트에 '이메일' 컬럼이 첫 번째 열로 삽입되었습니다.")
-        except Exception as e:
-            logger.warning(f"'{tab_name}' 시트 이메일 컬럼 검사 중 오류 (무시 가능): {e}")
-
     def _ensure_tabs(self):
         """Settings / News_Data / Topic_Settings / Briefing / Briefing_Docs 탭이 없으면 자동 생성"""
         existing = [ws.title for ws in self.spreadsheet.worksheets()]
@@ -363,7 +351,7 @@ class SheetsManager:
             ws.append_row([today, script])
 
     def save_briefing_doc(self, date_str: str, title: str, content: str):
-        """AI 브리핑 리포트를 Briefing_Docs 탭에 저장"""
+        """AI 브리핑 리포트를 Briefing_Docs 탭에 저장 (3열: 날짜, 제목, 내용)"""
         tab_name = "Briefing_Docs"
         existing = [ws.title for ws in self.spreadsheet.worksheets()]
 
@@ -374,19 +362,30 @@ class SheetsManager:
             ws = self.spreadsheet.worksheet(tab_name)
 
         data = ws.get_all_values()
+        headers = data[0] if data else []
+
+        # 헤더 기반 동적 인덱스 (3열 표준 및 이전 4열 구조 모두 완벽 대응)
+        date_col_idx = headers.index("날짜") if "날짜" in headers else (headers.index("Date") if "Date" in headers else 0)
+        title_col_num = (headers.index("제목") + 1) if "제목" in headers else (3 if "이메일" in headers else 2)
+        content_col_num = (headers.index("내용") + 1) if "내용" in headers else (4 if "이메일" in headers else 3)
+
         updated = False
         for idx, row in enumerate(data):
             if idx == 0:
                 continue
-            row_date = str(row[0]).strip()
-            if row_date == date_str:
-                ws.update_cell(idx + 1, 2, title)
-                ws.update_cell(idx + 1, 3, content)
-                updated = True
-                break
+            if len(row) > date_col_idx:
+                row_date = str(row[date_col_idx]).strip()
+                if row_date == date_str:
+                    ws.update_cell(idx + 1, title_col_num, title)
+                    ws.update_cell(idx + 1, content_col_num, content)
+                    updated = True
+                    break
 
         if not updated:
-            ws.append_row([date_str, title, content])
+            if "이메일" in headers or "Email" in headers:
+                ws.append_row(["", date_str, title, content])
+            else:
+                ws.append_row([date_str, title, content])
 
     def get_news_by_date_range(self, start_date: str, end_date: str) -> list[dict]:
         """시작 날짜와 종료 날짜 사이(포함)의 뉴스 반환"""
@@ -430,7 +429,7 @@ class SheetsManager:
             return date_str
 
     def save_weekly_briefing_doc(self, title: str, content: str, date_range_str: str):
-        """AI 주간 브리핑 리포트를 Weekly_Briefing_Docs 탭에 저장"""
+        """AI 주간 브리핑 리포트를 Weekly_Briefing_Docs 탭에 저장 (3열: 날짜, 제목, 내용)"""
         tab_name = "Weekly_Briefing_Docs"
         existing = [ws.title for ws in self.spreadsheet.worksheets()]
 
@@ -441,16 +440,26 @@ class SheetsManager:
             ws = self.spreadsheet.worksheet(tab_name)
 
         data = ws.get_all_values()
+        headers = data[0] if data else []
+
+        date_col_idx = headers.index("날짜") if "날짜" in headers else (headers.index("Date") if "Date" in headers else 0)
+        title_col_num = (headers.index("제목") + 1) if "제목" in headers else (3 if "이메일" in headers else 2)
+        content_col_num = (headers.index("내용") + 1) if "내용" in headers else (4 if "이메일" in headers else 3)
+
         updated = False
         for idx, row in enumerate(data):
             if idx == 0:
                 continue
-            row_date = str(row[0]).strip()
-            if row_date == date_range_str:
-                ws.update_cell(idx + 1, 2, title)
-                ws.update_cell(idx + 1, 3, content)
-                updated = True
-                break
+            if len(row) > date_col_idx:
+                row_date = str(row[date_col_idx]).strip()
+                if row_date == date_range_str:
+                    ws.update_cell(idx + 1, title_col_num, title)
+                    ws.update_cell(idx + 1, content_col_num, content)
+                    updated = True
+                    break
 
         if not updated:
-            ws.append_row([date_range_str, title, content])
+            if "이메일" in headers or "Email" in headers:
+                ws.append_row(["", date_range_str, title, content])
+            else:
+                ws.append_row([date_range_str, title, content])

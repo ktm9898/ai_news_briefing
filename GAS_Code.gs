@@ -275,25 +275,24 @@ function doPost(e) {
     
     try {
       const ss = SpreadsheetApp.getActiveSpreadsheet();
-      const sheet = getOrCreateTab(ss, 'Briefing_Docs', ['이메일', '날짜', '제목', '내용']);
+      const sheet = getOrCreateTab(ss, 'Briefing_Docs', ['날짜', '제목', '내용']);
       const data = sheet.getDataRange().getValues();
       if (data.length <= 1) {
         return createResponse({ success: false, error: '저장된 인사이트 리포트가 없습니다. (시트가 비어있음)' });
       }
       
       const headers = data[0];
-      const emailIdx = headers.indexOf('이메일') !== -1 ? headers.indexOf('이메일') : headers.indexOf('Email');
       const dateIdx = headers.indexOf('날짜') !== -1 ? headers.indexOf('날짜') : headers.indexOf('Date');
       const contentIdx = headers.indexOf('내용') !== -1 ? headers.indexOf('내용') : headers.indexOf('Content');
       
       let latestReport = null;
       let reportDate = dateStr;
       
-      // 뒤에서부터 검색하여 해당 이메일의 가장 최근 리포트 추출
+      // 뒤에서부터 검색하여 가장 최근의 유효한 리포트 추출 (3열 또는 4열 모두 호환)
       for (let i = data.length - 1; i >= 1; i--) {
-        const rowEmail = emailIdx !== -1 ? String(data[i][emailIdx]).trim().toLowerCase() : '';
-        if (rowEmail === targetEmail.toLowerCase()) {
-          latestReport = contentIdx !== -1 ? data[i][contentIdx] : null;
+        const contentVal = contentIdx !== -1 ? data[i][contentIdx] : null;
+        if (contentVal && String(contentVal).trim().startsWith('{')) {
+          latestReport = contentVal;
           let rDate = dateIdx !== -1 ? data[i][dateIdx] : dateStr;
           if (rDate instanceof Date || (rDate && Object.prototype.toString.call(rDate) === '[object Date]')) {
             reportDate = Utilities.formatDate(rDate, "GMT+9", "yyyy-MM-dd");
@@ -305,7 +304,7 @@ function doPost(e) {
       }
       
       if (!latestReport) {
-        return createResponse({ success: false, error: '저장된 인사이트 리포트를 찾을 수 없습니다. Email: ' + targetEmail });
+        return createResponse({ success: false, error: '저장된 인사이트 리포트를 찾을 수 없습니다.' });
       }
       
       let insightReport = null;
@@ -671,20 +670,9 @@ function getOrCreateTab(ss, name, headers) {
     sheet = ss.insertSheet(name);
     sheet.appendRow(headers);
   } else {
-    // 기존 탭 헤더 보정: '이메일' 필드 누락 시 추가하여 호환성 유지
     const data = sheet.getDataRange().getValues();
     if (data.length === 0 || data[0].length === 0) {
       sheet.appendRow(headers);
-    } else {
-      const currentHeaders = data[0];
-      if (currentHeaders.indexOf('이메일') === -1 && currentHeaders.indexOf('Email') === -1) {
-        sheet.insertColumnBefore(1);
-        sheet.getRange(1, 1).setValue('이메일');
-        if (sheet.getLastRow() > 1) {
-          // 기존 데이터 이메일 열 빈 문자열로 채우기
-          sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).setValue('');
-        }
-      }
     }
   }
   return sheet;
