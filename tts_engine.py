@@ -201,9 +201,17 @@ class TTSEngine:
         if not text:
             return ""
         
-        # 1. 소수점 처리: 숫자 사이의 마침표(.)를 '쩜'으로 변환
-        # 예: 3.5% -> 3쩜5% (TTS가 마침표로 읽어 끊기는 현상 방지)
-        text = re.sub(r'(\d)\.(\d)', r'\1쩜\2', text)
+        # 1. 소수점 처리: 소수점 이하 숫자를 하나씩 자릿수로 읽도록 변환 (예: 0.23% -> 0점 이 삼%, 3.5 -> 3점 오)
+        # TTS 엔진이 '0.23'을 '영점이십삼'으로 잘못 읽는 것을 방지하기 위함
+        digit_map = {'0': '영', '1': '일', '2': '이', '3': '삼', '4': '사', '5': '오', '6': '육', '7': '칠', '8': '팔', '9': '구'}
+        
+        def convert_decimal(match):
+            integer_part = match.group(1)
+            decimal_part = match.group(2)
+            converted_decimal = ' '.join(digit_map[d] for d in decimal_part)
+            return f"{integer_part}점 {converted_decimal}"
+
+        text = re.sub(r'(\d+)\.(\d+)', convert_decimal, text)
         
         # 2. S&P500 지수 발음 정정: S&P500 / S&P 500 -> 에스앤피 오백, S&P -> 에스앤피
         text = re.sub(r'S&P\s*500', '에스앤피 오백', text, flags=re.IGNORECASE)
