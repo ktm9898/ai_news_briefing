@@ -697,9 +697,9 @@ function formatParagraphs(text) {
   if (!text) return "";
   text = String(text).trim();
   
-  // 만약 개행문자(\n)가 이미 포함되어 있다면 개행문자를 <br>로 치환하여 그대로 반환
-  if (text.indexOf('\n') !== -1) {
-    return text.replace(/\n/g, '<br>');
+  // 만약 개행문자(\n 또는 \\n)가 이미 포함되어 있다면 개행문자를 <br>로 치환하여 그대로 반환
+  if (text.indexOf('\\n') !== -1 || text.indexOf('\n') !== -1) {
+    return text.replace(/\\n/g, '<br>').replace(/\n/g, '<br>');
   }
   
   // 개행문자가 없는 긴 문장의 경우, 2~3문장 단위로 문단을 분리
@@ -743,7 +743,7 @@ function generateInsightReportPdf(date, insightReport) {
 
   // 2. 주요 경제 흐름
   html += '<div class="section-header">1. 주요 경제 흐름</div>';
-  html += '<p>' + escapeHtml(insightReport.economic_trend || '').replace(/\n/g, '<br>') + '</p>';
+  html += '<p>' + formatParagraphs(insightReport.economic_trend || '') + '</p>';
 
   // 3. 업무 인사이트
   html += '<div class="section-header">2. 업무 인사이트</div>';
@@ -837,7 +837,7 @@ function sendDailyReportEmail(email, date, briefingScript, insightReport, newsLi
 
   // 1. 주요 경제 흐름
   htmlBody += '<div style="font-size: 14pt; font-weight: bold; color: #000; margin-top: 30px; margin-bottom: 12px;">1. 주요 경제 흐름</div>';
-  htmlBody += '<p style="font-size: 10.5pt; color: #333; margin-top: 0; margin-bottom: 10px; line-height: 1.7; text-align: justify; word-break: break-all;">' + escapeHtml(insightReport.economic_trend || '').replace(/\n/g, '<br>') + '</p>';
+  htmlBody += '<p style="font-size: 10.5pt; color: #333; margin-top: 0; margin-bottom: 10px; line-height: 1.7; text-align: justify; word-break: break-all;">' + formatParagraphs(insightReport.economic_trend || '') + '</p>';
 
   // 2. 업무 인사이트
   htmlBody += '<div style="font-size: 14pt; font-weight: bold; color: #000; margin-top: 30px; margin-bottom: 12px;">2. 업무 인사이트</div>';
@@ -896,17 +896,48 @@ function generateWeeklyInsightReportPdf(dateRange, insightReport) {
 
   // 2. 주요 경제 흐름
   html += '<div class="section-header">1. 주요 경제 흐름</div>';
-  html += '<p>' + escapeHtml(insightReport.economic_trend || '').replace(/\\n/g, '<br>') + '</p>';
+  html += '<p>' + formatParagraphs(insightReport.economic_trend || '') + '</p>';
 
   // 3. 인사이트
   html += '<div class="section-header">2. 인사이트</div>';
   if (insightReport.news_insights && Array.isArray(insightReport.news_insights)) {
-    insightReport.news_insights.forEach(function(item) {
-      var publisherDate = (item.publisher || item.date) ? ' <span style="font-size:10pt; color:#666; font-weight:normal;">(' + escapeHtml(item.publisher || '') + (item.publisher && item.date ? ', ' : '') + escapeHtml(item.date || '') + ')</span>' : '';
-      html += '<div class="news-title"><b>' + escapeHtml(item.title) + '</b>' + publisherDate + '</div>';
+    insightReport.news_insights.forEach(function(item, idx) {
+      var rawTitle = (item.issue_title || item.title || '주요 이슈').replace(/^(주요\s*이슈|ISSUE)\s*\d+[\.\:\s]*/i, '').trim();
+      var displayTitle = 'ISSUE ' + (idx + 1) + '. ' + rawTitle;
+
+      html += '<div class="news-title"><b>' + escapeHtml(displayTitle) + '</b></div>';
       html += '<p><b>주요내용:</b> ' + formatParagraphs(item.summary || '') + '</p>';
       
-      html += '<p style="margin-bottom: 25px;"><b>인사이트:</b> ' + formatParagraphs(item.implication || '') + '</p>';
+      var hasRefs = (item.references && item.references.length > 0) || (item.reference && String(item.reference).trim() !== '');
+      html += '<p style="margin-bottom: ' + (hasRefs ? '15px' : '25px') + ';"><b>인사이트:</b> ' + formatParagraphs(item.implication || '') + '</p>';
+
+      // references 배열 출력 (PDF에서도 참고 출처 표기)
+      if (item.references && Array.isArray(item.references) && item.references.length > 0) {
+        item.references.forEach(function(ref, rIdx) {
+          var isLast = (rIdx === item.references.length - 1);
+          var mb = isLast ? '25px' : '5px';
+          var refName = typeof ref === 'string' ? ref : (ref.name || '');
+          var refUrl = typeof ref === 'string' ? '' : (ref.url || '');
+          var isValidUrl = refUrl && /^https?:\/\//i.test(String(refUrl).trim());
+          if (isValidUrl) {
+            var safeUrl = String(refUrl).trim().replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+            html += '<p style="font-size: 10pt; margin-top: 0; margin-bottom: ' + mb + '; line-height: 1.7;"><a href="' + safeUrl + '" target="_blank" style="text-decoration: underline; color: #2563eb;">[참고 출처: ' + escapeHtml(refName) + ']</a></p>';
+          } else {
+            var q = encodeURIComponent(String(refName).replace(/"/g, ''));
+            html += '<p style="font-size: 10pt; margin-top: 0; margin-bottom: ' + mb + '; line-height: 1.7;"><a href="https://www.google.com/search?q=' + q + '" target="_blank" style="text-decoration: underline; color: #2563eb;">[참고 출처: ' + escapeHtml(refName) + ']</a></p>';
+          }
+        });
+      } else if (item.reference && String(item.reference).trim() !== '') {
+        var legacyUrl = item.reference_url || '';
+        var isValidLegacyUrl = legacyUrl && /^https?:\/\//i.test(String(legacyUrl).trim());
+        if (isValidLegacyUrl) {
+          var safeRefUrl = String(legacyUrl).trim().replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+          html += '<p style="font-size: 10pt; margin-top: 0; margin-bottom: 25px; line-height: 1.7;"><a href="' + safeRefUrl + '" target="_blank" style="text-decoration: underline; color: #2563eb;">[참고 출처: ' + escapeHtml(item.reference) + ']</a></p>';
+        } else {
+          var q = encodeURIComponent(String(item.reference).replace(/"/g, ''));
+          html += '<p style="font-size: 10pt; margin-top: 0; margin-bottom: 25px; line-height: 1.7;"><a href="https://www.google.com/search?q=' + q + '" target="_blank" style="text-decoration: underline; color: #2563eb;">[참고 출처: ' + escapeHtml(item.reference) + ']</a></p>';
+        }
+      }
     });
   }
 
@@ -914,7 +945,7 @@ function generateWeeklyInsightReportPdf(dateRange, insightReport) {
   html += '</body></html>';
 
   const htmlOutput = HtmlService.createHtmlOutput(html);
-  return htmlOutput.getAs('application/pdf').setName('소상공인_주간_인사이트_리포트_' + dateRange.replace(/\\s/g, '') + '.pdf');
+  return htmlOutput.getAs('application/pdf').setName('소상공인_주간_인사이트_리포트_' + dateRange.replace(/\s/g, '') + '.pdf');
 }
 
 function sendWeeklyReportEmail(email, dateRange, insightReport) {
@@ -935,9 +966,11 @@ function sendWeeklyReportEmail(email, dateRange, insightReport) {
 
   let newsInsightsHtml = "";
   if (insightReport.news_insights && Array.isArray(insightReport.news_insights)) {
-    insightReport.news_insights.forEach(function(item) {
-      var publisherDate = (item.publisher || item.date) ? ' <span style="font-size:10pt; color:#666; font-weight:normal;">(' + escapeHtml(item.publisher || '') + (item.publisher && item.date ? ', ' : '') + escapeHtml(item.date || '') + ')</span>' : '';
-      newsInsightsHtml += '<div style="font-size: 12pt; font-weight: bold; color: #000; margin-top: 25px; margin-bottom: 10px;"><b>' + escapeHtml(item.title) + '</b>' + publisherDate + '</div>';
+    insightReport.news_insights.forEach(function(item, idx) {
+      var rawTitle = (item.issue_title || item.title || '주요 이슈').replace(/^(주요\s*이슈|ISSUE)\s*\d+[\.\:\s]*/i, '').trim();
+      var displayTitle = 'ISSUE ' + (idx + 1) + '. ' + rawTitle;
+
+      newsInsightsHtml += '<div style="font-size: 12pt; font-weight: bold; color: #000; margin-top: 25px; margin-bottom: 10px;"><b>' + escapeHtml(displayTitle) + '</b></div>';
       newsInsightsHtml += '<p style="font-size: 10.5pt; color: #333; margin-top: 0; margin-bottom: 10px; line-height: 1.7; text-align: justify; word-break: break-all;"><b>주요내용:</b> ' + formatParagraphs(item.summary || '') + '</p>';
       
       // references 배열 존재 여부에 따라 하단 마진 조절
@@ -945,10 +978,9 @@ function sendWeeklyReportEmail(email, dateRange, insightReport) {
       newsInsightsHtml += '<p style="font-size: 10.5pt; color: #333; margin-top: 0; margin-bottom: ' + (hasRefs ? '15px' : '25px') + '; line-height: 1.7; text-align: justify; word-break: break-all;"><b>인사이트:</b> ' + formatParagraphs(item.implication || '') + '</p>';
       
       // 신규 배열 형식 (references)
-      // 신규 배열 형식 (references)
       if (item.references && Array.isArray(item.references) && item.references.length > 0) {
-        item.references.forEach(function(ref, idx) {
-          var isLast = (idx === item.references.length - 1);
+        item.references.forEach(function(ref, rIdx) {
+          var isLast = (rIdx === item.references.length - 1);
           var mb = isLast ? '25px' : '5px';
           var refName = typeof ref === 'string' ? ref : (ref.name || '');
           var refUrl = typeof ref === 'string' ? '' : (ref.url || '');
@@ -978,7 +1010,7 @@ function sendWeeklyReportEmail(email, dateRange, insightReport) {
     });
   }
 
-  let htmlBody = '<div style="font-family: \\\'Nanum Gothic\\\', \\\'Malgun Gothic\\\', \\\'Apple SD Gothic Neo\\\', sans-serif; background-color: #f8fafc; padding: 40px 20px; color: #1a1a1a;">';
+  let htmlBody = '<div style="font-family: \'Nanum Gothic\', \'Malgun Gothic\', \'Apple SD Gothic Neo\', sans-serif; background-color: #f8fafc; padding: 40px 20px; color: #1a1a1a;">';
   htmlBody += '<div style="max-width: 700px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; padding: 40px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border-radius: 8px;">';
   
   // 헤더
@@ -990,7 +1022,7 @@ function sendWeeklyReportEmail(email, dateRange, insightReport) {
 
   // 1. 주요 경제 흐름
   htmlBody += '<div style="font-size: 14pt; font-weight: bold; color: #000; margin-top: 30px; margin-bottom: 12px;">1. 주요 경제 흐름</div>';
-  htmlBody += '<p style="font-size: 10.5pt; color: #333; margin-top: 0; margin-bottom: 10px; line-height: 1.7; text-align: justify; word-break: break-all;">' + escapeHtml(insightReport.economic_trend || '').replace(/\\n/g, '<br>') + '</p>';
+  htmlBody += '<p style="font-size: 10.5pt; color: #333; margin-top: 0; margin-bottom: 10px; line-height: 1.7; text-align: justify; word-break: break-all;">' + formatParagraphs(insightReport.economic_trend || '') + '</p>';
 
   // 2. 인사이트
   htmlBody += '<div style="font-size: 14pt; font-weight: bold; color: #000; margin-top: 30px; margin-bottom: 12px;">2. 인사이트</div>';
