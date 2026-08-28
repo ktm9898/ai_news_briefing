@@ -1050,3 +1050,41 @@ function sendWeeklyReportEmail(email, dateRange, insightReport) {
     attachments: [pdfBlob]
   });
 }
+
+/**
+ * ⏰ 매일 아침 시간 기반 트리거용 자동 실행 함수
+ * 구글 Apps Script 트리거(매일 아침)에 등록하여 GitHub Actions 워크플로우를 즉시 실행합니다.
+ */
+function autoTriggerDailyNews() {
+  const props = PropertiesService.getScriptProperties();
+  const GITHUB_PAT = props.getProperty('GITHUB_PAT') || props.getProperty('GITHUB_TOKEN');
+  
+  if (!GITHUB_PAT) {
+    Logger.log('❌ 오류: GITHUB_PAT 또는 GITHUB_TOKEN이 스크립트 속성에 설정되지 않았습니다.');
+    return;
+  }
+
+  const url = 'https://api.github.com/repos/ktm9898/ai_news_briefing/actions/workflows/collect.yml/dispatches';
+  const options = {
+    method: 'post',
+    headers: {
+      'Accept': 'application/vnd.github.v3+json',
+      'Authorization': 'Bearer ' + GITHUB_PAT
+    },
+    payload: JSON.stringify({ ref: 'master' }),
+    muteHttpExceptions: true
+  };
+
+  try {
+    const response = UrlFetchApp.fetch(url, options);
+    const code = response.getResponseCode();
+    if (code >= 200 && code < 300) {
+      Logger.log('✅ GitHub Actions 뉴스 수집 파이프라인 트리거 성공!');
+    } else {
+      Logger.log('❌ GitHub API 오류 (' + code + '): ' + response.getContentText());
+    }
+  } catch (err) {
+    Logger.log('❌ GitHub Actions 요청 실패: ' + err.toString());
+  }
+}
+
