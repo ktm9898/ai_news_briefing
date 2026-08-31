@@ -488,8 +488,8 @@
             <div class="sticky top-0 bg-white border-b border-border px-5 py-3 flex items-center justify-between shrink-0">
                 <h2 class="text-sm font-bold" id="reportsModalTitle">📑 지난 리포트</h2>
                 <div class="flex items-center gap-2">
-                    <button id="printReportBtn" onclick="printReport()" class="hidden px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded hover:bg-blue-700 transition-colors">인쇄하기</button>
-                    <button id="backToListBtn" onclick="showReportList()" class="hidden px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-bold rounded hover:bg-gray-200 transition-colors">목록으로</button>
+                    <button id="printReportBtn" onclick="printReport()" class="hidden px-2.5 sm:px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded hover:bg-blue-700 transition-colors">인쇄</button>
+                    <button id="backToListBtn" onclick="showReportList()" class="hidden px-2.5 sm:px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-bold rounded hover:bg-gray-200 transition-colors">목록</button>
                     <button onclick="closeReportsModal()"
                         class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-100">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2771,15 +2771,19 @@
             const isFoundation = currentReportTab === 'foundation';
             const fallbackTitle = isFoundation ? '서울신용보증재단 인사이트 리포트' : '소기업·소상공인 주간 인사이트 리포트';
             
-            container.innerHTML = targetArray.map((r, i) => `
+            container.innerHTML = targetArray.map((r, i) => {
+                let rawTitle = r['제목'] || fallbackTitle;
+                let cleanTitle = rawTitle.replace(/\s*\([^)]*\d{4}[^)]*\)/g, '').replace(/\s*-\s*\d{4}.*$/g, '').trim();
+                if (!cleanTitle) cleanTitle = fallbackTitle;
+                return `
                 <div class="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 border border-border rounded-xl cursor-pointer transition-colors" onclick="viewReport(${i})">
                     <div>
-                        <h3 class="text-sm font-bold text-gray-900">${r['제목'] || fallbackTitle}</h3>
+                        <h3 class="text-sm font-bold text-gray-900">${cleanTitle}</h3>
                         <p class="text-xs text-muted mt-1">${r['날짜']}</p>
                     </div>
                     <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                 </div>
-            `).join('');
+            `}).join('');
         }
 
         async function loadReports(forceRefresh = false) {
@@ -2860,7 +2864,7 @@
             document.getElementById('reportDetailContainer').classList.remove('hidden');
             document.getElementById('printReportBtn').classList.remove('hidden');
             document.getElementById('backToListBtn').classList.remove('hidden');
-            document.getElementById('reportsModalTitle').textContent = report['날짜'] + ' 리포트';
+            document.getElementById('reportsModalTitle').textContent = '📑 리포트 상세';
 
             const rawContent = report['내용'] || '';
             let html = '';
