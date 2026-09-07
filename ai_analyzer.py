@@ -412,6 +412,25 @@ class AIAnalyzer:
         _, briefing = self.summarize_and_brief(news_list)
         return briefing
 
+    def _clean_insight_text(self, text: str) -> str:
+        """리포트 본문에서 프롬프트 내부 뉴스 번호(예: (뉴스 33), [뉴스 1], - 뉴스 138) 등) 및 불필요한 공백을 완벽히 정제"""
+        if not text or not isinstance(text, str):
+            return text
+        import re
+        # 1. 괄호가 포함된 케이스: (뉴스 33), [뉴스 1], (뉴스 33 등
+        cleaned = re.sub(r'[\(\[\{]\s*뉴스\s*\d+\s*[\)\]\}]', '', text)
+        # 2. 괄호가 닫히기만 한 케이스: - 뉴스 138) -> 제거
+        cleaned = re.sub(r'[-–—]?\s*뉴스\s*\d+\s*[\)\]\}]', '', cleaned)
+        # 3. 독립적으로 나온 케이스: 뉴스 12
+        cleaned = re.sub(r'(?:^|\s|\b)(?:뉴스\s*\d+)(?:\b|\s|$)', ' ', cleaned)
+        cleaned = re.sub(r'[-–—]\s*뉴스\s*\d+', '', cleaned)
+        # 4. 잔여 빈 괄호 및 기호 정리: "()", "[]", "- )" 등
+        cleaned = re.sub(r'[-–—]?\s*[\(\[\{]\s*[\)\]\}]', '', cleaned)
+        cleaned = re.sub(r'[-–—]\s*[\)\]\}]', '', cleaned)
+        # 5. 다중 공백 정리
+        cleaned = re.sub(r'[ \t]{2,}', ' ', cleaned)
+        return cleaned.strip()
+
     def analyze_weekly_insight(self, news_list: list[dict], date_range_str: str) -> dict:
         """
         주간 소상공인 인사이트 리포트 생성
@@ -449,8 +468,9 @@ class AIAnalyzer:
      - 단순 1~2줄 요약이 아니라, 관련 보도들의 핵심 팩트, 구체적인 통계 수치, 발생 배경 및 업계 파급 효과를 5~7문장(약 400~500자)으로 깊이 있게 종합 서술하십시오.
    - **implication (인사이트 및 실전 대응 전략)**:
      - 일반론적 훈계나 피상적인 조언(예: '비용을 줄이세요')을 철저히 배제하고, 소상공인이 현장에서 즉시 실천할 수 있는 구체적인 비즈니스 솔루션을 입체적으로 제시하십시오.
-     - **[서술 구조 다양화 - 기계적 템플릿 반복 금지]**:
-       * '단기적으로는~, 중장기적으로는~' 같은 도식적 구분이나, 3개 이슈 모두의 마지막 문단을 매번 '실제 사례로, ~', '해외 사례로, ~', '벤치마킹 사례로, ~'처럼 판에 박힌 동일한 공식으로 기계적으로 끝맺지 마십시오.
+     - **[서술 구조 다양화 - 기계적 템플릿 및 반복 접속사 절대 금지]**:
+       * **[접속사 반복 금지]**: 문단의 시작을 '우선,', '다음으로,', '마지막으로,', '첫째,', '둘째,' 등으로 매번 기계적으로 시작하지 마십시오. 각 문단은 전달하고자 하는 핵심 솔루션이나 전략, 배경 설명 등으로 자연스럽고 다채롭게 시작하십시오.
+       * '단기적으로는~, 중장기적으로는~' 같은 도식적 구분이나, 3개 이슈 모두의 마지막 문단을 매번 동일한 패턴으로 끝맺지 마십시오.
        * 벤치마킹 사례나 실천 팁은 매우 유용한 정보이므로 적극 담아내되, 3개 이슈가 각 사안의 고유한 성격에 맞게 서로 다른 다채로운 전개 방식을 갖도록 자연스럽게 분산·융합하십시오:
          - 금융/원가/부채 사안: 정부·지자체 정책금융/채무조정 신청 요령, 고정비 방어 및 원가 구조 개선 등 **구체적인 실무 대응 절차와 팁** 중심으로 전개
          - 상권/소비트렌드/마케팅 사안: 타깃 고객 공략법, 매장 공간/메뉴 차별화, 로컬 브랜딩 및 온라인 판로 지원 연계 방안에 **검증된 성공 벤치마킹 사례**를 문맥 속에 자연스럽게 녹여냄
@@ -461,9 +481,9 @@ class AIAnalyzer:
      - 인사이트 및 벤치마킹 사례에서 인용한 공공기관 보고서, 정책 자료, 연구기관 등의 정확한 명칭을 1~2개 배열 형태로 반드시 기재하십시오. (현재 요약 중인 원본 뉴스 출처는 적지 마십시오.)
 
 3. [문체 및 절대 금지 규칙]:
-   - **[내부 뉴스 번호 인용 절대 금지]**:
-     * `(뉴스 1)`, `(뉴스 120)`과 같은 프롬프트 내부 뉴스 번호는 본문(`economic_trend`, `summary`, `implication`) 어디에도 절대 기재하지 마십시오.
-     * 소상공인 독자는 개별 원본 뉴스 목록을 알지 못하므로, 특정 통계나 사실을 인용할 때는 "한국은행 발표에 따르면", "서울시 통계에 따르면", "최근 언론 보도에 따르면"처럼 독자가 신뢰할 수 있는 기관명이나 주체를 명시하여 자연스럽게 서술하십시오.
+   - **[내부 뉴스 번호 및 기사 리스트 언급 절대 금지]**:
+     * **최종 독자는 제공된 원본 뉴스 목록이나 기사 번호를 전혀 볼 수 없습니다.** 따라서 `(뉴스 1)`, `[뉴스 33]`, `(뉴스 120)`, `뉴스 138`과 같은 프롬프트 내부 뉴스 번호나 기사 식별자는 본문(`economic_trend`, `summary`, `implication`) 어디에도 단 한 번도 기재해서는 안 됩니다.
+     * 특정 사례, 통계 또는 사실을 인용할 때는 "한국은행 발표에 따르면", "서울시 실태조사에 따르면", "골목상권 내 성공 사례처럼", "최근 업계 동향에 따르면"과 같이 독자가 신뢰할 수 있는 기관명이나 주체, 맥락을 명시하여 자연스럽게 서술하십시오.
    - 모든 내용은 정중하고 전문적인 격식체 경어(예: "~하시기 바랍니다", "~할 필요가 있습니다")로 작성하며, 이모지는 절대 사용하지 마십시오.
 
 반드시 아래 JSON 형식을 엄수하여 응답하십시오:
@@ -517,6 +537,20 @@ class AIAnalyzer:
                         logger.error(f"주간 JSON 2차 복구 에러. 원본: {e}. 텍스트: {text_repaired[:200]}")
                         raise e2
                 
+                # ── 내부 뉴스 번호 후처리 정제 ──
+                if result:
+                    if "economic_trend" in result:
+                        result["economic_trend"] = self._clean_insight_text(result["economic_trend"])
+                    for item in result.get("news_insights", []):
+                        if "issue_title" in item:
+                            item["issue_title"] = self._clean_insight_text(item["issue_title"])
+                        if "summary" in item:
+                            item["summary"] = self._clean_insight_text(item["summary"])
+                        if "implication" in item:
+                            item["implication"] = self._clean_insight_text(item["implication"])
+                        if "references" in item and isinstance(item["references"], list):
+                            item["references"] = [self._clean_insight_text(r) for r in item["references"] if r]
+
                 return result
             except Exception as e:
                 logger.error(f"주간 인사이트 분석 시도 {attempt+1} 실패: {e}")
