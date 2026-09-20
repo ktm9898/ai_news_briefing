@@ -276,8 +276,11 @@ class AIAnalyzer:
    - **summary 작성 가이드**: 단순 요약을 넘어 기사의 배경, 구체적인 수치, 핵심 쟁점 등을 상세하고 구체적으로 설명하십시오.
    - **implication 작성 가이드**: 단순히 표면적인 대응을 넘어, 해당 뉴스의 이면과 배경을 통찰하십시오. 타 지역 뉴스라면 서울시 환경에 비추어 유추하고, 파급 효과를 구체적으로 짚어주십시오. 관련된 국내외 유사 사례나 성공/실패 레퍼런스를 1~2개 이상 구체적으로 포함하여 통찰을 제공하되, **[할루시네이션(거짓 정보) 엄격 금지]** 반드시 대중적으로 널리 알려지고 교차 검증된 실제 팩트(Fact) 사례만 인용하십시오.
    - **[외부 사례 출처 표기 (필수)]**: 인사이트를 작성할 때 반드시 1~2개의 적절한 외부 유사 사례 등을 인용하십시오. 인용한 외부 레퍼런스의 정확한 명칭을 'references' 배열에 개별 항목으로 기재하십시오. 현재 요약 중인 기사의 출처는 적지 마십시오.
-
-   - 가독성을 극대화하기 위해 내용이 길어질 경우 논리적 흐름에 따라 2~3개의 문단으로 구분하고, 문단 사이에는 반드시 빈 줄(엔터 키 두 번, \n\n)을 삽입하십시오.
+   - **[내부 뉴스 번호 인용 절대 금지]**:
+     * 최종 리포트 독자는 내부 기사 번호([뉴스 1] 등)를 전혀 알지 못합니다.
+     * 따라서 본문('summary', 'implication') 어디에도 '(뉴스 3 참조)', '뉴스 00번', '1번 기사' 등 내부 번호나 참조 표기를 절대 기재하지 마십시오.
+     * 특정 기사나 사례, 통계를 언급할 때는 '서울시 발표에 따르면', '최근 언론 보도에 따르면'처럼 사실과 기관명 중심으로 자연스럽게 서술하십시오.
+   - 가독성을 극대화하기 위해 내용이 길어질 경우 논리적 흐름에 따라 2~3개의 문단으로 구분하고, 문단 사이에는 반드시 빈 줄(엔터 키 두 번, \\n\\n)을 삽입하십시오.
 4. 모든 내용은 정중하고 전문적인 문체로 작성하며, 이모지는 절대 사용하지 마십시오.
 
 """
@@ -412,25 +415,6 @@ class AIAnalyzer:
         _, briefing = self.summarize_and_brief(news_list)
         return briefing
 
-    def _clean_insight_text(self, text: str) -> str:
-        """리포트 본문에서 프롬프트 내부 뉴스 번호(예: (뉴스 33), [뉴스 1], - 뉴스 138) 등) 및 불필요한 공백을 완벽히 정제"""
-        if not text or not isinstance(text, str):
-            return text
-        import re
-        # 1. 괄호가 포함된 케이스: (뉴스 33), [뉴스 1], (뉴스 33 등
-        cleaned = re.sub(r'[\(\[\{]\s*뉴스\s*\d+\s*[\)\]\}]', '', text)
-        # 2. 괄호가 닫히기만 한 케이스: - 뉴스 138) -> 제거
-        cleaned = re.sub(r'[-–—]?\s*뉴스\s*\d+\s*[\)\]\}]', '', cleaned)
-        # 3. 독립적으로 나온 케이스: 뉴스 12
-        cleaned = re.sub(r'(?:^|\s|\b)(?:뉴스\s*\d+)(?:\b|\s|$)', ' ', cleaned)
-        cleaned = re.sub(r'[-–—]\s*뉴스\s*\d+', '', cleaned)
-        # 4. 잔여 빈 괄호 및 기호 정리: "()", "[]", "- )" 등
-        cleaned = re.sub(r'[-–—]?\s*[\(\[\{]\s*[\)\]\}]', '', cleaned)
-        cleaned = re.sub(r'[-–—]\s*[\)\]\}]', '', cleaned)
-        # 5. 다중 공백 정리
-        cleaned = re.sub(r'[ \t]{2,}', ' ', cleaned)
-        return cleaned.strip()
-
     def analyze_weekly_insight(self, news_list: list[dict], date_range_str: str) -> dict:
         """
         주간 소상공인 인사이트 리포트 생성
@@ -439,17 +423,13 @@ class AIAnalyzer:
             return {"economic_trend": "수집된 뉴스가 없습니다.", "news_insights": []}
 
         news_texts = []
-        for idx, news in enumerate(news_list):
+        for news in news_list:
             naver_desc = news.get("네이버 요약", "") or news.get("description", "") or news.get("본문 전문", "")[:400]
-            body_preview = (news.get("본문 전문", "") or "")[:1500]
+            full_body = (news.get("본문 전문", "") or "").strip()[:8000]
             news_texts.append(
-                f"[뉴스 {idx + 1}]\n"
-                f"날짜: {news.get('날짜', '')}\n"
-                f"언론사: {news.get('언론사', '')}\n"
-                f"주제: {news.get('주제', '기타')}\n"
-                f"제목: {news.get('제목', '')}\n"
-                f"요약: {naver_desc}\n"
-                f"본문(일부): {body_preview}\n"
+                f"■ [{news.get('주제', '기타')}] {news.get('제목', '')}\n"
+                f"  - 요약: {naver_desc}\n"
+                f"  - 본문: {full_body}\n"
             )
 
         prompt = f"""당신은 공공기관 및 소상공인 비즈니스 컨설팅 최고 전문가입니다.
@@ -481,8 +461,8 @@ class AIAnalyzer:
      - 인사이트 및 벤치마킹 사례에서 인용한 공공기관 보고서, 정책 자료, 연구기관 등의 정확한 명칭을 1~2개 배열 형태로 반드시 기재하십시오. (현재 요약 중인 원본 뉴스 출처는 적지 마십시오.)
 
 3. [문체 및 절대 금지 규칙]:
-   - **[내부 뉴스 번호 및 기사 리스트 언급 절대 금지]**:
-     * **최종 독자는 제공된 원본 뉴스 목록이나 기사 번호를 전혀 볼 수 없습니다.** 따라서 `(뉴스 1)`, `[뉴스 33]`, `(뉴스 120)`, `뉴스 138`과 같은 프롬프트 내부 뉴스 번호나 기사 식별자는 본문(`economic_trend`, `summary`, `implication`) 어디에도 단 한 번도 기재해서는 안 됩니다.
+   - **[내부 기사 번호 및 기사 리스트 언급 절대 금지]**:
+     * 최종 독자는 제공된 원본 뉴스 목록을 전혀 볼 수 없습니다.
      * 특정 사례, 통계 또는 사실을 인용할 때는 "한국은행 발표에 따르면", "서울시 실태조사에 따르면", "골목상권 내 성공 사례처럼", "최근 업계 동향에 따르면"과 같이 독자가 신뢰할 수 있는 기관명이나 주체, 맥락을 명시하여 자연스럽게 서술하십시오.
    - 모든 내용은 정중하고 전문적인 격식체 경어(예: "~하시기 바랍니다", "~할 필요가 있습니다")로 작성하며, 이모지는 절대 사용하지 마십시오.
 
@@ -537,20 +517,6 @@ class AIAnalyzer:
                         logger.error(f"주간 JSON 2차 복구 에러. 원본: {e}. 텍스트: {text_repaired[:200]}")
                         raise e2
                 
-                # ── 내부 뉴스 번호 후처리 정제 ──
-                if result:
-                    if "economic_trend" in result:
-                        result["economic_trend"] = self._clean_insight_text(result["economic_trend"])
-                    for item in result.get("news_insights", []):
-                        if "issue_title" in item:
-                            item["issue_title"] = self._clean_insight_text(item["issue_title"])
-                        if "summary" in item:
-                            item["summary"] = self._clean_insight_text(item["summary"])
-                        if "implication" in item:
-                            item["implication"] = self._clean_insight_text(item["implication"])
-                        if "references" in item and isinstance(item["references"], list):
-                            item["references"] = [self._clean_insight_text(r) for r in item["references"] if r]
-
                 return result
             except Exception as e:
                 logger.error(f"주간 인사이트 분석 시도 {attempt+1} 실패: {e}")
