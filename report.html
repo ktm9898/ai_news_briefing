@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>소기업·소상공인 주간 인사이트 리포트</title>
+    
+    <!-- Open Graph (카카오톡, 문자, SNS 미리보기 카드) -->
+    <meta property="og:title" content="소기업·소상공인 주간 인사이트 리포트">
+    <meta property="og:description" content="이번 주 꼭 알아야 할 주요 경제 흐름과 핵심 이슈 인사이트를 확인하세요.">
+    <meta property="og:type" content="article">
+    
+    <!-- Pretendard 폰트 (최고 수준의 한글 가독성) -->
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Pretendard', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'Roboto', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            word-break: keep-all;
+        }
+
+        /* ── 기존 모달과 100% 완벽히 일치하는 리포트 본문 스타일 ── */
+        .report-content {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+            color: #1a1a1a;
+            line-height: 1.6;
+            word-break: keep-all;
+        }
+        .report-content h1 { 
+            font-size: 20pt; 
+            text-align: left; 
+            margin-bottom: 10px; 
+            color: #000; 
+            font-weight: 700; 
+        }
+        .report-content .section-header { 
+            font-size: 14pt; 
+            font-weight: 800 !important; 
+            color: #000 !important; 
+            margin-top: 30px; 
+            margin-bottom: 12px; 
+            border-bottom: none !important; 
+        }
+        .report-content .news-title { 
+            font-size: 12pt; 
+            font-weight: 800 !important; 
+            color: #000 !important; 
+            margin-top: 25px; 
+            margin-bottom: 10px; 
+            padding-left: 0; 
+        }
+        .report-content p, .report-content li { 
+            font-size: 10.5pt; 
+            color: #333; 
+            margin-bottom: 10px; 
+            line-height: 1.6; 
+        }
+        .report-content b, .report-content strong { 
+            font-weight: 700; 
+            color: #000; 
+        }
+        .report-content hr { 
+            border: 0;
+            border-top: 1px solid #000; 
+            border-bottom: none; 
+            margin: 20px 0; 
+        }
+        .report-content .footer-note { 
+            font-size: 9pt; 
+            color: #6b7280; 
+            text-align: left; 
+            margin-top: 40px; 
+            border-top: 1px solid #e5e7eb; 
+            padding-top: 10px; 
+        }
+
+        /* ── 기존 모달과 100% 동일한 A4 인쇄 스타일 ── */
+        @page { 
+            size: A4; 
+            margin: 20mm; 
+        }
+        @media print {
+            body {
+                background: white !important;
+                color: black !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .print-hide {
+                display: none !important;
+            }
+            main {
+                padding: 0 !important;
+                margin: 0 !important;
+                max-width: 100% !important;
+            }
+            .report-card {
+                box-shadow: none !important;
+                border: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                max-width: 100% !important;
+            }
+            .reference-link {
+                text-decoration: none !important;
+                color: inherit !important;
+                pointer-events: none;
+            }
+            .print-hide-ref {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center">
+
+    <!-- ═══════════ 상단 네비게이션 바 (인쇄 시 숨김) ═══════════ -->
+    <header class="w-full bg-white/95 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50 print-hide transition-shadow">
+        <div class="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2 min-w-0">
+                <span class="text-xl">📑</span>
+                <span class="font-bold text-slate-800 text-sm sm:text-base truncate">소기업·소상공인 주간 리포트</span>
+            </div>
+            
+            <div class="flex items-center gap-2 shrink-0">
+                <!-- 인쇄 버튼 -->
+                <button onclick="window.print()" title="인쇄 / PDF 저장" 
+                        class="px-3 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-1.5 transition-colors shadow-sm">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                    <span>인쇄</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- ═══════════ 메인 리포트 컨테이너 ═══════════ -->
+    <main class="w-full max-w-3xl mx-auto px-4 py-6 sm:py-10 flex-1">
+        
+        <!-- 로딩 상태 스켈레톤 -->
+        <div id="loadingState" class="bg-white rounded-2xl p-6 sm:p-10 border border-slate-200 shadow-sm space-y-6 animate-pulse">
+            <div class="h-8 bg-slate-200 rounded w-3/4"></div>
+            <div class="h-4 bg-slate-100 rounded w-1/4"></div>
+            <div class="h-px bg-slate-200 my-4"></div>
+            <div class="h-5 bg-slate-200 rounded w-1/3"></div>
+            <div class="space-y-2">
+                <div class="h-4 bg-slate-100 rounded"></div>
+                <div class="h-4 bg-slate-100 rounded w-5/6"></div>
+                <div class="h-4 bg-slate-100 rounded w-4/6"></div>
+            </div>
+            <div class="h-5 bg-slate-200 rounded w-1/3 pt-4"></div>
+            <div class="space-y-2">
+                <div class="h-4 bg-slate-100 rounded"></div>
+                <div class="h-4 bg-slate-100 rounded w-5/6"></div>
+            </div>
+            <p class="text-center text-xs text-slate-400 pt-6">최신 주간 리포트를 불러오고 있습니다...</p>
+        </div>
+
+        <!-- 에러 상태 알림 -->
+        <div id="errorState" class="hidden bg-white rounded-2xl p-8 border border-red-200 text-center space-y-4 shadow-sm">
+            <div class="w-12 h-12 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto text-xl font-bold">⚠️</div>
+            <h3 class="text-base font-bold text-slate-800">리포트를 불러올 수 없습니다</h3>
+            <p id="errorMessage" class="text-xs text-slate-500 leading-relaxed"></p>
+            <button onclick="fetchReports(true)" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg transition-colors">다시 시도</button>
+        </div>
+
+        <!-- 실제 리포트 카드 (기존 모달 p-5 sm:p-8 완벽 동일) -->
+        <article id="reportCard" class="report-card hidden bg-white rounded-2xl p-5 sm:p-8 border border-slate-200 shadow-sm">
+            <div id="reportContent" class="report-content"></div>
+        </article>
+
+    </main>
+
+    <!-- 하단 카피라이트 (인쇄 시 숨김) -->
+    <footer class="w-full text-center py-6 text-xs text-slate-400 print-hide border-t border-slate-100 mt-auto">
+        소기업·소상공인을 위한 주간 AI 브리핑 시스템
+    </footer>
+
+    <!-- ═══════════ 스크립트 로직 ═══════════ -->
+    <script>
+        // Google Apps Script API Endpoint (Weekly_Briefing_Docs 전용)
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwtgUJ0QfKHPn6HLt2U41OLUog92RFVaKPyLLVwQodq03LMm50qm4dwQk798D3ovFcaHw/exec';
+        
+        let reportList = [];
+        let currentIndex = 0;
+
+        // 문단 정렬 헬퍼 (원문 100% 보존: 실제 줄바꿈이 있는 경우만 <br> 처리)
+        function formatParagraphs(text) {
+            if (!text) return "";
+            text = String(text).trim();
+            if (text.indexOf('\\n') !== -1 || text.indexOf('\n') !== -1) {
+                return text.replace(/\\n/g, '<br>').replace(/\n/g, '<br>');
+            }
+            return text;
+        }
+
+        // 리포트 렌더링 함수
+        function renderReport(index) {
+            const report = reportList[index];
+            if (!report) return;
+
+            currentIndex = index;
+            const container = document.getElementById('reportContent');
+            const rawContent = report['내용'] || '';
+            let html = '';
+
+            try {
+                if (rawContent.trim().startsWith('{')) {
+                    const data = JSON.parse(rawContent);
+                    const mainTitle = '소기업·소상공인 주간 인사이트 리포트';
+                    const displayDate = String(report['날짜'] || '').replace(/-/g, '.');
+                    const footerText = '본 리포트는 서울시 소기업 및 소상공인의 사업운영을 지원하기 위해 AI를 통해 분석된 주간 경제 보고서입니다.';
+
+                    html += `<div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px;">`;
+                    html += `<h1 style="margin: 0; font-size: 20pt; color: #000; font-weight: 700;">${mainTitle}</h1>`;
+                    html += `<span style="color:#666; font-size: 10pt;">${displayDate}</span>`;
+                    html += `</div>`;
+                    html += `<hr style="margin: 0 0 20px 0; border: 0; border-top: 1px solid #000;">`;
+
+                    // 1. 주요 경제 흐름
+                    html += `<div class="section-header">1. 주요 경제 흐름</div>`;
+                    html += `<p>${formatParagraphs(data.economic_trend || '')}</p>`;
+
+                    // 2. 인사이트
+                    html += `<div class="section-header">2. 인사이트</div>`;
+                    if (data.news_insights && Array.isArray(data.news_insights)) {
+                        data.news_insights.forEach((item, idx) => {
+                            let rawTitle = (item.issue_title || item.title || '이슈').replace(/^(주요\s*이슈|ISSUE)\s*\d+[\.\:\s]*/i, '').trim();
+                            let displayTitle = `ISSUE ${idx + 1}. ${rawTitle}`;
+                            html += `<div class="news-title"><b>${displayTitle}</b></div>`;
+
+                            html += `<p><b>주요내용:</b> ${formatParagraphs(item.summary)}</p>`;
+
+                            let impText = formatParagraphs(item.implication);
+                            let hasRefs = (item.references && item.references.length > 0) || (item.reference && item.reference.trim() !== '');
+                            html += `<p style="margin-bottom: ${hasRefs ? '15px' : '25px'};"><b>인사이트:</b> ${impText}</p>`;
+
+                            // 신규 배열 형식 (references)
+                            if (item.references && Array.isArray(item.references) && item.references.length > 0) {
+                                item.references.forEach((ref, refIdx) => {
+                                    const isLast = (refIdx === item.references.length - 1);
+                                    const mb = isLast ? '25px' : '5px';
+                                    if (ref.url && ref.url.trim() !== '') {
+                                        html += `<p class="print-hide-ref" style="margin-bottom: ${mb}; color: #2563eb;"><a href="${ref.url}" target="_blank" class="reference-link" style="text-decoration: underline; color: #2563eb;">[참고 출처: ${ref.name}]</a></p>`;
+                                    } else {
+                                        const q = encodeURIComponent(ref.name.replace(/"/g, ''));
+                                        html += `<p class="print-hide-ref" style="margin-bottom: ${mb}; color: #2563eb;"><a href="https://www.google.com/search?q=${q}" target="_blank" class="reference-link" style="text-decoration: underline; color: #2563eb;">[참고 출처: ${ref.name}]</a></p>`;
+                                    }
+                                });
+                            }
+                            // 기존 단일 문자열 형식 (하위 호환)
+                            else if (item.reference && item.reference.trim() !== '') {
+                                if (item.reference_url && item.reference_url.trim() !== '') {
+                                    html += `<p class="print-hide-ref" style="margin-bottom: 25px; color: #2563eb;"><a href="${item.reference_url}" target="_blank" class="reference-link" style="text-decoration: underline; color: #2563eb;">[참고 출처: ${item.reference}]</a></p>`;
+                                } else {
+                                    const q = encodeURIComponent(item.reference.replace(/"/g, ''));
+                                    html += `<p class="print-hide-ref" style="margin-bottom: 25px; color: #2563eb;"><a href="https://www.google.com/search?q=${q}" target="_blank" class="reference-link" style="text-decoration: underline; color: #2563eb;">[참고 출처: ${item.reference}]</a></p>`;
+                                }
+                            }
+                        });
+                    }
+
+                    html += `<div class="footer-note">${footerText}</div>`;
+                } else {
+                    // Fallback (텍스트 기반)
+                    const lines = rawContent.split('\\n');
+                    lines.forEach((line, i) => {
+                        const trimmed = line.trim();
+                        if (!trimmed) return;
+                        if (i === 0) html += `<h1>${trimmed}</h1>`;
+                        else if (trimmed.startsWith('일자:')) html += `<p style="color:#64748b; font-size: 10pt; margin-bottom: 20px;">${trimmed.replace('일자: ', '')}</p>`;
+                        else if (trimmed.match(/^\\d+\\./)) html += `<div class="section-header">${trimmed}</div>`;
+                        else if (trimmed.startsWith('* ') || /^\\d+\\.\\s/.test(trimmed)) {
+                            const cleanTitle = trimmed.replace(/^\\*\\s*/, '');
+                            html += `<div class="news-title"><b>${cleanTitle}</b></div>`;
+                        } else if (trimmed.includes('--------------------------------------------------')) {
+                            html += `<hr class="border-t border-slate-900 my-4">`;
+                        } else if (trimmed.includes('본 리포트는')) {
+                            html += `<div class="footer-note">${trimmed}</div>`;
+                        } else {
+                            let content = trimmed.replace(/\\*\\*(.*?)\\*\\*/g, '<b>$1</b>');
+                            html += `<p>${content}</p>`;
+                        }
+                    });
+                }
+            } catch (err) {
+                console.error("리포트 파싱 오류:", err);
+                html = `<p class="text-red-500">리포트 데이터를 파싱하는 중 오류가 발생했습니다.</p><pre class="text-xs bg-slate-100 p-4 rounded">${rawContent}</pre>`;
+            }
+
+            container.innerHTML = html;
+            document.getElementById('reportCard').classList.remove('hidden');
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('errorState').classList.add('hidden');
+
+            // 브라우저 탭 타이틀 갱신
+            const reportDate = report['날짜'] || '';
+            document.title = reportDate ? `[${reportDate}] 주간 인사이트 리포트` : '소기업·소상공인 주간 인사이트 리포트';
+        }
+
+        // 주간 리포트 데이터 가져오기
+        async function fetchReports(forceRefresh = false) {
+            const loading = document.getElementById('loadingState');
+            const errorState = document.getElementById('errorState');
+            const card = document.getElementById('reportCard');
+
+            loading.classList.remove('hidden');
+            errorState.classList.add('hidden');
+            card.classList.add('hidden');
+
+            try {
+                // 오직 소기업·소상공인 주간 리포트(Weekly_Briefing_Docs)만 호출
+                const fetchUrl = `${SCRIPT_URL}?tab=Weekly_Briefing_Docs&t=${Date.now()}`;
+                const resp = await fetch(fetchUrl);
+                if (!resp.ok) throw new Error(`HTTP 에러: ${resp.status}`);
+                
+                const data = await resp.json();
+                if (!Array.isArray(data)) {
+                    throw new Error(data && data.error ? data.error : '데이터가 올바른 배열 형태가 아닙니다.');
+                }
+                if (data.length === 0) {
+                    throw new Error('등록된 주간 리포트가 없습니다.');
+                }
+
+                // 날짜 기준 최신순 정렬
+                data.sort((a, b) => {
+                    const dateA = a['날짜'] ? new Date(String(a['날짜']).substring(0, 10)) : new Date(0);
+                    const dateB = b['날짜'] ? new Date(String(b['날짜']).substring(0, 10)) : new Date(0);
+                    return dateB - dateA;
+                });
+
+                reportList = data;
+
+                // URL 파라미터 확인 (?date=YYYY-MM-DD 또는 기간 문자열)
+                const urlParams = new URLSearchParams(window.location.search);
+                const reqDate = urlParams.get('date');
+                
+                let targetIdx = 0;
+                if (reqDate) {
+                    const decodedDate = decodeURIComponent(reqDate).trim();
+                    const foundIdx = reportList.findIndex(r => String(r['날짜']).includes(decodedDate));
+                    if (foundIdx !== -1) targetIdx = foundIdx;
+                }
+
+                renderReport(targetIdx);
+
+            } catch (err) {
+                console.error('리포트 조회 실패:', err);
+                loading.classList.add('hidden');
+                errorState.classList.remove('hidden');
+                document.getElementById('errorMessage').textContent = err.message || '네트워크 연결 상태를 확인해주세요.';
+            }
+        }
+
+        // 초기 실행
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchReports();
+        });
+    </script>
+</body>
+</html>

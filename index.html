@@ -488,6 +488,7 @@
             <div class="sticky top-0 bg-white border-b border-border px-5 py-3 flex items-center justify-between shrink-0">
                 <h2 class="text-sm font-bold" id="reportsModalTitle">📑 지난 리포트</h2>
                 <div class="flex items-center gap-2">
+                    <button id="shareReportBtn" onclick="copyWeeklyReportLink()" class="hidden px-2.5 sm:px-3 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded hover:bg-emerald-700 transition-colors flex items-center gap-1">공유</button>
                     <button id="printReportBtn" onclick="printReport()" class="hidden px-2.5 sm:px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded hover:bg-blue-700 transition-colors">인쇄</button>
                     <button id="backToListBtn" onclick="showReportList()" class="hidden px-2.5 sm:px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-bold rounded hover:bg-gray-200 transition-colors">목록</button>
                     <button onclick="closeReportsModal()"
@@ -2745,8 +2746,12 @@
             switchReportTab('foundation');
         }
 
+        let currentViewingReport = null;
+
         function closeReportsModal() {
             closeModalElement(document.getElementById('reportsModal'));
+            const shareBtn = document.getElementById('shareReportBtn');
+            if (shareBtn) shareBtn.classList.add('hidden');
         }
 
         function showReportList() {
@@ -2754,8 +2759,45 @@
             document.getElementById('reportListContainer').classList.remove('hidden');
             document.getElementById('reportDetailContainer').classList.add('hidden');
             document.getElementById('printReportBtn').classList.add('hidden');
+            const shareBtn = document.getElementById('shareReportBtn');
+            if (shareBtn) shareBtn.classList.add('hidden');
             document.getElementById('backToListBtn').classList.add('hidden');
             document.getElementById('reportsModalTitle').textContent = '📑 지난 리포트';
+            currentViewingReport = null;
+        }
+
+        function copyWeeklyReportLink() {
+            if (!currentViewingReport) return;
+            const reportDate = currentViewingReport['날짜'] || '';
+            
+            let baseUrl = window.location.href.split('?')[0].split('#')[0];
+            if (baseUrl.endsWith('index.html')) {
+                baseUrl = baseUrl.replace(/index\.html$/, 'report.html');
+            } else if (baseUrl.endsWith('/')) {
+                baseUrl += 'report.html';
+            } else {
+                baseUrl = baseUrl.substring(0, baseUrl.lastIndexOf('/') + 1) + 'report.html';
+            }
+            
+            const finalUrl = reportDate ? `${baseUrl}?date=${encodeURIComponent(reportDate)}` : baseUrl;
+            
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(finalUrl).then(() => {
+                    alert(`🔗 고객 전송용 리포트 링크가 복사되었습니다!\n\n${finalUrl}`);
+                }).catch(() => fallbackCopy(finalUrl));
+            } else {
+                fallbackCopy(finalUrl);
+            }
+            
+            function fallbackCopy(text) {
+                const temp = document.createElement('input');
+                temp.value = text;
+                document.body.appendChild(temp);
+                temp.select();
+                document.execCommand('copy');
+                document.body.removeChild(temp);
+                alert(`🔗 고객 전송용 리포트 링크가 복사되었습니다!\n\n${text}`);
+            }
         }
 
         function renderReportList(targetArray) {
@@ -2859,10 +2901,22 @@
             const report = reportArray[index];
             if (!report) return;
 
+            currentViewingReport = report;
+
             document.getElementById('reportTabMenu').classList.add('hidden');
             document.getElementById('reportListContainer').classList.add('hidden');
             document.getElementById('reportDetailContainer').classList.remove('hidden');
             document.getElementById('printReportBtn').classList.remove('hidden');
+            
+            const shareBtn = document.getElementById('shareReportBtn');
+            if (shareBtn) {
+                if (currentReportTab === 'business') {
+                    shareBtn.classList.remove('hidden');
+                } else {
+                    shareBtn.classList.add('hidden');
+                }
+            }
+
             document.getElementById('backToListBtn').classList.remove('hidden');
             document.getElementById('reportsModalTitle').textContent = '📑 리포트 상세';
 
