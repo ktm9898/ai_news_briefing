@@ -9,9 +9,11 @@ scheduler.py - APScheduler 기반 자동 실행 스케줄러
   5. 시트 저장
 """
 
+import json
 import logging
 import requests
 import re
+from pathlib import Path
 from datetime import datetime, timedelta, timezone
 
 # KST (UTC+9) 타임존 정의
@@ -28,6 +30,47 @@ from gws_manager import GWSManager
 
 
 logger = logging.getLogger(__name__)
+
+
+def save_weekly_report_static(date_range: str, title: str, content_data, max_keep: int = 10) -> bool:
+    """주간 리포트를 reports/weekly_reports.json 정적 파일에 저장하고 최신 max_keep(기본 10)개만 유지"""
+    try:
+        reports_dir = Path(__file__).resolve().parent / "reports"
+        reports_dir.mkdir(parents=True, exist_ok=True)
+        reports_file = reports_dir / "weekly_reports.json"
+
+        current_reports = []
+        if reports_file.exists():
+            try:
+                with open(reports_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    if isinstance(data, list):
+                        current_reports = data
+            except Exception as read_err:
+                logger.warning(f"기존 weekly_reports.json 읽기 실패, 새로 작성합니다: {read_err}")
+
+        content_str = json.dumps(content_data, ensure_ascii=False) if isinstance(content_data, dict) else str(content_data)
+        new_entry = {
+            "날짜": date_range,
+            "제목": title,
+            "내용": content_str
+        }
+
+        # 동일 날짜 범위가 있으면 제거 후 최신 항목으로 맨 앞에 삽입
+        filtered = [r for r in current_reports if r.get("날짜") != date_range]
+        updated = [new_entry] + filtered
+
+        # 최신 max_keep(최대 10개)만 유지
+        updated = updated[:max_keep]
+
+        with open(reports_file, "w", encoding="utf-8") as f:
+            json.dump(updated, f, ensure_ascii=False, indent=2)
+
+        logger.info(f"✅ 정적 주간 리포트 파일 저장 완료 ({reports_file}, 총 {len(updated)}건 보존)")
+        return True
+    except Exception as e:
+        logger.error(f"❌ 정적 주간 리포트 저장 중 오류: {e}", exc_info=True)
+        return False
 
 
 def run_pipeline():
@@ -269,6 +312,10 @@ def run_pipeline():
                             weekly_date_range
                         )
                         logger.info("Weekly_Briefing_Docs 저장 성공")
+
+                        # 정적 주간 리포트 파일(reports/weekly_reports.json) 최신 10개 유지 저장
+                        save_weekly_report_static(weekly_date_range, weekly_title, weekly_insight_data, max_keep=10)
+
                         # 전체 등록된 이메일 구독자 대상 주간 인사이트 리포트 자동 발송
                         try:
                             sheets.trigger_email_dispatch("weekly")

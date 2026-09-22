@@ -195,7 +195,8 @@
 
     <!-- ═══════════ 스크립트 로직 ═══════════ -->
     <script>
-        // Google Apps Script API Endpoint (Weekly_Briefing_Docs 전용)
+        // 정적 리포트 파일 경로 및 Google Apps Script Fallback 엔드포인트
+        const STATIC_REPORTS_URL = './reports/weekly_reports.json';
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwtgUJ0QfKHPn6HLt2U41OLUog92RFVaKPyLLVwQodq03LMm50qm4dwQk798D3ovFcaHw/exec';
         
         let reportList = [];
@@ -291,7 +292,7 @@
             document.title = reportDate ? `[${reportDate}] 주간 인사이트 리포트` : '소기업·소상공인 주간 인사이트 리포트';
         }
 
-        // 주간 리포트 데이터 가져오기
+        // 주간 리포트 데이터 가져오기 (정적 JSON 우선 -> GAS 백업 폴백)
         async function fetchReports(forceRefresh = false) {
             const loading = document.getElementById('loadingState');
             const errorState = document.getElementById('errorState');
@@ -301,48 +302,71 @@
             errorState.classList.add('hidden');
             card.classList.add('hidden');
 
-            try {
-                // 오직 소기업·소상공인 주간 리포트(Weekly_Briefing_Docs)만 호출
-                const fetchUrl = `${SCRIPT_URL}?tab=Weekly_Briefing_Docs&t=${Date.now()}`;
-                const resp = await fetch(fetchUrl);
-                if (!resp.ok) throw new Error(`HTTP 에러: ${resp.status}`);
-                
-                const data = await resp.json();
-                if (!Array.isArray(data)) {
-                    throw new Error(data && data.error ? data.error : '데이터가 올바른 배열 형태가 아닙니다.');
+            let data = null;
+
+            // 1차 시도: 정적 JSON 파일 우선 로드 (0.05초 초고속 렌더링)
+            if (!forceRefresh) {
+                try {
+                    const cacheBuster = Math.floor(Date.now() / 300000); // 5분 단위 캐시 갱신
+                    const staticResp = await fetch(`${STATIC_REPORTS_URL}?v=${cacheBuster}`);
+                    if (staticResp.ok) {
+                        const staticData = await staticResp.json();
+                        if (Array.isArray(staticData) && staticData.length > 0) {
+                            data = staticData;
+                            console.log('⚡ 초고속 정적 리포트 로드 성공 (총 ' + data.length + '건)');
+                        }
+                    }
+                } catch (staticErr) {
+                    console.warn('정적 리포트 로드 실패, 구글 시트 백업으로 전환합니다:', staticErr);
                 }
-                if (data.length === 0) {
-                    throw new Error('등록된 주간 리포트가 없습니다.');
-                }
-
-                // 날짜 기준 최신순 정렬
-                data.sort((a, b) => {
-                    const dateA = a['날짜'] ? new Date(String(a['날짜']).substring(0, 10)) : new Date(0);
-                    const dateB = b['날짜'] ? new Date(String(b['날짜']).substring(0, 10)) : new Date(0);
-                    return dateB - dateA;
-                });
-
-                reportList = data;
-
-                // URL 파라미터 확인 (?date=YYYY-MM-DD 또는 기간 문자열)
-                const urlParams = new URLSearchParams(window.location.search);
-                const reqDate = urlParams.get('date');
-                
-                let targetIdx = 0;
-                if (reqDate) {
-                    const decodedDate = decodeURIComponent(reqDate).trim();
-                    const foundIdx = reportList.findIndex(r => String(r['날짜']).includes(decodedDate));
-                    if (foundIdx !== -1) targetIdx = foundIdx;
-                }
-
-                renderReport(targetIdx);
-
-            } catch (err) {
-                console.error('리포트 조회 실패:', err);
-                loading.classList.add('hidden');
-                errorState.classList.remove('hidden');
-                document.getElementById('errorMessage').textContent = err.message || '네트워크 연결 상태를 확인해주세요.';
             }
+
+            // 2차 시도 (폴백): 정적 파일이 없거나 강제 새로고침 시 구글 앱스 스크립트 호출
+            if (!data) {
+                try {
+                    const fetchUrl = `${SCRIPT_URL}?tab=Weekly_Briefing_Docs&t=${Date.now()}`;
+                    const resp = await fetch(fetchUrl);
+                    if (!resp.ok) throw new Error(`HTTP 에러: ${resp.status}`);
+                    
+                    const gasData = await resp.json();
+                    if (!Array.isArray(gasData)) {
+                        throw new Error(gasData && gasData.error ? gasData.error : '데이터가 올바른 배열 형태가 아닙니다.');
+                    }
+                    if (gasData.length === 0) {
+                        throw new Error('등록된 주간 리포트가 없습니다.');
+                    }
+                    data = gasData;
+                    console.log('구글 시트(GAS) 리포트 백업 로드 완료 (총 ' + data.length + '건)');
+                } catch (gasErr) {
+                    console.error('리포트 조회 최종 실패:', gasErr);
+                    loading.classList.add('hidden');
+                    errorState.classList.remove('hidden');
+                    document.getElementById('errorMessage').textContent = gasErr.message || '네트워크 연결 상태를 확인해주세요.';
+                    return;
+                }
+            }
+
+            // 날짜 기준 최신순 정렬
+            data.sort((a, b) => {
+                const dateA = a['날짜'] ? new Date(String(a['날짜']).substring(0, 10)) : new Date(0);
+                const dateB = b['날짜'] ? new Date(String(b['날짜']).substring(0, 10)) : new Date(0);
+                return dateB - dateA;
+            });
+
+            reportList = data;
+
+            // URL 파라미터 확인 (?date=YYYY-MM-DD 또는 기간 문자열)
+            const urlParams = new URLSearchParams(window.location.search);
+            const reqDate = urlParams.get('date');
+            
+            let targetIdx = 0;
+            if (reqDate) {
+                const decodedDate = decodeURIComponent(reqDate).trim();
+                const foundIdx = reportList.findIndex(r => String(r['날짜']).includes(decodedDate));
+                if (foundIdx !== -1) targetIdx = foundIdx;
+            }
+
+            renderReport(targetIdx);
         }
 
         // 초기 실행

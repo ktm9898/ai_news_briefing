@@ -50,13 +50,13 @@ jobs:
           find audio/ -name "*.mp3" -type f -mtime +10 -not -name "briefing_latest.mp3" -delete
           ls -R audio/
 
-      - name: 📤 오디오 파일 저장
+      - name: 📤 오디오 및 정적 리포트 저장
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add audio/ -f
+          git add audio/ reports/ -f
           git diff --cached --quiet || {
-            git commit -m "🔊 브리핑 오디오 자동 업데이트 $(date +%Y-%m-%d)"
+            git commit -m "🔊 브리핑 오디오 및 주간 리포트 자동 업데이트 $(date +%Y-%m-%d)"
             git pull --rebase origin master
             git push origin master
           }
