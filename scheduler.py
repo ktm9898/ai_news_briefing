@@ -32,6 +32,47 @@ from gws_manager import GWSManager
 logger = logging.getLogger(__name__)
 
 
+def load_recent_weekly_reports(limit: int = 2) -> list[dict]:
+    """최근 주간 리포트(최대 limit개)에서 날짜와 다룬 이슈 제목 목록을 추출하여 반환 (중복 주제 방지용)"""
+    try:
+        reports_file = Path(__file__).resolve().parent / "reports" / "weekly_reports.json"
+        if not reports_file.exists():
+            return []
+        with open(reports_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            if not isinstance(data, list):
+                return []
+
+        recent_summaries = []
+        for r in data[:limit]:
+            date_range = r.get("날짜", "")
+            content = r.get("내용", "")
+            issue_titles = []
+            if isinstance(content, str):
+                try:
+                    c_dict = json.loads(content)
+                    if isinstance(c_dict, dict) and "news_insights" in c_dict:
+                        for ins in c_dict.get("news_insights", []):
+                            if ins.get("issue_title"):
+                                issue_titles.append(ins.get("issue_title"))
+                except Exception:
+                    pass
+            elif isinstance(content, dict):
+                for ins in content.get("news_insights", []):
+                    if ins.get("issue_title"):
+                        issue_titles.append(ins.get("issue_title"))
+
+            if date_range or issue_titles:
+                recent_summaries.append({
+                    "date_range": date_range,
+                    "issues": issue_titles
+                })
+        return recent_summaries
+    except Exception as e:
+        logger.warning(f"최근 주간 리포트 로드 실패: {e}")
+        return []
+
+
 def save_weekly_report_static(date_range: str, title: str, content_data, max_keep: int = 10) -> bool:
     """주간 리포트를 reports/weekly_reports.json 정적 파일에 저장하고 최신 max_keep(기본 10)개만 유지"""
     try:
@@ -302,7 +343,8 @@ def run_pipeline():
                 logger.info(f"지난 7일간 뉴스 수집 건수: {len(weekly_news)}건")
                 
                 if weekly_news:
-                    weekly_insight_data = analyzer.analyze_weekly_insight(weekly_news, weekly_date_range)
+                    recent_reports = load_recent_weekly_reports(limit=2)
+                    weekly_insight_data = analyzer.analyze_weekly_insight(weekly_news, weekly_date_range, recent_reports=recent_reports)
                     if weekly_insight_data:
                         weekly_insight_data = analyzer.enrich_references_with_urls(weekly_insight_data)
                         weekly_title = f"소기업·소상공인 주간 인사이트 리포트 ({weekly_date_range})"
