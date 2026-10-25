@@ -132,10 +132,7 @@ def generate_weekly_report_only(send_email: bool = False) -> dict:
     logger.info(f"📅 주간 소상공인 인사이트 리포트 단독 생성 시작 (이메일 발송: {send_email})")
     logger.info(f"주간 날짜 범위: {weekly_date_range}")
 
-    from sheets_manager import GoogleSheetsManager
-    from ai_analyzer import AIAnalyzer
-
-    sheets = GoogleSheetsManager()
+    sheets = SheetsManager()
     analyzer = AIAnalyzer()
 
     weekly_news = sheets.get_news_by_date_range(start_date_str, end_date_str)
