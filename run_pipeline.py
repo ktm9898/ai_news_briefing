@@ -66,9 +66,23 @@ def main():
     logger.info("✅ 파이프라인 정상 완료")
 
 
+def run_weekly_only():
+    """오늘(일요일)자 주간 리포트만 단독 재생성 (이메일 발송 제외)"""
+    from scheduler import generate_weekly_report_only
+    logger.info("🚀 오늘(25일)자 주간 리포트 단독 재생성 시작 (이메일 발송 안 함)")
+    res = generate_weekly_report_only(send_email=False)
+    if res.get("status") == "success":
+        logger.info("✅ 주간 리포트 재생성 및 reports/weekly_reports.json 저장 완료")
+    else:
+        logger.error(f"❌ 주간 리포트 재생성 실패: {res}")
+        sys.exit(1)
+
+
 if __name__ == "__main__":
     if "--cleanup" in sys.argv:
         run_cleanup()
+    elif "--weekly-only" in sys.argv:
+        run_weekly_only()
     else:
         main()
 

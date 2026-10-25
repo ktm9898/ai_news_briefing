@@ -2,6 +2,11 @@ name: 📰 뉴스 수집 파이프라인
 
 on:
   workflow_dispatch:  # 수동 실행 및 Google Apps Script(GAS) 시간 트리거 자동 호출
+    inputs:
+      mode:
+        description: '실행 모드 (default: 전체 파이프라인 / weekly-only: 오늘 주간 리포트만 재생성(이메일 제외))'
+        required: false
+        default: 'default'
 
 
 jobs:
@@ -41,8 +46,13 @@ jobs:
           GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
           GOOGLE_APPLICATION_CREDENTIALS: service_account.json
         run: |
-          echo "Starting news collection pipeline..."
-          python -u run_pipeline.py
+          if [ "${{ github.event.inputs.mode }}" = "weekly-only" ]; then
+            echo "Running today's weekly-only report generation (no email)..."
+            python -u run_pipeline.py --weekly-only
+          else
+            echo "Starting news collection pipeline..."
+            python -u run_pipeline.py
+          fi
 
       - name: 🧹 오래된 오디오 파일 정리 (10일 보존 정책)
         run: |

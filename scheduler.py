@@ -32,7 +32,7 @@ from gws_manager import GWSManager
 logger = logging.getLogger(__name__)
 
 
-def load_recent_weekly_reports(limit: int = 2) -> list[dict]:
+def load_recent_weekly_reports(limit: int = 2, exclude_date_range: str = None) -> list[dict]:
     """최근 주간 리포트(최대 limit개)에서 날짜와 다룬 이슈 제목 목록을 추출하여 반환 (중복 주제 방지용)"""
     try:
         reports_file = Path(__file__).resolve().parent / "reports" / "weekly_reports.json"
@@ -44,8 +44,11 @@ def load_recent_weekly_reports(limit: int = 2) -> list[dict]:
                 return []
 
         recent_summaries = []
-        for r in data[:limit]:
+        for r in data:
             date_range = r.get("날짜", "")
+            if exclude_date_range and date_range == exclude_date_range:
+                continue
+
             content = r.get("내용", "")
             issue_titles = []
             if isinstance(content, str):
@@ -67,6 +70,9 @@ def load_recent_weekly_reports(limit: int = 2) -> list[dict]:
                     "date_range": date_range,
                     "issues": issue_titles
                 })
+            if len(recent_summaries) >= limit:
+                break
+
         return recent_summaries
     except Exception as e:
         logger.warning(f"최근 주간 리포트 로드 실패: {e}")
@@ -112,6 +118,71 @@ def save_weekly_report_static(date_range: str, title: str, content_data, max_kee
     except Exception as e:
         logger.error(f"❌ 정적 주간 리포트 저장 중 오류: {e}", exc_info=True)
         return False
+
+
+def generate_weekly_report_only(send_email: bool = False) -> dict:
+    """주간 리포트만 독립적으로 생성 및 갱신 (기본: 이메일 발송 안 함)"""
+    from datetime import datetime, timedelta, timezone
+    KST = timezone(timedelta(hours=9))
+    now = datetime.now(KST)
+    end_date_str = now.strftime("%Y-%m-%d")
+    start_date_str = (now - timedelta(days=6)).strftime("%Y-%m-%d")
+    weekly_date_range = f"{start_date_str} ~ {end_date_str}"
+
+    logger.info(f"📅 주간 소상공인 인사이트 리포트 단독 생성 시작 (이메일 발송: {send_email})")
+    logger.info(f"주간 날짜 범위: {weekly_date_range}")
+
+    from sheets_manager import GoogleSheetsManager
+    from ai_analyzer import AIAnalyzer
+
+    sheets = GoogleSheetsManager()
+    analyzer = AIAnalyzer()
+
+    weekly_news = sheets.get_news_by_date_range(start_date_str, end_date_str)
+    logger.info(f"지난 7일간 뉴스 수집 건수: {len(weekly_news)}건")
+
+    if not weekly_news:
+        logger.warning("지난 7일간 기사 데이터가 존재하지 않아 주간 리포트를 생성할 수 없습니다.")
+        return {"status": "no_news"}
+
+    recent_reports = load_recent_weekly_reports(limit=2, exclude_date_range=weekly_date_range)
+    logger.info(f"최근 2주 리포트 히스토리 ({len(recent_reports)}건) 로드 완료:")
+    for idx, r in enumerate(recent_reports):
+        logger.info(f"  * 히스토리 [{r.get('date_range')}]: {r.get('issues')}")
+
+    weekly_insight_data = analyzer.analyze_weekly_insight(weekly_news, weekly_date_range, recent_reports=recent_reports)
+    if not weekly_insight_data:
+        logger.error("주간 인사이트 생성 실패")
+        return {"status": "failed"}
+
+    weekly_insight_data = analyzer.enrich_references_with_urls(weekly_insight_data)
+    weekly_title = f"소기업·소상공인 주간 인사이트 리포트 ({weekly_date_range})"
+
+    sheets.save_weekly_briefing_doc(
+        weekly_title,
+        json.dumps(weekly_insight_data, ensure_ascii=False),
+        weekly_date_range
+    )
+    logger.info("Weekly_Briefing_Docs 저장 성공")
+
+    save_weekly_report_static(weekly_date_range, weekly_title, weekly_insight_data, max_keep=10)
+
+    if send_email:
+        try:
+            sheets.trigger_email_dispatch("weekly")
+        except Exception as wmail_err:
+            logger.error(f"주간 메일 발송 중 오류: {wmail_err}")
+    else:
+        logger.info("ℹ️ 이메일 발송 없이 주간 리포트 갱신만 완료되었습니다.")
+
+    insights = weekly_insight_data.get("news_insights", [])
+    logger.info("==========================================")
+    logger.info("✨ [신규 생성된 주간 3대 핵심 이슈]")
+    for idx, item in enumerate(insights, 1):
+        logger.info(f"  {idx}. {item.get('issue_title')}")
+    logger.info("==========================================")
+
+    return {"status": "success", "data": weekly_insight_data}
 
 
 def run_pipeline():
