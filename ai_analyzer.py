@@ -22,10 +22,12 @@ class AIAnalyzer:
 
     def __init__(self):
         # google-genai Client 초기화 (API key가 빈 값이면 환경변수에서 자동 참조)
+        # JSON 모드(response_mime_type) 및 Google Search Grounding 지원을 위해 v1beta 명시
+        http_opts = types.HttpOptions(api_version="v1beta")
         if GEMINI_API_KEY:
-            self.client = genai.Client(api_key=GEMINI_API_KEY)
+            self.client = genai.Client(api_key=GEMINI_API_KEY, http_options=http_opts)
         else:
-            self.client = genai.Client()
+            self.client = genai.Client(http_options=http_opts)
 
     @staticmethod
     def _extract_retry_delay(error) -> float:
