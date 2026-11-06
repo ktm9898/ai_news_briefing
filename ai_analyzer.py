@@ -12,7 +12,7 @@ import time
 from google import genai
 from google.genai import types
 
-from config import GEMINI_API_KEY, GEMINI_MODEL, DEFAULT_CRITERIA
+from config import GEMINI_API_KEY, GEMINI_MODEL, GEMINI_GROUNDING_MODEL, DEFAULT_CRITERIA
 
 logger = logging.getLogger(__name__)
 
@@ -611,7 +611,7 @@ class AIAnalyzer:
         url_map = {}
         try:
             response = self.client.models.generate_content(
-                model=GEMINI_MODEL,
+                model=GEMINI_GROUNDING_MODEL,
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     tools=[types.Tool(google_search=types.GoogleSearch())],
