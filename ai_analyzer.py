@@ -12,7 +12,7 @@ import time
 from google import genai
 from google.genai import types
 
-from config import GEMINI_API_KEY, GEMINI_MODEL, GEMINI_GROUNDING_MODEL, DEFAULT_CRITERIA
+from config import GEMINI_API_KEY, GEMINI_MODEL, GEMINI_FALLBACK_MODEL, GEMINI_GROUNDING_MODEL, DEFAULT_CRITERIA
 
 logger = logging.getLogger(__name__)
 
@@ -23,11 +23,22 @@ class AIAnalyzer:
     def __init__(self):
         # google-genai Client 초기화 (API key가 빈 값이면 환경변수에서 자동 참조)
         # JSON 모드(response_mime_type) 및 Google Search Grounding 지원을 위해 v1beta 명시
-        http_opts = types.HttpOptions(api_version="v1beta")
+        # SDK 내부의 숨겨진 중복 재시도를 끄고(attempts=1) 파이프라인에서 직접 재시도/모델 전환 제어
+        http_opts = types.HttpOptions(
+            api_version="v1beta",
+            retry_options=types.HttpRetryOptions(attempts=1),
+        )
         if GEMINI_API_KEY:
             self.client = genai.Client(api_key=GEMINI_API_KEY, http_options=http_opts)
         else:
             self.client = genai.Client(http_options=http_opts)
+
+    @staticmethod
+    def _select_model(attempt: int, force_fallback: bool = False) -> str:
+        """1~3회차(attempt 0, 1, 2)는 메인 모델(3.8-flash), 4~5회차(attempt 3, 4)는 예비 모델(3.6-flash) 사용"""
+        if force_fallback or attempt >= 3:
+            return GEMINI_FALLBACK_MODEL
+        return GEMINI_MODEL
 
     @staticmethod
     def _extract_retry_delay(error) -> float:
@@ -162,10 +173,13 @@ class AIAnalyzer:
 """
 
         max_retries = 5
+        force_fallback = False
         for attempt in range(max_retries):
+            current_model = self._select_model(attempt, force_fallback)
             try:
+                logger.info(f"AI 1차 선별 요청 (시도 {attempt + 1}/{max_retries}, 모델: {current_model})")
                 response = self.client.models.generate_content(
-                    model=GEMINI_MODEL,
+                    model=current_model,
                     contents=prompt,
                     config=types.GenerateContentConfig(
                         response_mime_type="application/json",
@@ -215,11 +229,14 @@ class AIAnalyzer:
                 return final_list_for_ai, main_news_results
 
             except Exception as e:
-                logger.error(f"AI 1차 선별 실패 (시도 {attempt + 1}/{max_retries}): {e}")
+                logger.error(f"AI 1차 선별 실패 (시도 {attempt + 1}/{max_retries}, 모델: {current_model}): {e}")
                 if attempt == max_retries - 1:
                     raise e
                 else:
-                    if '429' in str(e):
+                    if '429' in str(e) and 'PerDay' in str(e):
+                        force_fallback = True
+                        wait_sec = 5.0
+                    elif '429' in str(e):
                         wait_sec = self._extract_retry_delay(e)
                     else:
                         wait_sec = 10 * (attempt + 1)
@@ -352,10 +369,13 @@ class AIAnalyzer:
 """
 
         max_retries = 5
+        force_fallback = False
         for attempt in range(max_retries):
+            current_model = self._select_model(attempt, force_fallback)
             try:
+                logger.info(f"AI 통합 분석 요청 (시도 {attempt + 1}/{max_retries}, 모델: {current_model})")
                 response = self.client.models.generate_content(
-                    model=GEMINI_MODEL,
+                    model=current_model,
                     contents=prompt,
                     config=types.GenerateContentConfig(
                         response_mime_type="application/json",
@@ -393,11 +413,14 @@ class AIAnalyzer:
                 
                 return result
             except Exception as e:
-                logger.error(f"통합 분석 시도 {attempt+1} 실패: {e}")
+                logger.error(f"통합 분석 시도 {attempt+1} 실패 (모델: {current_model}): {e}")
                 if attempt == max_retries - 1:
                     raise e
                 else:
-                    if '429' in str(e):
+                    if '429' in str(e) and 'PerDay' in str(e):
+                        force_fallback = True
+                        wait_sec = 5.0
+                    elif '429' in str(e):
                         wait_sec = self._extract_retry_delay(e)
                     else:
                         wait_sec = 10 * (attempt + 1)
@@ -521,10 +544,13 @@ class AIAnalyzer:
 {"".join(news_texts)}
 """
         max_retries = 5
+        force_fallback = False
         for attempt in range(max_retries):
+            current_model = self._select_model(attempt, force_fallback)
             try:
+                logger.info(f"주간 인사이트 분석 요청 (시도 {attempt + 1}/{max_retries}, 모델: {current_model})")
                 response = self.client.models.generate_content(
-                    model=GEMINI_MODEL,
+                    model=current_model,
                     contents=prompt,
                     config=types.GenerateContentConfig(
                         response_mime_type="application/json",
@@ -552,11 +578,14 @@ class AIAnalyzer:
                 
                 return result
             except Exception as e:
-                logger.error(f"주간 인사이트 분석 시도 {attempt+1} 실패: {e}")
+                logger.error(f"주간 인사이트 분석 시도 {attempt+1} 실패 (모델: {current_model}): {e}")
                 if attempt == max_retries - 1:
                     raise e
                 else:
-                    if '429' in str(e):
+                    if '429' in str(e) and 'PerDay' in str(e):
+                        force_fallback = True
+                        wait_sec = 5.0
+                    elif '429' in str(e):
                         wait_sec = self._extract_retry_delay(e)
                     else:
                         wait_sec = 10 * (attempt + 1)
