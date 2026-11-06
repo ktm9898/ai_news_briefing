@@ -12,7 +12,7 @@ import time
 from google import genai
 from google.genai import types
 
-from config import GEMINI_API_KEY, GEMINI_MODEL, GEMINI_FALLBACK_MODEL, GEMINI_GROUNDING_MODEL, DEFAULT_CRITERIA
+from config import GEMINI_API_KEY, GEMINI_MODEL, GEMINI_FALLBACK_MODEL, DEFAULT_CRITERIA
 
 logger = logging.getLogger(__name__)
 
@@ -594,8 +594,8 @@ class AIAnalyzer:
 
     def enrich_references_with_urls(self, insight_data: dict) -> dict:
         """
-        인사이트 리포트의 references 배열을 순회하며 Google Search Grounding을 통해 실제 URL로 보강합니다.
-        (할당량 최적화를 위해 모든 출처를 모아서 단 1회의 API만 호출하여 일괄 처리합니다.)
+        인사이트 리포트의 references 배열을 표준 객체 구조({"name": ..., "url": ""})로 정규화합니다.
+        (프론트엔드 및 이메일 렌더러에서 url이 비어 있을 때 자동으로 구글 검색 링크로 연결합니다.)
         """
         if not insight_data or "news_insights" not in insight_data:
             return insight_data
@@ -604,106 +604,25 @@ class AIAnalyzer:
         if not insights:
             return insight_data
 
-        logger.info(f"🔍 참고출처 URL 검색 (Grounding) 시작: 총 {len(insights)}개 기사")
-        import re
-        import json
-        
-        # 1. 문서 전체의 고유한 출처(reference) 목록 추출
-        all_refs = []
         for item in insights:
             raw_refs = item.get("references", [])
             if not raw_refs and item.get("reference"):
                 raw_refs = [r.strip() for r in item.get("reference").split(",") if r.strip()]
-            
-            for ref_text in raw_refs:
-                ref_text = str(ref_text).strip()
-                if ref_text and ref_text not in all_refs:
-                    all_refs.append(ref_text)
-                    
-        if not all_refs:
-            return insight_data
-            
-        logger.info(f"  - 검색 대상 고유 출처: 총 {len(all_refs)}개 (단 1회 일괄 호출 진행)")
-        
-        # 2. 한 번의 호출로 모든 URL 검색 수행
-        prompt = f"""다음 목록에 있는 각 출처(보고서, 기사, 발표자료 등)에 해당하는 공식적이고 정확한 원문 URL을 찾아주세요.
-목록:
-{chr(10).join(f'- {ref}' for ref in all_refs)}
 
-반드시 아래 JSON 형식으로만 응답하세요. 검색되지 않으면 빈 문자열("")을 넣으세요.
-{{
-  "urls": {{
-    "출처명1": "https://...",
-    "출처명2": "https://..."
-  }}
-}}"""
-        url_map = {}
-        try:
-            response = self.client.models.generate_content(
-                model=GEMINI_GROUNDING_MODEL,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    tools=[types.Tool(google_search=types.GoogleSearch())],
-                )
-            )
-            text = response.text.strip()
-            if text.startswith("```json"): text = text[7:]
-            elif text.startswith("```"): text = text[3:]
-            if text.endswith("```"): text = text[:-3]
-            
-            result = json.loads(text.strip())
-            url_map = result.get("urls", {})
-            logger.info("  - 일괄 URL 검색(Grounding) API 호출 성공")
-        except Exception as e:
-            logger.error(f"  - 일괄 URL 검색 API 호출 중 오류 (스킵됨): {e}")
-
-        # 3. URL 유효성 검증 (HTTP HEAD 요청으로 실제 접근 가능한지 확인)
-        import requests as http_requests
-        validated_url_map = {}
-        for ref_name, raw_url in url_map.items():
-            clean_url = ""
-            if raw_url:
-                url_match = re.search(r'(https?://[^\s"\'<>]+)', str(raw_url))
-                if url_match:
-                    clean_url = url_match.group(1).rstrip(')"]')
-            
-            if clean_url:
-                try:
-                    resp = http_requests.head(clean_url, timeout=5, allow_redirects=True,
-                                              headers={"User-Agent": "Mozilla/5.0"})
-                    if resp.status_code < 400:
-                        validated_url_map[ref_name] = clean_url
-                        logger.info(f"  ✅ [{ref_name}] -> {clean_url} (HTTP {resp.status_code})")
-                    else:
-                        # HEAD가 실패하면 GET으로 한 번 더 시도 (일부 서버는 HEAD를 거부)
-                        resp2 = http_requests.get(clean_url, timeout=5, allow_redirects=True,
-                                                  headers={"User-Agent": "Mozilla/5.0"}, stream=True)
-                        resp2.close()
-                        if resp2.status_code < 400:
-                            validated_url_map[ref_name] = clean_url
-                            logger.info(f"  ✅ [{ref_name}] -> {clean_url} (GET 재시도 HTTP {resp2.status_code})")
-                        else:
-                            logger.warning(f"  ❌ [{ref_name}] -> {clean_url} (HTTP {resp.status_code}/{resp2.status_code}, 링크 제거)")
-                except Exception as ve:
-                    logger.warning(f"  ❌ [{ref_name}] -> {clean_url} (접속 불가: {ve}, 링크 제거)")
-            else:
-                logger.warning(f"  - [{ref_name}] -> URL 검색 실패")
-
-        # 4. 검증된 URL을 원본 구조에 매핑하여 반환
-        for item in insights:
-            raw_refs = item.get("references", [])
-            if not raw_refs and item.get("reference"):
-                raw_refs = [r.strip() for r in item.get("reference").split(",") if r.strip()]
-            
             enriched_refs = []
-            for ref_text in raw_refs:
-                ref_text = str(ref_text).strip()
-                if not ref_text:
+            for ref_item in raw_refs:
+                if isinstance(ref_item, dict):
+                    ref_name = str(ref_item.get("name", "")).strip()
+                    ref_url = str(ref_item.get("url", "")).strip()
+                else:
+                    ref_name = str(ref_item).strip()
+                    ref_url = ""
+
+                if not ref_name:
                     continue
-                
-                verified_url = validated_url_map.get(ref_text, "")
-                enriched_refs.append({"name": ref_text, "url": verified_url})
-                    
+
+                enriched_refs.append({"name": ref_name, "url": ref_url})
+
             item["references"] = enriched_refs
 
         return insight_data
