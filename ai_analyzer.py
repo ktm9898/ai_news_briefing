@@ -26,6 +26,7 @@ class AIAnalyzer:
         # SDK 내부의 숨겨진 중복 재시도를 끄고(attempts=1) 파이프라인에서 직접 재시도/모델 전환 제어
         http_opts = types.HttpOptions(
             api_version="v1beta",
+            timeout=240_000,  # 개별 API 호출 최대 대기 시간: 4분 (240,000ms)
             retry_options=types.HttpRetryOptions(attempts=1),
         )
         if GEMINI_API_KEY:
